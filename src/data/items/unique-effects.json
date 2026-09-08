@@ -1,0 +1,74 @@
+{
+  "$comment": "REQ-EQP-007: legendary equipment changes how a build WORKS. None of these is a large multiplier — each one makes a build possible that was not possible before, or imposes a cost that reshapes how the hunter must be played.",
+  "effects": [
+    {
+      "id": "the_long_argument",
+      "name": "The Long Argument",
+      "slots": ["weapon"],
+      "description": "Every consecutive attack against the same target hits harder; switching targets resets it. Rewards the target-lock the AI already keeps (REQ-AI-006).",
+      "effects": [
+        { "type": "skillTagPower", "tag": "martial", "value": 0.12 },
+        { "type": "aiWeightShift", "key": "consistency", "value": 0.2 },
+        { "type": "aiWeightShift", "key": "burst", "value": -0.15 }
+      ],
+      "identity": {
+        "roleLean": { "damage": 0.85, "tank": 0.15 },
+        "rangeBand": { "melee": 0.7, "mid": 0.3 },
+        "riskPostureShift": 0.02,
+        "skillAffinity": { "martial": 0.6, "precision": 0.4 }
+      }
+    },
+    {
+      "id": "widows_ledger",
+      "name": "The Widow's Ledger",
+      "slots": ["trinket", "offhand"],
+      "description": "Healing done to a downed ally is doubled; healing to a healthy one is halved. A healer built around this is useless at attrition and irreplaceable at disasters.",
+      "effects": [
+        { "type": "skillTagPower", "tag": "restorative", "value": -0.35 },
+        { "type": "downedTimerBonus", "value": 0.75 },
+        { "type": "aiWeightShift", "key": "allySafety", "value": 0.3 }
+      ],
+      "identity": {
+        "roleLean": { "healer": 0.5, "support": 0.5 },
+        "rangeBand": { "mid": 0.6, "melee": 0.4 },
+        "riskPostureShift": 0.12,
+        "skillAffinity": { "rescue": 0.7, "restorative": 0.3 }
+      }
+    },
+    {
+      "id": "iron_promise",
+      "name": "The Iron Promise",
+      "slots": ["body", "offhand"],
+      "description": "The bearer cannot be reduced below one health while an ally is downed. Turns a tank into a hard guarantee, at the cost of everything offensive.",
+      "effects": [
+        { "type": "threatGeneration", "value": 0.5 },
+        { "type": "skillTagPower", "tag": "martial", "value": -0.25 },
+        { "type": "aiWeightShift", "key": "allySafety", "value": 0.35 },
+        { "type": "aiWeightShift", "key": "personalOutput", "value": -0.2 }
+      ],
+      "identity": {
+        "roleLean": { "tank": 0.7, "support": 0.3 },
+        "rangeBand": { "melee": 1.0 },
+        "riskPostureShift": -0.1,
+        "skillAffinity": { "defensive": 0.5, "threat": 0.3, "rescue": 0.2 }
+      }
+    },
+    {
+      "id": "cold_arithmetic",
+      "name": "Cold Arithmetic",
+      "slots": ["weapon", "trinket"],
+      "description": "Skills cost nothing below a quarter resource, but the bearer regenerates none. Converts a sustained build into a series of committed pushes.",
+      "effects": [
+        { "type": "skillTagCost", "tag": "*", "value": -0.5 },
+        { "type": "aiWeightShift", "key": "efficiency", "value": 0.25 },
+        { "type": "aiWeightShift", "key": "burst", "value": 0.15 }
+      ],
+      "identity": {
+        "roleLean": { "damage": 0.6, "control": 0.4 },
+        "rangeBand": { "ranged": 0.6, "mid": 0.4 },
+        "riskPostureShift": 0.08,
+        "skillAffinity": { "arcane": 0.5, "elemental": 0.5 }
+      }
+    }
+  ]
+}

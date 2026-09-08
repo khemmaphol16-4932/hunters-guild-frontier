@@ -22,6 +22,10 @@ import { unspentAttributePoints, type Hunter } from '../core/hunter/Hunter.js';
 import { describeBuild, profileDistance } from '../systems/hunter/describeBuild.js';
 import { describePotential } from '../core/hunter/potential.js';
 import type { HunterId } from '../core/ids.js';
+import { EQUIPMENT_SLOTS } from '../data/itemSchema.js';
+import { isPerfect, itemQuality, type Item } from '../core/items/Item.js';
+import { Equipment } from '../systems/items/Equipment.js';
+import type { RefineResult } from '../systems/items/Refinement.js';
 import { asSkillId } from '../core/ids.js';
 
 interface DashboardState {
@@ -190,9 +194,11 @@ export class BuildDashboard {
       this.renderBuildProfileCard(hunter),
       this.renderAttributesCard(hunter),
       this.renderDerivedCard(hunter),
+      this.renderEquipmentCard(hunter),
       this.renderSkillsCard(hunter),
       this.renderPotentialCard(hunter),
       this.renderChronicleCard(hunter),
+      this.renderArmouryCard(hunter),
     );
     detail.append(grid);
 
@@ -333,18 +339,28 @@ export class BuildDashboard {
     card.append(el('h3', undefined, 'Derived Stats'));
 
     const multiplier = this.session.condition.statMultiplier(hunter);
-    const stats = computeDerivedStats(
-      hunter.attributes,
-      hunter.level,
-      this.session.content.balance.attributes,
-      { globalMultiplier: multiplier },
-    );
+    const balance = this.session.content.balance.attributes;
+    const gear = this.session.equipment.aggregateStats(hunter);
+
+    const bare = computeDerivedStats(hunter.attributes, hunter.level, balance, {
+      globalMultiplier: multiplier,
+    });
+    const withGear = computeDerivedStats(hunter.attributes, hunter.level, balance, {
+      globalMultiplier: multiplier,
+      flat: gear,
+    });
 
     const table = el('table', 'kv');
     for (const name of DERIVED_STAT_DISPLAY_ORDER) {
+      const total = Math.round((withGear[name] ?? 0) * 10) / 10;
+      const fromGear = Math.round(((withGear[name] ?? 0) - (bare[name] ?? 0)) * 10) / 10;
+
       const row = el('tr');
       row.append(el('td', undefined, name));
-      row.append(el('td', 'num', String(Math.round((stats[name] ?? 0) * 10) / 10)));
+      row.append(el('td', 'num', String(total)));
+      // Showing the gear share separately answers "is this stat coming from my build or my
+      // loot?", which is the question a player actually has when comparing two hunters.
+      row.append(el('td', 'num', fromGear !== 0 ? `+${fromGear}` : ''));
       table.append(row);
     }
     card.append(table);
@@ -423,6 +439,186 @@ export class BuildDashboard {
         };
         card.append(button);
       }
+    }
+
+    return card;
+  }
+
+  /**
+   * Equipment, slot by slot.
+   *
+   * Shows roll quality and refinement alongside the item name, because REQ-EQP-021 makes
+   * two copies of the same item genuinely different and a dashboard that hid that would be
+   * hiding the main reason to care about a drop.
+   */
+  private renderEquipmentCard(hunter: Hunter): HTMLElement {
+    const card = el('div', 'card');
+    card.append(el('h3', undefined, 'Equipment'));
+
+    const allHunters = this.session.roster.all();
+
+    for (const slot of EQUIPMENT_SLOTS) {
+      const row = el('div', 'slot-row');
+      row.append(el('span', 'slot-name', slot));
+
+      const itemId = hunter.equipment[slot];
+      const item = itemId !== null ? this.session.armoury.get(itemId) : undefined;
+
+      if (item) {
+        const rarity = this.session.content.raritiesById.get(item.rarity);
+        const label = el(
+          'span',
+          'slot-item',
+          `${item.name}${item.refinement > 0 ? ` +${item.refinement}` : ''}`,
+        );
+        if (rarity) label.style.color = rarity.colour;
+        label.title = this.describeItem(item);
+        row.append(label);
+
+        row.append(
+          el('span', 'slot-quality', `${Math.round(itemQuality(item) * 100)}%`),
+        );
+
+        const actions = el('span');
+        const off = el('button', 'small', 'off') as HTMLButtonElement;
+        off.onclick = () => {
+          const result = this.commands.unequipSlot(hunter.id, slot);
+          this.notify(result.ok ? `Unequipped ${item.name}.` : result.error, !result.ok);
+        };
+        actions.append(off);
+
+        if (!this.session.refinement.isAtMax(item)) {
+          const refine = el('button', 'small', '+1') as HTMLButtonElement;
+          refine.title = this.session.refinement.describeNextAttempt(item);
+          refine.onclick = () => {
+            const result = this.commands.refineItem(String(item.id));
+            if (!result.ok) return this.notify(result.error, true);
+            return this.notify(this.describeRefineOutcome(item.name, result.value));
+          };
+          actions.append(refine);
+        }
+        row.append(actions);
+      } else {
+        row.append(el('span', 'slot-item empty', '—'));
+        row.append(el('span', 'slot-quality'));
+
+        const available = this.session.equipment.availableFor(hunter, slot, allHunters);
+        const equipBest = el('button', 'small', `equip (${available.length})`) as HTMLButtonElement;
+        equipBest.disabled = available.length === 0;
+        equipBest.onclick = () => {
+          // Best by roll quality, then rarity — the choice a player would make by hand.
+          const best = [...available].sort(
+            (a, b) => this.itemScore(b) - this.itemScore(a),
+          )[0];
+          if (!best) return this.notify('nothing available for that slot', true);
+          const result = this.commands.equipItem(hunter.id, String(best.id));
+          return this.notify(result.ok ? `Equipped ${best.name}.` : result.error, !result.ok);
+        };
+        row.append(equipBest);
+      }
+
+      card.append(row);
+    }
+
+    const setLines = this.session.sets.describe(
+      this.session.equipment.equippedItems(hunter),
+    );
+    if (setLines.length > 0) {
+      card.append(el('h3', undefined, 'Set bonuses'));
+      const list = el('ul', 'notes');
+      for (const line of setLines) list.append(el('li', undefined, line));
+      card.append(list);
+    }
+
+    const effects = Equipment.mergeEffects(this.session.equipment.aggregateEffects(hunter));
+    if (effects.length > 0) {
+      card.append(el('h3', undefined, 'Gear effects'));
+      const list = el('ul', 'notes');
+      for (const effect of effects) {
+        const qualifier = effect.tag ?? effect.key ?? effect.status ?? '';
+        const sign = effect.value >= 0 ? '+' : '';
+        list.append(
+          el(
+            'li',
+            undefined,
+            `${effect.type}${qualifier ? ` (${qualifier})` : ''}: ${sign}${Math.round(effect.value * 100)}%`,
+          ),
+        );
+      }
+      card.append(list);
+    }
+
+    return card;
+  }
+
+  /** The guild's loose items and cards, plus the actions that dispose of them. */
+  private renderArmouryCard(hunter: Hunter): HTMLElement {
+    const card = el('div', 'card');
+    const equipped = Equipment.equippedIdsAcross(this.session.roster.all());
+    const loose = this.session.armoury.all().filter((item) => !equipped.has(item.id));
+
+    card.append(el('h3', undefined, `Armoury — ${loose.length} loose, ${equipped.size} in use`));
+
+    const generate = el('button', 'small', 'Find loot ×10') as HTMLButtonElement;
+    generate.style.marginRight = '4px';
+    generate.onclick = () => {
+      const items = this.debugLoot(hunter.level);
+      this.notify(`Recovered ${items} items.`);
+    };
+    card.append(generate);
+
+    const sellJunk = el('button', 'small', 'Sell below rare') as HTMLButtonElement;
+    sellJunk.onclick = () => {
+      const result = this.commands.sellJunk('rare');
+      this.notify(`Sold ${result.sold} items for ${result.gold} gold.`);
+    };
+    card.append(sellJunk);
+
+    const cardCounts = this.session.armoury.loseCards();
+    if (cardCounts.size > 0) {
+      card.append(el('h3', undefined, 'Cards held'));
+      for (const [cardId, count] of cardCounts) {
+        const def = this.session.cards.get(cardId);
+        if (!def) continue;
+        const tag = el('span', 'tag', `${def.name} ×${count}`);
+        tag.title = `${def.description}\nFits: ${def.compatibleSlots.join(', ')}`;
+        card.append(tag);
+      }
+
+      card.append(el('h3', undefined, 'Socket into equipped gear'));
+      const socket = el('button', 'small', 'Socket what fits') as HTMLButtonElement;
+      socket.onclick = () => {
+        const socketed = this.socketAvailable(hunter.id);
+        this.notify(
+          socketed > 0 ? `Socketed ${socketed} card(s).` : 'Nothing fits the current gear.',
+          socketed === 0,
+        );
+      };
+      card.append(socket);
+    }
+
+    if (loose.length > 0) {
+      card.append(el('h3', undefined, 'Best unused, by slot'));
+      const bySlot = new Map<string, (typeof loose)[number]>();
+      for (const item of loose) {
+        const current = bySlot.get(item.slot);
+        if (!current || this.itemScore(item) > this.itemScore(current)) {
+          bySlot.set(item.slot, item);
+        }
+      }
+      const table = el('table', 'kv');
+      for (const [slot, item] of bySlot) {
+        const row = el('tr');
+        row.append(el('td', undefined, slot));
+        const nameCell = el('td', undefined, item.name);
+        const rarity = this.session.content.raritiesById.get(item.rarity);
+        if (rarity) nameCell.style.color = rarity.colour;
+        nameCell.title = this.describeItem(item);
+        row.append(nameCell);
+        row.append(el('td', 'num', `${Math.round(itemQuality(item) * 100)}%`));
+        table.append(row);
+      }
+      card.append(table);
     }
 
     return card;
@@ -551,6 +747,67 @@ export class BuildDashboard {
     card.append(el('p', undefined, `${other.name}: ${describeBuild(b).summary}`));
 
     return card;
+  }
+
+  // --- Item helpers ---------------------------------------------------------
+
+  private debugLoot(itemLevel: number): number {
+    return this.commands.findLoot(10, itemLevel).length;
+  }
+
+  private socketAvailable(hunterId: HunterId): number {
+    return this.commands.socketWhatFits(hunterId);
+  }
+
+  /** Ranking used by the "equip best" and "best unused" affordances. */
+  private itemScore(item: Item): number {
+    const rarityRank = this.session.content.rarities.order.indexOf(item.rarity);
+    return rarityRank * 10 + itemQuality(item) * 5 + item.refinement;
+  }
+
+  /** Tooltip text: main stats, substats with roll quality, sockets, set and unique effect. */
+  private describeItem(item: Item): string {
+    const lines: string[] = [`${item.name} — item level ${item.itemLevel}`];
+
+    for (const [stat, value] of Object.entries(this.session.equipment.mainStats(item))) {
+      lines.push(`  ${stat}: ${Math.round(value * 10) / 10}`);
+    }
+    for (const roll of item.substats) {
+      lines.push(
+        `  ${roll.stat}: ${Math.round(roll.value * 10) / 10} (${Math.round(roll.quality * 100)}% roll)`,
+      );
+    }
+    if (isPerfect(item, this.session.content.substats.perfectThreshold)) {
+      lines.push('  PERFECT — every substat rolled at maximum');
+    }
+    if (item.socketed.length > 0) {
+      const names = item.socketed.map(
+        (cardId) => (cardId === null ? 'empty' : this.session.cards.get(cardId)?.name ?? cardId),
+      );
+      lines.push(`  sockets: ${names.join(', ')}`);
+    }
+    if (item.setId) {
+      lines.push(`  set: ${this.session.sets.get(item.setId)?.name ?? item.setId}`);
+    }
+    if (item.uniqueEffectId) {
+      const unique = this.session.content.uniqueEffectsById.get(item.uniqueEffectId);
+      if (unique) lines.push(`  ${unique.name}: ${unique.description}`);
+    }
+
+    return lines.join('\n');
+  }
+
+  private describeRefineOutcome(name: string, outcome: RefineResult): string {
+    switch (outcome.kind) {
+      case 'success':
+        return `${name} refined to +${outcome.level}.`;
+      case 'nothing':
+        return `${name} resisted the attempt — nothing changed.`;
+      case 'downgrade':
+        return `${name} slipped from +${outcome.from} to +${outcome.to}.`;
+      case 'destroyed':
+        return `${name} was destroyed.`;
+    }
   }
 
   // --- Small helpers --------------------------------------------------------

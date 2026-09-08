@@ -12,10 +12,12 @@
  */
 
 import type { AttributeBalance, Role } from '../../data/schema.js';
+import { EQUIPMENT_SLOTS, type EquipmentSlot } from '../../data/itemSchema.js';
 import type {
   AdvancedClassId,
   ArchetypeId,
   HunterId,
+  ItemId,
   PersonalityId,
   SkillId,
   SpecializationId,
@@ -58,6 +60,15 @@ export interface Hunter {
   /** Skill id -> accumulated mastery points. Permanent, unbounded (REQ-MAS-001). */
   readonly mastery: Readonly<Record<string, number>>;
 
+  /**
+   * Slot -> item id, or null for empty.
+   *
+   * Items are referenced by id, never embedded, because REQ-EQP-004 makes all equipment
+   * tradable and unbound — the item belongs to the guild's armoury and the hunter merely
+   * has it equipped. Embedding would make transferring an item a copy rather than a move.
+   */
+  readonly equipment: Readonly<Record<EquipmentSlot, ItemId | null>>;
+
   readonly potential: Potential;
   readonly personalityId: PersonalityId;
   readonly traitIds: readonly TraitId[];
@@ -84,6 +95,12 @@ export interface CreateHunterOptions {
 
 export const FRESH_CONDITION: HunterCondition = { hunger: 0, fatigue: 0, morale: 0.7 };
 
+export function emptyEquipment(): Record<EquipmentSlot, ItemId | null> {
+  const out = {} as Record<EquipmentSlot, ItemId | null>;
+  for (const slot of EQUIPMENT_SLOTS) out[slot] = null;
+  return out;
+}
+
 export function createHunter(
   options: CreateHunterOptions,
   balance: AttributeBalance,
@@ -102,6 +119,7 @@ export function createHunter(
     knownSkills: options.knownSkills ?? [],
     loadout: [],
     mastery: {},
+    equipment: emptyEquipment(),
     potential: options.potential,
     personalityId: options.personalityId,
     traitIds: options.potential.traitIds,
@@ -144,6 +162,22 @@ export function withMastery(
 
 export function withCondition(hunter: Hunter, condition: HunterCondition): Hunter {
   return { ...hunter, condition };
+}
+
+export function withEquipment(
+  hunter: Hunter,
+  equipment: Readonly<Record<EquipmentSlot, ItemId | null>>,
+): Hunter {
+  return { ...hunter, equipment };
+}
+
+export function equippedItemIds(hunter: Hunter): readonly ItemId[] {
+  const ids: ItemId[] = [];
+  for (const slot of EQUIPMENT_SLOTS) {
+    const id = hunter.equipment[slot];
+    if (id !== null) ids.push(id);
+  }
+  return ids;
 }
 
 // --- Derived queries --------------------------------------------------------

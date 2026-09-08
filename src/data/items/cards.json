@@ -1,0 +1,196 @@
+{
+  "$comment": "REQ-CRD-001: cards are build-CHANGING. Every card here alters behaviour, skill interaction or AI weighting — none is a plain +damage. Effects are declarative so Phase 4 combat and AI consume them without cards needing to know either system exists.",
+  "$effectTypes": {
+    "skillTagPower": "scales the power of skills carrying a tag",
+    "skillTagCost": "scales the resource cost of skills carrying a tag (negative is cheaper)",
+    "threatGeneration": "scales threat produced (REQ-AI-003)",
+    "aiWeightShift": "shifts a named utility consideration (REQ-AI-001) — the mechanism by which a card changes how a hunter thinks",
+    "statusChance": "adds a chance to apply a status effect",
+    "overhealConversion": "converts overheal into another effect (REQ-CBT-011)",
+    "downedTimerBonus": "extends the window in which a downed ally can be rescued (REQ-CBT-012)",
+    "interruptReadiness": "raises how readily the AI spends an interrupt (REQ-AI-007, still bounded by the fixed reaction priority)"
+  },
+  "cards": [
+    {
+      "id": "bulwark_sigil",
+      "name": "Bulwark Sigil",
+      "rarity": "rare",
+      "source": { "kind": "common" },
+      "compatibleTags": ["defensive", "threat"],
+      "compatibleSlots": ["offhand", "body", "head"],
+      "description": "The bearer draws attention deliberately and holds it.",
+      "effects": [
+        { "type": "threatGeneration", "value": 0.35 },
+        { "type": "aiWeightShift", "key": "allySafety", "value": 0.1 }
+      ],
+      "identity": {
+        "roleLean": { "tank": 0.8, "support": 0.2 },
+        "rangeBand": { "melee": 0.6, "mid": 0.4 },
+        "riskPostureShift": -0.04,
+        "skillAffinity": { "threat": 0.6, "defensive": 0.4 }
+      }
+    },
+    {
+      "id": "counterpoise",
+      "name": "Counterpoise",
+      "rarity": "epic",
+      "source": { "kind": "common" },
+      "compatibleTags": ["martial", "precision"],
+      "compatibleSlots": ["weapon", "hands"],
+      "description": "Turns being attacked into an opportunity. Reactive builds become genuinely reactive.",
+      "effects": [
+        { "type": "skillTagPower", "tag": "precision", "value": 0.2 },
+        { "type": "interruptReadiness", "value": 0.25 },
+        { "type": "aiWeightShift", "key": "burst", "value": 0.08 }
+      ],
+      "identity": {
+        "roleLean": { "damage": 0.6, "tank": 0.4 },
+        "rangeBand": { "melee": 0.8, "mid": 0.2 },
+        "riskPostureShift": 0.05,
+        "skillAffinity": { "precision": 0.7, "martial": 0.3 }
+      }
+    },
+    {
+      "id": "tidebound_charm",
+      "name": "Tidebound Charm",
+      "rarity": "rare",
+      "source": { "kind": "common" },
+      "compatibleTags": ["restorative", "arcane"],
+      "compatibleSlots": ["trinket", "offhand", "weapon"],
+      "description": "Healing that overflows becomes a shield instead of being wasted.",
+      "effects": [
+        { "type": "overhealConversion", "value": 0.4 },
+        { "type": "skillTagCost", "tag": "restorative", "value": -0.12 }
+      ],
+      "identity": {
+        "roleLean": { "healer": 0.7, "support": 0.3 },
+        "rangeBand": { "mid": 0.6, "ranged": 0.4 },
+        "riskPostureShift": -0.03,
+        "skillAffinity": { "restorative": 0.8, "arcane": 0.2 }
+      }
+    },
+    {
+      "id": "long_watch",
+      "name": "Long Watch",
+      "rarity": "epic",
+      "source": { "kind": "common" },
+      "compatibleTags": ["rescue", "mobility"],
+      "compatibleSlots": ["feet", "hands", "trinket"],
+      "description": "Buys time for the fallen. Makes rescues viable that otherwise would not be.",
+      "effects": [
+        { "type": "downedTimerBonus", "value": 0.5 },
+        { "type": "aiWeightShift", "key": "allySafety", "value": 0.15 },
+        { "type": "aiWeightShift", "key": "personalOutput", "value": -0.05 }
+      ],
+      "identity": {
+        "roleLean": { "support": 0.7, "healer": 0.3 },
+        "rangeBand": { "mid": 0.7, "melee": 0.3 },
+        "riskPostureShift": 0.04,
+        "skillAffinity": { "rescue": 0.8, "mobility": 0.2 }
+      }
+    },
+    {
+      "id": "hoarfrost_lens",
+      "name": "Hoarfrost Lens",
+      "rarity": "epic",
+      "source": { "kind": "common" },
+      "compatibleTags": ["elemental", "arcane"],
+      "compatibleSlots": ["weapon", "offhand", "trinket"],
+      "description": "Trades raw force for control — enemies leave the fight slowed rather than dead.",
+      "effects": [
+        { "type": "statusChance", "status": "slow", "value": 0.25 },
+        { "type": "skillTagPower", "tag": "elemental", "value": 0.1 },
+        { "type": "aiWeightShift", "key": "consistency", "value": 0.1 }
+      ],
+      "identity": {
+        "roleLean": { "control": 0.7, "damage": 0.3 },
+        "rangeBand": { "ranged": 0.7, "mid": 0.3 },
+        "riskPostureShift": -0.05,
+        "skillAffinity": { "elemental": 0.7, "magical": 0.3 }
+      }
+    },
+    {
+      "id": "quartermasters_seal",
+      "name": "Quartermaster's Seal",
+      "rarity": "rare",
+      "source": { "kind": "common" },
+      "compatibleTags": [],
+      "compatibleSlots": ["head", "body", "trinket"],
+      "description": "Universal. Makes every skill cheaper, which turns a burst build into a sustained one.",
+      "effects": [
+        { "type": "skillTagCost", "tag": "*", "value": -0.1 },
+        { "type": "aiWeightShift", "key": "efficiency", "value": 0.12 }
+      ],
+      "identity": {
+        "roleLean": {},
+        "rangeBand": {},
+        "riskPostureShift": 0,
+        "skillAffinity": {}
+      }
+    },
+
+    {
+      "id": "warden_of_ash_card",
+      "name": "Card of the Warden of Ash",
+      "rarity": "legendary",
+      "source": { "kind": "boss", "bossId": "warden_of_ash" },
+      "compatibleTags": ["defensive", "threat", "martial"],
+      "compatibleSlots": ["weapon", "offhand", "body"],
+      "description": "Threat taken becomes threat given. A tank built around this stops needing a damage dealer to hold aggro for them.",
+      "effects": [
+        { "type": "threatGeneration", "value": 0.8 },
+        { "type": "skillTagPower", "tag": "defensive", "value": 0.25 },
+        { "type": "aiWeightShift", "key": "survival", "value": -0.08 },
+        { "type": "interruptReadiness", "value": 0.2 }
+      ],
+      "identity": {
+        "roleLean": { "tank": 0.85, "damage": 0.15 },
+        "rangeBand": { "melee": 1.0 },
+        "riskPostureShift": 0.1,
+        "skillAffinity": { "threat": 0.5, "defensive": 0.5 }
+      }
+    },
+    {
+      "id": "emberheart_card",
+      "name": "Card of the Emberheart",
+      "rarity": "legendary",
+      "source": { "kind": "boss", "bossId": "emberheart" },
+      "compatibleTags": ["elemental", "magical"],
+      "compatibleSlots": ["weapon", "offhand", "trinket"],
+      "description": "Fire spreads. Turns single-target elemental damage into area damage, which changes what parties the bearer belongs in.",
+      "effects": [
+        { "type": "skillTagPower", "tag": "elemental", "value": 0.35 },
+        { "type": "statusChance", "status": "burn", "value": 0.4 },
+        { "type": "skillTagCost", "tag": "elemental", "value": 0.15 },
+        { "type": "aiWeightShift", "key": "burst", "value": 0.15 }
+      ],
+      "identity": {
+        "roleLean": { "damage": 0.9, "control": 0.1 },
+        "rangeBand": { "ranged": 0.8, "mid": 0.2 },
+        "riskPostureShift": 0.12,
+        "skillAffinity": { "elemental": 0.8, "magical": 0.2 }
+      }
+    },
+    {
+      "id": "hollow_choir_card",
+      "name": "Card of the Hollow Choir",
+      "rarity": "legendary",
+      "source": { "kind": "boss", "bossId": "hollow_choir" },
+      "compatibleTags": ["restorative", "rallying"],
+      "compatibleSlots": ["trinket", "offhand", "head"],
+      "description": "Healing reaches the whole party at reduced strength. A single healer can cover a formation that would otherwise need two.",
+      "effects": [
+        { "type": "skillTagPower", "tag": "restorative", "value": -0.2 },
+        { "type": "overhealConversion", "value": 0.6 },
+        { "type": "aiWeightShift", "key": "allySafety", "value": 0.2 },
+        { "type": "downedTimerBonus", "value": 0.3 }
+      ],
+      "identity": {
+        "roleLean": { "healer": 0.6, "support": 0.4 },
+        "rangeBand": { "mid": 0.6, "ranged": 0.4 },
+        "riskPostureShift": -0.06,
+        "skillAffinity": { "restorative": 0.6, "rallying": 0.4 }
+      }
+    }
+  ]
+}

@@ -39,3 +39,44 @@ Dev server on :5173, no console or build errors. Two Vanguards taken down opposi
 ### Open at the end of this session
 
 The behavioural half of REQ-BLD-003 — different builds producing different AI *decisions* — cannot be tested until combat exists. Everything here is the profile-level proxy. Risk R2 stays open until Phase 4.
+
+---
+
+## 2026-09-09 — Phase 2: Equipment
+
+**Goal.** Items, rarity, substats, cards, sets, refinement and disposal — with the acceptance condition that `BuildIdentity` picks up real equipment and card contributions **without an interface change**, validating the DL-009 bet.
+
+### Delivered
+
+Six content files (rarities, item types, substats, cards, sets, unique effects) plus refinement and loot balance, all schema-validated with cross-file referential checks. Systems: `ItemGenerator` (weighted table + pity), `Substats`, `Equipment` (slots, derived main stats, stat and effect aggregation), `Cards` (sockets, tag compatibility, duplicate conversion), `Sets` (2/3/4-piece stacking), `Refinement` (safe zone + risk zone), `Armoury` (guild-wide storage, sell, dismantle, bulk sell), and `identityContributions` (the real `EquipmentContribution` / `CardContribution`). Save bumped to v3 with a v2→v3 migration. Equipment and armoury cards added to the dashboard.
+
+**212 tests across 10 suites** (was 160). Typecheck and production build clean.
+
+### The DL-009 bet paid off — with one caveat worth stating
+
+`git diff HEAD -- src/systems/hunter/` returned **empty**: `BuildIdentity.ts`, `contributions.ts` and `build-identity.json` were byte-identical to the Phase 1 commit after the whole equipment system landed. Swapping the null objects for real implementations required no interface change, no reweighting, and no new coupling. That is the payoff for having designed the contribution interfaces in Phase 1 rather than deferring build identity until items existed.
+
+**The caveat:** the interface held, but Phase 1 had only ever *consumed half of it*. `IdentityContribution` declares four fields; `BuildIdentity` read `roleLean` and `rangeBand` from equipment and cards and silently ignored `riskPostureShift` and `skillAffinity`. Nothing noticed because the null objects returned zeros for all four. Phase 2's tests caught it immediately — a boss card could not make a hunter bolder, and a legendary could not make one more rescue-minded, which quietly contradicted REQ-BLD-001's claim that equipment and cards are build inputs. Fixed by consuming all four fields; the change is additive and is exactly zero for an unequipped hunter, so no Phase 1 test moved.
+
+Worth recording as a general lesson: a null object satisfies a compiler but proves nothing about whether the consumer actually uses what it is given.
+
+### Other problems the tests caught
+
+1. **Two malformed assertions of my own** — `expect(x).toBeLessThan ? … : …` is a truthiness check on a function, not an assertion. Replaced with real bounds, and the perfect-item test now also asserts `isPerfect` *can* return true, so it cannot pass vacuously.
+2. **A v1 migration test asserting stale expectations** — the v1→current chain now legitimately adds equipment slots. Updated, and a second test added for the case that actually matters: a v2 save that already has equipment must not have it overwritten.
+
+### Design decisions taken this phase
+
+- **`Inventory` became `Armoury`, guild-wide rather than per-hunter.** REQ-EQP-004 says equipment is never bound to a hunter; a per-hunter bag would turn "give the recruit the old sword" into a transfer with failure modes rather than an equip with none.
+- **Main stats are derived, never stored.** An item persists type, rarity, level and refinement; its main stats are computed. Retuning a blade's coefficient therefore updates every blade in every existing save (REQ-TEC-002). Substats are the opposite — they are rolls, so they are stored.
+- **Refinement scales main stats only.** This keeps the substat lottery and the refinement gamble as separate games, so refinement cannot launder a badly-rolled item.
+- **Set bonuses and card effects are behavioural, not flat stats.** This is the mechanism honouring REQ-EQP-006's "must not invalidate normal equipment" and REQ-CRD-001's "not merely generic +damage" — and tests now assert the property, so a future set cannot quietly break it.
+- **Boss card drop rate validation is a hard failure.** `loot.json` declaring anything other than 0.005 throws at load, because REQ-CRD-002 locks it and a well-meaning retune should not be able to override a locked decision silently.
+
+### Verified in the browser
+
+Two Vanguards gear-differentiated: one in a completed 4-piece Ashwarden set with a +6 refined shield carrying the Warden of Ash boss card, one in a caster kit. Profile distance 0.337. The dashboard shows roll quality per slot, all three set tiers with progress toward the next, merged gear effects (threat generation +135%, ally-safety AI weight +28%, defensive skill cost −20%), and a gear column in the derived stats. Save → reload → 74 items, 7 equipped, refinement 6 and risk posture restored bit-identically. No console or build errors.
+
+### Open
+
+Refinement and selling compute their gold cost but do not move gold — the Resources system is Phase 7, and half-implementing it here is the temporary architecture §126 warns against. The *risk* half of refinement's risk/reward is fully live. Tracked in TECH_DEBT.md.

@@ -33,6 +33,13 @@ import { Personality } from '../systems/hunter/Personality.js';
 import { Condition } from '../systems/hunter/Condition.js';
 import { BuildIdentity } from '../systems/hunter/BuildIdentity.js';
 import { Chronicle } from '../systems/hunter/Chronicle.js';
+import { Armoury } from '../systems/items/Armoury.js';
+import { Cards } from '../systems/items/Cards.js';
+import { Sets } from '../systems/items/Sets.js';
+import { Equipment } from '../systems/items/Equipment.js';
+import { Refinement } from '../systems/items/Refinement.js';
+import { ItemGenerator } from '../systems/items/ItemGenerator.js';
+import { CardIdentity, EquipmentIdentity } from '../systems/items/identityContributions.js';
 import { SaveGame, type SaveStorage } from '../save/SaveGame.js';
 import type { CurrentSavePayload } from '../save/envelope.js';
 
@@ -110,6 +117,14 @@ export class Session {
   readonly condition: Condition;
   readonly buildIdentity: BuildIdentity;
   readonly chronicle: Chronicle;
+
+  readonly armoury: Armoury;
+  readonly cards: Cards;
+  readonly sets: Sets;
+  readonly equipment: Equipment;
+  readonly refinement: Refinement;
+  readonly itemGenerator: ItemGenerator;
+
   readonly save: SaveGame;
 
   readonly worldSeed: string;
@@ -140,6 +155,27 @@ export class Session {
       balance: this.content.balance.personality,
       events: this.events,
     });
+    this.armoury = new Armoury(this.content);
+    this.cards = new Cards(this.content);
+    this.sets = new Sets(this.content);
+    this.equipment = new Equipment({
+      content: this.content,
+      armoury: this.armoury,
+      cards: this.cards,
+      sets: this.sets,
+    });
+    this.refinement = new Refinement(this.content.balance.refinement);
+    this.itemGenerator = new ItemGenerator(this.content);
+
+    const itemIdentityDeps = {
+      content: this.content,
+      equipment: this.equipment,
+      cards: this.cards,
+      sets: this.sets,
+    };
+
+    // Phase 2 swaps the Phase 1 null objects for real contributions. BuildIdentity itself
+    // is unchanged — see systems/items/identityContributions.ts and DL-009.
     this.buildIdentity = new BuildIdentity({
       balance: this.content.balance.buildIdentity,
       classSystem: this.classSystem,
@@ -147,6 +183,8 @@ export class Session {
       mastery: this.mastery,
       personality: this.personality,
       condition: this.condition,
+      equipment: new EquipmentIdentity(itemIdentityDeps),
+      cards: new CardIdentity(itemIdentityDeps),
     });
     this.chronicle = new Chronicle({
       balance: this.content.balance.chronicle,
@@ -228,6 +266,8 @@ export class Session {
       chronicles: this.chronicle.all(),
       clock: this.clock.snapshot(),
       rngStreams,
+      armoury: this.armoury.snapshot(),
+      lootPity: this.itemGenerator.pity,
     };
   }
 
@@ -237,6 +277,8 @@ export class Session {
     for (const hunter of payload.hunters) this.roster.add(hunter);
     this.chronicle.restore(payload.chronicles);
     this.clock.restore(payload.clock);
+    this.armoury.restore(payload.armoury);
+    this.itemGenerator.restorePity(payload.lootPity);
   }
 
   dispose(): void {

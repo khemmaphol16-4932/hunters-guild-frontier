@@ -111,6 +111,13 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+/**
+ * Scales gear skill-affinity into the same range as the class and loadout contributions,
+ * which add raw shares rather than weighted ones. Chosen so a weapon's affinity lands near
+ * a class tag's 0.35 rather than dominating it.
+ */
+const GEAR_AFFINITY_SCALE = 0.25;
+
 export class BuildIdentity {
   private readonly balance: BuildIdentityBalance;
   private readonly classSystem: ClassSystem;
@@ -183,7 +190,11 @@ export class BuildIdentity {
     }
 
     // --- Equipment (weight 2) and Cards (weight 1) --------------------------
-    // Null objects in Phase 1 (DL-009). Weighted here so Phase 2 needs no reweighting.
+    // Backed by null objects in Phase 1 and by real implementations from Phase 2 onward
+    // (DL-009). All four fields of the contribution are consumed: role lean, range band,
+    // risk posture and skill affinity. Consuming only the first two — as this originally
+    // did — left gear unable to make a hunter bolder or more rescue-minded, which quietly
+    // contradicted REQ-BLD-001's claim that equipment and cards are build inputs.
     const equipmentContribution = this.equipment.contributionFor(hunter);
     addWeights(roleLean, equipmentContribution.roleLean, weights.equipment);
     addWeights(rangeBand, equipmentContribution.rangeBand, weights.equipment);
@@ -191,6 +202,19 @@ export class BuildIdentity {
     const cardContribution = this.cards.contributionFor(hunter);
     addWeights(roleLean, cardContribution.roleLean, weights.cards);
     addWeights(rangeBand, cardContribution.rangeBand, weights.cards);
+
+    // Both contributions arrive already averaged across the items or cards that produced
+    // them, so they are summed at full strength rather than re-weighted. With no gear both
+    // are zero, which is why adding this changes nothing for an unequipped hunter.
+    const gearRiskShift =
+      equipmentContribution.riskPostureShift + cardContribution.riskPostureShift;
+
+    for (const [tag, value] of Object.entries(equipmentContribution.skillAffinity)) {
+      skillAffinity[tag] = (skillAffinity[tag] ?? 0) + value * GEAR_AFFINITY_SCALE * weights.equipment;
+    }
+    for (const [tag, value] of Object.entries(cardContribution.skillAffinity)) {
+      skillAffinity[tag] = (skillAffinity[tag] ?? 0) + value * GEAR_AFFINITY_SCALE * weights.cards;
+    }
 
     // --- Personality: weights only, already clamped (REQ-HUN-010) -----------
     const personalityInfluence = this.personality.influenceOf(hunter);
@@ -228,7 +252,7 @@ export class BuildIdentity {
       secondaryRole,
       rangeBand: normalisedRanges,
       primaryRange,
-      riskPosture: this.riskPosture(hunter, normalisedRoles, classRiskShift),
+      riskPosture: this.riskPosture(hunter, normalisedRoles, classRiskShift + gearRiskShift),
       resourceProfile: this.resourceProfile(hunter),
       skillAffinity,
       versatility: Math.min(

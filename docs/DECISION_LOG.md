@@ -142,6 +142,46 @@ Assumptions made under §127 (ambiguity resolved conservatively, documented, wor
 
 ---
 
+## DL-014 — Item storage is guild-wide (`Armoury`), not a per-hunter inventory
+
+**Ambiguity.** §20 describes equipment and trading but never says where items live.
+
+**Decision.** One guild-wide `Armoury` holds every item and loose card. A hunter's `equipment` field references items by id; the hunter *has* items equipped, the guild *owns* them.
+
+**Why conservative.** REQ-EQP-004 states equipment is never bound to a hunter. With a per-hunter bag, "give the new recruit the old sword" becomes a transfer operation with two failure modes; guild-wide, it is an equip with none. The system map originally said `Inventory`; renamed once the requirement made the shape obvious.
+
+---
+
+## DL-015 — Item main stats are derived; substats are stored
+
+**Ambiguity.** §20/§21 fix main stats by item type and randomise substats, but say nothing about persistence.
+
+**Decision.** An item persists its type, rarity, level, refinement, substat rolls, sockets, set and unique effect. Main stats are *computed* from type × level × rarity multiplier × refinement bonus at read time.
+
+**Why conservative.** REQ-TEC-002 wants balance in data. Deriving main stats means retuning a blade's coefficient updates every blade in every existing save; storing them would freeze old items at old balance. Substats are the opposite case — they are rolls, not formulas, so they must be stored or the item would change every time it was read.
+
+---
+
+## DL-016 — Refinement scales main stats only
+
+**Ambiguity.** §22 defines refinement as safe zone plus risk zone but not what it affects.
+
+**Decision.** Refinement multiplies main stats. It never touches substats.
+
+**Why conservative.** It keeps the substat lottery and the refinement gamble as two separate games. If refinement scaled substats, a badly-rolled item could be laundered into a good one, which would flatten the "two copies of the same item are worth different amounts" property REQ-EQP-021 depends on.
+
+---
+
+## DL-017 — Set and card effects are behavioural, not flat stats
+
+**Ambiguity.** §23 says sets must not invalidate normal equipment; §24 says cards must not be generic +damage. Neither says how to guarantee it.
+
+**Decision.** Every set tier and every card effect is drawn from a declarative vocabulary of *behavioural* effects — skill-tag power and cost, threat generation, AI weight shifts, status chance, overheal conversion, downed-timer bonus, interrupt readiness. No set or card grants a flat stat.
+
+**Why conservative.** It makes both requirements structural rather than a tuning target: a better-rolled non-set item still competes on stats and loses only the behaviour, so the choice stays live. Tests assert the property, so a future set cannot quietly break it. It also gives Phase 4's combat and AI one vocabulary to consume instead of four.
+
+---
+
 ## DL-011 — Attribute point budget and the 1–100 curve
 
 **Ambiguity.** §9 says attribute points are generated from level; §10 caps level at 100. Neither gives numbers.

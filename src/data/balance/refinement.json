@@ -1,0 +1,31 @@
+{
+  "$comment": "REQ-EQP-005: refinement is a Safe Zone plus a Risk Zone. The safe zone always succeeds and is the reliable path everyone takes; the risk zone is a real decision with a real downside, which is the point (§22). Protection consumables let a player buy away the worst outcome, which is a gold sink (REQ-ECO-001).",
+  "maxLevel": 15,
+  "safeLimit": 5,
+  "mainStatBonusPerLevel": 0.06,
+  "$note": "Refinement scales MAIN stats only. It never touches substats, so it cannot launder a badly-rolled item into a good one (REQ-EQP-002).",
+  "riskZone": [
+    { "level": 6, "successChance": 0.85, "onFailure": "nothing" },
+    { "level": 7, "successChance": 0.75, "onFailure": "nothing" },
+    { "level": 8, "successChance": 0.65, "onFailure": "downgrade" },
+    { "level": 9, "successChance": 0.55, "onFailure": "downgrade" },
+    { "level": 10, "successChance": 0.45, "onFailure": "downgrade" },
+    { "level": 11, "successChance": 0.38, "onFailure": "destroy" },
+    { "level": 12, "successChance": 0.3, "onFailure": "destroy" },
+    { "level": 13, "successChance": 0.22, "onFailure": "destroy" },
+    { "level": 14, "successChance": 0.15, "onFailure": "destroy" },
+    { "level": 15, "successChance": 0.08, "onFailure": "destroy" }
+  ],
+  "downgradeLevels": 1,
+  "protection": {
+    "$comment": "A protection charge converts 'destroy' into 'downgrade' and 'downgrade' into 'nothing'. It never raises the success chance — the gamble stays a gamble.",
+    "resourceId": "warding_salt",
+    "costPerAttempt": 1
+  },
+  "costPerAttempt": {
+    "$comment": "Gold cost scales with the level being attempted and the item's level.",
+    "base": 50,
+    "perRefineLevel": 40,
+    "perItemLevel": 6
+  }
+}

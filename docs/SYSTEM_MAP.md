@@ -56,13 +56,14 @@ Every system from spec §115, assigned a layer, an owner module, the data it own
 
 | System | Module | Owns |
 |---|---|---|
-| Item generation | `systems/items/ItemGenerator.ts` | rarity roll, base stats by type |
-| Substats | `systems/items/Substats.ts` | randomized substat rolls & ranges |
-| Equipment | `systems/items/Equipment.ts` | slots, equipping, compatibility |
-| Cards | `systems/items/Cards.ts` | card definitions, sockets, compatibility tags |
-| Sets | `systems/items/Sets.ts` | 2/3/4-piece bonuses |
-| Refinement | `systems/items/Refinement.ts` | safe zone / risk zone |
-| Inventory | `systems/items/Inventory.ts` | storage, sell, dismantle, convert |
+| Item generation | `systems/items/ItemGenerator.ts` | rarity roll, weighted loot table, pity counter |
+| Substats | `systems/items/Substats.ts` | randomized substat rolls, roll quality |
+| Equipment | `systems/items/Equipment.ts` | slots, equipping, derived main stats, stat and effect aggregation |
+| Cards | `systems/items/Cards.ts` | card definitions, sockets, tag compatibility, duplicate conversion |
+| Sets | `systems/items/Sets.ts` | 2/3/4-piece bonuses, stacking, progress description |
+| Refinement | `systems/items/Refinement.ts` | safe zone / risk zone, protection charges |
+| Armoury | `systems/items/Armoury.ts` | guild-wide item and card storage, sell, dismantle, bulk sell. Renamed from `Inventory` in Phase 2 — REQ-EQP-004 leaves items unbound, so a per-hunter bag would turn handing a recruit the old sword into a transfer with failure modes rather than an equip with none. |
+| Item identity | `systems/items/identityContributions.ts` | the real `EquipmentContribution` and `CardContribution` consumed by `BuildIdentity` (DL-009) |
 
 ## Party & combat
 

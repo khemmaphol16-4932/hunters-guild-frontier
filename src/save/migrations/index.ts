@@ -38,7 +38,52 @@ const v1ToV2: Migration = {
   },
 };
 
-export const MIGRATIONS: readonly Migration[] = [v1ToV2];
+/**
+ * v2 → v3: add the guild armoury, the loot pity counter, and per-hunter equipment slots.
+ *
+ * A v2 save has no items at all, so there is nothing to reconstruct — every hunter gets an
+ * empty slot map and the armoury starts empty. This is the well-behaved case a migration
+ * chain exists for: the schema grew, and old saves remain loadable without inventing data.
+ *
+ * The slot list is duplicated here rather than imported from data/itemSchema on purpose.
+ * A migration must keep reading old saves correctly forever, so it cannot depend on a
+ * constant that later phases are free to change — if a slot is added in Phase 6, this
+ * migration must still produce exactly the v3 shape it was written for.
+ */
+const V3_EQUIPMENT_SLOTS = ['weapon', 'offhand', 'head', 'body', 'hands', 'feet', 'trinket'];
+
+const v2ToV3: Migration = {
+  from: 2,
+  to: 3,
+  describe: 'add the guild armoury, loot pity counter and hunter equipment slots',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) {
+      throw new SaveMigrationError('v2 payload is not an object');
+    }
+    const v2 = payload as Record<string, unknown>;
+
+    const emptyEquipment: Record<string, null> = {};
+    for (const slot of V3_EQUIPMENT_SLOTS) emptyEquipment[slot] = null;
+
+    const hunters = Array.isArray(v2['hunters']) ? v2['hunters'] : [];
+    const upgraded = hunters.map((hunter) => {
+      if (typeof hunter !== 'object' || hunter === null) return hunter;
+      const record = hunter as Record<string, unknown>;
+      return { ...record, equipment: record['equipment'] ?? { ...emptyEquipment } };
+    });
+
+    return {
+      hunters: upgraded,
+      chronicles: Array.isArray(v2['chronicles']) ? v2['chronicles'] : [],
+      clock: v2['clock'] ?? { tick: 0, accumulatorMs: 0 },
+      rngStreams: v2['rngStreams'] ?? {},
+      armoury: { items: [], cardCounts: {}, cardsSeen: [] },
+      lootPity: { sinceTier: 0 },
+    };
+  },
+};
+
+export const MIGRATIONS: readonly Migration[] = [v1ToV2, v2ToV3];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */
 export function migratePayload(

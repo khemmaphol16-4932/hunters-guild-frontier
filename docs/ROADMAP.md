@@ -63,11 +63,11 @@ Legacy · NG+ · generational hunters · mentors · legacy traits · endless sca
 
 ---
 
-## Phase 2 — Equipment ⬜
+## Phase 2 — Equipment ✅
 
 Slots · item definitions · rarity · main stats · substats · cards · set bonuses · refinement (safe/risk) · item generation · trading · sell/dismantle/convert.
 
-Key DoD: substat randomization is seeded and reproducible; refinement risk zone is a real risk/reward decision; `BuildIdentity` picks up real equipment and card contributions with **no change to its interface** (validates the B7 resolution).
+**Delivered.** Substat randomization is seeded and reproducible; the refinement risk zone can downgrade and destroy; `BuildIdentity` picked up real equipment and card contributions with **no interface change** — `git diff` over `src/systems/hunter/` was empty after the phase (validates the B7/DL-009 resolution). Storage is guild-wide (`Armoury`) rather than per-hunter, because REQ-EQP-004 leaves items unbound. Save at v3 with a v2→v3 migration.
 
 ## Phase 3 — Hunter System ⬜
 

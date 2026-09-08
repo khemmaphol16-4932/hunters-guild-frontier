@@ -153,13 +153,46 @@ describe('slots, autosave and backups', () => {
 });
 
 describe('migration chain (risk R4)', () => {
-  it('migrates a v1 payload up to the current version', () => {
+  it('migrates a v1 payload up through every version to the current one', () => {
+    // Walks v1 -> v2 (clock and RNG state) -> v3 (armoury, pity, equipment slots).
     const v1 = { hunters: [{ id: 'h1', name: 'Old Hand' }], chronicles: [] };
     const migrated = migratePayload(v1, 1, CURRENT_SAVE_VERSION) as Record<string, unknown>;
 
-    expect(migrated['hunters']).toEqual(v1.hunters);
     expect(migrated['clock']).toEqual({ tick: 0, accumulatorMs: 0 });
     expect(migrated['rngStreams']).toEqual({});
+    expect(migrated['armoury']).toEqual({ items: [], cardCounts: {}, cardsSeen: [] });
+    expect(migrated['lootPity']).toEqual({ sinceTier: 0 });
+
+    // The hunter is carried through with its original fields intact and the new equipment
+    // map added — a migration adds structure, it does not invent or discard data.
+    const hunters = migrated['hunters'] as Record<string, unknown>[];
+    expect(hunters).toHaveLength(1);
+    expect(hunters[0]).toMatchObject({ id: 'h1', name: 'Old Hand' });
+    expect(hunters[0]?.['equipment']).toEqual({
+      weapon: null,
+      offhand: null,
+      head: null,
+      body: null,
+      hands: null,
+      feet: null,
+      trinket: null,
+    });
+  });
+
+  it('does not overwrite equipment a hunter already has', () => {
+    // Idempotence matters: a v2 save written after the Hunter type gained equipment (but
+    // before the version bump landed) must not have its gear wiped.
+    const v2 = {
+      hunters: [{ id: 'h1', name: 'Kitted', equipment: { weapon: 'itm_abc' } }],
+      chronicles: [],
+      clock: { tick: 12, accumulatorMs: 5 },
+      rngStreams: {},
+    };
+    const migrated = migratePayload(v2, 2, 3) as Record<string, unknown>;
+    const hunters = migrated['hunters'] as Record<string, unknown>[];
+
+    expect(hunters[0]?.['equipment']).toEqual({ weapon: 'itm_abc' });
+    expect(migrated['clock']).toEqual({ tick: 12, accumulatorMs: 5 });
   });
 
   it('loads a v1 envelope end to end through SaveGame', () => {

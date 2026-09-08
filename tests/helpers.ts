@@ -1,4 +1,5 @@
 import { Session } from '../src/app/Session.js';
+import { GuildCommands } from '../src/app/GuildCommands.js';
 import { MemoryStorage } from '../src/save/SaveGame.js';
 import { DebugConsole } from '../src/debug/commands.js';
 
@@ -8,6 +9,7 @@ import { DebugConsole } from '../src/debug/commands.js';
  */
 export function testSession(seed = 'test-seed'): {
   session: Session;
+  commands: GuildCommands;
   debug: DebugConsole;
 } {
   let tick = 0;
@@ -16,5 +18,9 @@ export function testSession(seed = 'test-seed'): {
     storage: new MemoryStorage(),
     now: () => ++tick,
   });
-  return { session, debug: new DebugConsole(session) };
+  return {
+    session,
+    commands: new GuildCommands(session),
+    debug: new DebugConsole(session),
+  };
 }

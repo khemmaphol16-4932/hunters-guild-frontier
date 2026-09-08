@@ -1,0 +1,79 @@
+{
+  "$comment": "REQ-EQP-001/002/003. Rarity controls how many substats an item rolls and how many sockets it has — never its main stat, which is fixed by item type (REQ-EQP-002). 'Perfect' is not a rarity: it is an item whose substats all rolled at maximum, which is why perfect items are possible but extremely rare (REQ-EQP-003).",
+  "rarities": [
+    {
+      "id": "common",
+      "name": "Common",
+      "colour": "#8c98a8",
+      "substatCount": 1,
+      "sockets": { "min": 0, "max": 0 },
+      "mainStatMultiplier": 1.0,
+      "lootWeight": 520,
+      "canCarrySet": false,
+      "canCarryUniqueEffect": false,
+      "dismantleValue": 1
+    },
+    {
+      "id": "refined",
+      "name": "Refined",
+      "colour": "#dde3ea",
+      "substatCount": 2,
+      "sockets": { "min": 0, "max": 1 },
+      "mainStatMultiplier": 1.25,
+      "lootWeight": 300,
+      "canCarrySet": false,
+      "canCarryUniqueEffect": false,
+      "dismantleValue": 3
+    },
+    {
+      "id": "rare",
+      "name": "Rare",
+      "colour": "#5b8dd6",
+      "substatCount": 3,
+      "sockets": { "min": 1, "max": 1 },
+      "mainStatMultiplier": 1.55,
+      "lootWeight": 130,
+      "canCarrySet": true,
+      "canCarryUniqueEffect": false,
+      "dismantleValue": 8
+    },
+    {
+      "id": "epic",
+      "name": "Epic",
+      "colour": "#b58bd6",
+      "substatCount": 4,
+      "sockets": { "min": 1, "max": 2 },
+      "mainStatMultiplier": 1.9,
+      "lootWeight": 42,
+      "canCarrySet": true,
+      "canCarryUniqueEffect": false,
+      "dismantleValue": 20
+    },
+    {
+      "id": "ancient",
+      "name": "Ancient",
+      "colour": "#d9a441",
+      "substatCount": 4,
+      "sockets": { "min": 2, "max": 3 },
+      "mainStatMultiplier": 2.3,
+      "lootWeight": 7,
+      "canCarrySet": true,
+      "canCarryUniqueEffect": false,
+      "dismantleValue": 60
+    },
+    {
+      "id": "legendary",
+      "name": "Legendary",
+      "colour": "#d4685f",
+      "substatCount": 5,
+      "sockets": { "min": 2, "max": 3 },
+      "mainStatMultiplier": 2.6,
+      "lootWeight": 1,
+      "canCarrySet": true,
+      "canCarryUniqueEffect": true,
+      "dismantleValue": 200,
+      "$note": "REQ-EQP-007: a legendary carries a unique effect that changes how a build works. Its main-stat multiplier is deliberately only slightly above Ancient — the reason to want one is the effect, not the numbers."
+    }
+  ],
+  "order": ["common", "refined", "rare", "epic", "ancient", "legendary"]
+}

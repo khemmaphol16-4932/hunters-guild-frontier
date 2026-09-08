@@ -1,0 +1,171 @@
+{
+  "$comment": "REQ-EQP-002: main stats are FIXED by item type. A blade always gives physical attack; rarity and refinement scale it, they never change what it is. Each type also declares its build-identity contribution — this is how equipment participates in build identity (REQ-BLD-001) with §16 weight 2.",
+  "slots": ["weapon", "offhand", "head", "body", "hands", "feet", "trinket"],
+  "types": [
+    {
+      "id": "blade",
+      "name": "Blade",
+      "slot": "weapon",
+      "mainStats": { "physicalAttack": 2.4, "accuracy": 0.5 },
+      "roleLean": { "damage": 0.7, "tank": 0.3 },
+      "rangeBand": { "melee": 1.0 },
+      "riskPostureShift": 0.04,
+      "skillAffinity": { "martial": 0.5, "physical": 0.4 },
+      "substatPool": "weapon"
+    },
+    {
+      "id": "maul",
+      "name": "Maul",
+      "slot": "weapon",
+      "mainStats": { "physicalAttack": 3.1 },
+      "roleLean": { "damage": 0.85, "control": 0.15 },
+      "rangeBand": { "melee": 1.0 },
+      "riskPostureShift": 0.08,
+      "skillAffinity": { "martial": 0.5, "physical": 0.5 },
+      "substatPool": "weapon"
+    },
+    {
+      "id": "bow",
+      "name": "Bow",
+      "slot": "weapon",
+      "mainStats": { "physicalAttack": 2.1, "critChance": 0.12 },
+      "roleLean": { "damage": 0.8, "control": 0.2 },
+      "rangeBand": { "ranged": 0.85, "mid": 0.15 },
+      "riskPostureShift": -0.02,
+      "skillAffinity": { "precision": 0.6, "physical": 0.3 },
+      "substatPool": "weapon"
+    },
+    {
+      "id": "stave",
+      "name": "Stave",
+      "slot": "weapon",
+      "mainStats": { "magicAttack": 2.6, "healingPower": 0.8 },
+      "roleLean": { "damage": 0.45, "healer": 0.4, "control": 0.15 },
+      "rangeBand": { "ranged": 0.6, "mid": 0.4 },
+      "riskPostureShift": -0.02,
+      "skillAffinity": { "arcane": 0.6, "magical": 0.4 },
+      "substatPool": "weapon"
+    },
+    {
+      "id": "shield",
+      "name": "Shield",
+      "slot": "offhand",
+      "mainStats": { "physicalDefense": 1.8, "maxHp": 6.0 },
+      "roleLean": { "tank": 0.9, "support": 0.1 },
+      "rangeBand": { "melee": 1.0 },
+      "riskPostureShift": -0.08,
+      "skillAffinity": { "defensive": 0.7, "threat": 0.3 },
+      "substatPool": "armour"
+    },
+    {
+      "id": "focus",
+      "name": "Focus",
+      "slot": "offhand",
+      "mainStats": { "magicAttack": 1.3, "maxResource": 4.0 },
+      "roleLean": { "healer": 0.4, "damage": 0.35, "control": 0.25 },
+      "rangeBand": { "ranged": 0.5, "mid": 0.5 },
+      "riskPostureShift": 0.02,
+      "skillAffinity": { "arcane": 0.6, "restorative": 0.4 },
+      "substatPool": "armour"
+    },
+    {
+      "id": "helm",
+      "name": "Helm",
+      "slot": "head",
+      "mainStats": { "physicalDefense": 1.0, "magicDefense": 1.0 },
+      "roleLean": { "tank": 0.6, "support": 0.4 },
+      "rangeBand": {},
+      "riskPostureShift": -0.02,
+      "skillAffinity": { "defensive": 0.4 },
+      "substatPool": "armour"
+    },
+    {
+      "id": "cuirass",
+      "name": "Cuirass",
+      "slot": "body",
+      "mainStats": { "physicalDefense": 2.2, "maxHp": 9.0 },
+      "roleLean": { "tank": 0.85, "support": 0.15 },
+      "rangeBand": { "melee": 0.7, "mid": 0.3 },
+      "riskPostureShift": -0.06,
+      "skillAffinity": { "defensive": 0.6 },
+      "substatPool": "armour"
+    },
+    {
+      "id": "robes",
+      "name": "Robes",
+      "slot": "body",
+      "mainStats": { "magicDefense": 2.0, "maxResource": 5.0 },
+      "roleLean": { "healer": 0.45, "damage": 0.3, "control": 0.25 },
+      "rangeBand": { "ranged": 0.6, "mid": 0.4 },
+      "riskPostureShift": 0.03,
+      "skillAffinity": { "arcane": 0.5, "magical": 0.3 },
+      "substatPool": "armour"
+    },
+    {
+      "id": "gauntlets",
+      "name": "Gauntlets",
+      "slot": "hands",
+      "mainStats": { "physicalAttack": 0.7, "physicalDefense": 0.8 },
+      "roleLean": { "damage": 0.5, "tank": 0.5 },
+      "rangeBand": { "melee": 1.0 },
+      "riskPostureShift": 0.03,
+      "skillAffinity": { "martial": 0.4 },
+      "substatPool": "armour"
+    },
+    {
+      "id": "wraps",
+      "name": "Wraps",
+      "slot": "hands",
+      "mainStats": { "actionSpeed": 0.4, "critChance": 0.1 },
+      "roleLean": { "damage": 0.6, "control": 0.4 },
+      "rangeBand": { "mid": 0.5, "ranged": 0.5 },
+      "riskPostureShift": 0.05,
+      "skillAffinity": { "precision": 0.4, "mobility": 0.3 },
+      "substatPool": "armour"
+    },
+    {
+      "id": "greaves",
+      "name": "Greaves",
+      "slot": "feet",
+      "mainStats": { "physicalDefense": 0.9, "evasion": 0.6 },
+      "roleLean": { "tank": 0.55, "damage": 0.45 },
+      "rangeBand": { "melee": 0.6, "mid": 0.4 },
+      "riskPostureShift": -0.02,
+      "skillAffinity": { "defensive": 0.3, "mobility": 0.3 },
+      "substatPool": "armour"
+    },
+    {
+      "id": "boots",
+      "name": "Boots",
+      "slot": "feet",
+      "mainStats": { "evasion": 1.1, "actionSpeed": 0.3 },
+      "roleLean": { "damage": 0.5, "control": 0.3, "support": 0.2 },
+      "rangeBand": { "mid": 0.5, "ranged": 0.5 },
+      "riskPostureShift": 0.04,
+      "skillAffinity": { "mobility": 0.6 },
+      "substatPool": "armour"
+    },
+    {
+      "id": "charm",
+      "name": "Charm",
+      "slot": "trinket",
+      "mainStats": { "critChance": 0.2, "critDamage": 1.4 },
+      "roleLean": { "damage": 0.8, "control": 0.2 },
+      "rangeBand": {},
+      "riskPostureShift": 0.06,
+      "skillAffinity": { "precision": 0.4 },
+      "substatPool": "trinket"
+    },
+    {
+      "id": "sigil",
+      "name": "Sigil",
+      "slot": "trinket",
+      "mainStats": { "healingPower": 1.6, "maxResource": 3.0 },
+      "roleLean": { "healer": 0.6, "support": 0.4 },
+      "rangeBand": {},
+      "riskPostureShift": -0.05,
+      "skillAffinity": { "restorative": 0.6, "rallying": 0.2 },
+      "substatPool": "trinket"
+    }
+  ]
+}

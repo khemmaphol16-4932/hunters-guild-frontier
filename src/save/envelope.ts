@@ -15,8 +15,9 @@
 import type { Hunter } from '../core/hunter/Hunter.js';
 import type { HunterChronicle } from '../systems/hunter/Chronicle.js';
 import type { RngState } from '../core/rng.js';
+import type { Item } from '../core/items/Item.js';
 
-export const CURRENT_SAVE_VERSION = 2;
+export const CURRENT_SAVE_VERSION = 3;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -51,7 +52,26 @@ export interface SavePayloadV2 {
   readonly rngStreams: Readonly<Record<string, RngState>>;
 }
 
-export type CurrentSavePayload = SavePayloadV2;
+/**
+ * v3 — adds the guild armoury and the loot pity counter (Phase 2).
+ *
+ * Hunters gained an `equipment` slot map in the same phase. The migration fills it with
+ * empty slots rather than guessing, because a v2 save has no items to equip.
+ */
+export interface SavePayloadV3 {
+  readonly hunters: readonly Hunter[];
+  readonly chronicles: readonly HunterChronicle[];
+  readonly clock: { readonly tick: number; readonly accumulatorMs: number };
+  readonly rngStreams: Readonly<Record<string, RngState>>;
+  readonly armoury: {
+    readonly items: readonly Item[];
+    readonly cardCounts: Readonly<Record<string, number>>;
+    readonly cardsSeen: readonly string[];
+  };
+  readonly lootPity: { readonly sinceTier: number };
+}
+
+export type CurrentSavePayload = SavePayloadV3;
 
 export interface Migration {
   readonly from: number;

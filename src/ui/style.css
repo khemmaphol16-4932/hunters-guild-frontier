@@ -106,3 +106,13 @@ ul.notes.weak li { color: var(--warn); }
 .empty { color: var(--muted); font-style: italic; }
 .err { color: var(--warn); }
 .points { color: var(--accent); font-size: 11px; }
+
+/* Equipment slots */
+.slot-row {
+  display: grid; grid-template-columns: 58px 1fr 40px auto;
+  gap: 6px; align-items: center; margin-bottom: 3px;
+}
+.slot-row .slot-name { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+.slot-row .slot-item { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-row .slot-item.empty { color: var(--muted); }
+.slot-row .slot-quality { text-align: right; font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }

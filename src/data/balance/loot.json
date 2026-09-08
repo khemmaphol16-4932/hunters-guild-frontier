@@ -1,0 +1,24 @@
+{
+  "$comment": "REQ-LOT-001: weighted random with pity/protection on some systems. Rarity weights live in rarities.json; this file holds the pity rules and the conversion values that keep a duplicate rare from feeling worthless (REQ-CRD-003).",
+  "pity": {
+    "$comment": "A counter of drops since the last item at or above the pity tier. On reaching the threshold the next drop is forced to that tier. Protects against a long unlucky run without making luck irrelevant.",
+    "tier": "epic",
+    "threshold": 40,
+    "resetsOnTierOrBetter": true
+  },
+  "bossCards": {
+    "$comment": "REQ-CRD-002: 0.5% from a boss, and each boss has its own pool. Duplicate protection is separate — see conversion below.",
+    "dropChance": 0.005,
+    "duplicateProtection": {
+      "$comment": "After this many boss kills with no card, the next kill guarantees one. The counter is per boss, so farming one boss cannot advance the pity on another.",
+      "guaranteeAfterKills": 200
+    }
+  },
+  "conversion": {
+    "$comment": "REQ-CRD-003 / REQ-LOT-002: a duplicate must have a useful outcome. Dismantling yields crafting material; a duplicate boss card converts to a currency that buys a card of the player's choosing, which is what stops a 0.5% drop from ever being a dead end.",
+    "dismantleResourceId": "salvage",
+    "duplicateCardResourceId": "boss_essence",
+    "duplicateCardValue": 1,
+    "cardPurchaseCost": 8
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "$comment": "REQ-EQP-006: bonuses at 2/3/4 pieces, and they must not invalidate non-set gear. That constraint is honoured two ways — a set piece rolls its main and substats exactly like any other item of its rarity (no hidden bonus), and the tier bonuses are behavioural rather than large flat stats, so a better-rolled non-set item stays a real competitor.",
+  "sets": [
+    {
+      "id": "ashwardens",
+      "name": "Ashwarden's Vigil",
+      "description": "Worn by hunters whose job was to still be standing at the end.",
+      "tiers": [
+        {
+          "pieces": 2,
+          "description": "Threat generated is raised while below half health.",
+          "effects": [{ "type": "threatGeneration", "value": 0.2 }],
+          "identity": { "roleLean": { "tank": 1.0 }, "riskPostureShift": -0.02, "skillAffinity": { "threat": 0.3 } }
+        },
+        {
+          "pieces": 3,
+          "description": "Defensive skills cost less, so bracing is not a resource decision.",
+          "effects": [{ "type": "skillTagCost", "tag": "defensive", "value": -0.2 }],
+          "identity": { "roleLean": { "tank": 1.0 }, "riskPostureShift": -0.03, "skillAffinity": { "defensive": 0.4 } }
+        },
+        {
+          "pieces": 4,
+          "description": "The bearer will hold a position the AI would otherwise abandon.",
+          "effects": [
+            { "type": "aiWeightShift", "key": "allySafety", "value": 0.18 },
+            { "type": "aiWeightShift", "key": "survival", "value": -0.1 }
+          ],
+          "identity": { "roleLean": { "tank": 0.8, "support": 0.2 }, "riskPostureShift": 0.06, "skillAffinity": { "threat": 0.4, "defensive": 0.4 } }
+        }
+      ]
+    },
+    {
+      "id": "quietstep",
+      "name": "Quietstep",
+      "description": "Light, fast, and not where the counterattack lands.",
+      "tiers": [
+        {
+          "pieces": 2,
+          "description": "Movement and repositioning skills come up more often.",
+          "effects": [{ "type": "skillTagCost", "tag": "mobility", "value": -0.25 }],
+          "identity": { "roleLean": { "damage": 0.7, "control": 0.3 }, "riskPostureShift": 0.03, "skillAffinity": { "mobility": 0.5 } }
+        },
+        {
+          "pieces": 3,
+          "description": "Precision skills hit harder the longer the bearer avoids being hit.",
+          "effects": [{ "type": "skillTagPower", "tag": "precision", "value": 0.18 }],
+          "identity": { "roleLean": { "damage": 0.85, "control": 0.15 }, "riskPostureShift": 0.04, "skillAffinity": { "precision": 0.5 } }
+        },
+        {
+          "pieces": 4,
+          "description": "The bearer commits to openings rather than trading steadily.",
+          "effects": [
+            { "type": "aiWeightShift", "key": "burst", "value": 0.2 },
+            { "type": "aiWeightShift", "key": "consistency", "value": -0.12 }
+          ],
+          "identity": { "roleLean": { "damage": 0.9, "control": 0.1 }, "riskPostureShift": 0.08, "skillAffinity": { "precision": 0.4, "mobility": 0.4 } }
+        }
+      ]
+    },
+    {
+      "id": "lantern_order",
+      "name": "Vestments of the Lantern Order",
+      "description": "The order that went into the dark specifically to bring people back out.",
+      "tiers": [
+        {
+          "pieces": 2,
+          "description": "Restorative skills reach further.",
+          "effects": [{ "type": "skillTagPower", "tag": "restorative", "value": 0.15 }],
+          "identity": { "roleLean": { "healer": 1.0 }, "riskPostureShift": -0.02, "skillAffinity": { "restorative": 0.5 } }
+        },
+        {
+          "pieces": 3,
+          "description": "Rescues stay viable in situations that would normally be written off.",
+          "effects": [{ "type": "downedTimerBonus", "value": 0.4 }],
+          "identity": { "roleLean": { "healer": 0.6, "support": 0.4 }, "riskPostureShift": 0.03, "skillAffinity": { "rescue": 0.6 } }
+        },
+        {
+          "pieces": 4,
+          "description": "The bearer will attempt rescues most hunters decline.",
+          "effects": [
+            { "type": "aiWeightShift", "key": "allySafety", "value": 0.25 },
+            { "type": "overhealConversion", "value": 0.35 }
+          ],
+          "identity": { "roleLean": { "healer": 0.5, "support": 0.5 }, "riskPostureShift": 0.07, "skillAffinity": { "rescue": 0.5, "restorative": 0.5 } }
+        }
+      ]
+    }
+  ]
+}

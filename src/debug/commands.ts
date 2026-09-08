@@ -23,8 +23,12 @@ import { applyExperience } from '../core/hunter/leveling.js';
 import { asSkillId, type HunterId, type SkillId } from '../core/ids.js';
 import { withLevel, type DepartmentId, type Hunter } from '../core/hunter/Hunter.js';
 import { describeBuild, profileDistance } from '../systems/hunter/describeBuild.js';
-import { isErr, type Result } from '../core/result.js';
+import { err, isErr, ok, type Result } from '../core/result.js';
 import type { UseSignificance } from '../systems/skills/SkillMastery.js';
+import { EQUIPMENT_SLOTS } from '../data/itemSchema.js';
+import { asItemId } from '../core/ids.js';
+import { isPerfect, itemQuality, type Item } from '../core/items/Item.js';
+import type { GenerateOptions } from '../systems/items/ItemGenerator.js';
 
 export interface SpawnOptions {
   archetype?: string;
@@ -164,6 +168,91 @@ export class DebugConsole {
     return hunter;
   }
 
+  // --- Items (§118 "Spawn Item", "Force Loot") -------------------------------
+
+  /** §118 "Spawn Item". Generates from the loot stream so results stay reproducible. */
+  spawnItem(options: GenerateOptions): Item {
+    const item = this.session.itemGenerator.generate(this.session.streams.loot, options);
+    this.session.armoury.add(item);
+    return item;
+  }
+
+  /** §118 "Force Loot" — a batch through the real loot table, pity counter included. */
+  forceLoot(count: number, itemLevel: number): readonly Item[] {
+    const items = this.session.itemGenerator.generateMany(this.session.streams.loot, count, {
+      itemLevel,
+    });
+    this.session.armoury.addMany(items);
+    return items;
+  }
+
+  /** Grant a card directly, reporting whether the guild already had one (REQ-CRD-003). */
+  giveCard(cardId: string): Result<{ duplicate: boolean }, string> {
+    if (!this.session.cards.get(cardId)) return err(`unknown card "${cardId}"`);
+    return ok(this.session.armoury.addCard(cardId));
+  }
+
+  /**
+   * Kit a hunter out with a full set of items at their level, socketing whatever cards
+   * fit. The fastest way to produce two gear-differentiated hunters for a build comparison.
+   */
+  outfit(
+    hunterId: HunterId,
+    options: { rarity?: string; setId?: string; itemLevel?: number } = {},
+  ): Hunter {
+    const hunter = this.session.roster.require(hunterId);
+    const itemLevel = options.itemLevel ?? hunter.level;
+
+    for (const slot of EQUIPMENT_SLOTS) {
+      const item = this.spawnItem({
+        itemLevel,
+        slot,
+        ...(options.rarity !== undefined ? { rarity: options.rarity } : {}),
+        ...(options.setId !== undefined ? { setId: options.setId } : {}),
+      });
+      this.commands.equipItem(hunterId, String(item.id));
+    }
+
+    return this.session.roster.require(hunterId);
+  }
+
+  /** Socket every compatible card the guild holds into a hunter's gear. */
+  socketAvailable(hunterId: HunterId): number {
+    const hunter = this.session.roster.require(hunterId);
+    let socketed = 0;
+
+    for (const item of this.session.equipment.equippedItems(hunter)) {
+      for (const card of this.session.cards.all()) {
+        if (this.session.armoury.cardCount(card.id) <= 0) continue;
+        const current = this.session.armoury.get(item.id);
+        if (!current) break;
+        if (!this.session.cards.canSocket(current, card.id).ok) continue;
+        if (this.commands.socketCard(String(item.id), card.id).ok) socketed += 1;
+      }
+    }
+
+    return socketed;
+  }
+
+  inspectItem(itemId: string): Record<string, unknown> {
+    const item = this.session.armoury.require(asItemId(itemId));
+    return {
+      name: item.name,
+      slot: item.slot,
+      rarity: item.rarity,
+      itemLevel: item.itemLevel,
+      refinement: item.refinement,
+      quality: Math.round(itemQuality(item) * 1000) / 1000,
+      perfect: isPerfect(item, this.session.content.substats.perfectThreshold),
+      mainStats: this.session.equipment.mainStats(item),
+      substats: item.substats,
+      sockets: item.socketed,
+      setId: item.setId,
+      uniqueEffectId: item.uniqueEffectId,
+      value: this.session.armoury.sellValue(item),
+    };
+  }
+
   // --- Inspection -----------------------------------------------------------
 
   /** §118 "Inspect AI State" — the Phase 1 half: identity and derived stats. */
@@ -175,7 +264,10 @@ export class DebugConsole {
       hunter.attributes,
       hunter.level,
       this.session.content.balance.attributes,
-      { globalMultiplier: this.session.condition.statMultiplier(hunter) },
+      {
+        globalMultiplier: this.session.condition.statMultiplier(hunter),
+        flat: this.session.equipment.aggregateStats(hunter),
+      },
     );
 
     return {

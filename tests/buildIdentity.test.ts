@@ -15,6 +15,11 @@ import { testSession } from './helpers.js';
 import { ROLES } from '../src/data/schema.js';
 import { asSkillId } from '../src/core/ids.js';
 import { describeBuild, profileDistance } from '../src/systems/hunter/describeBuild.js';
+import { GuildCommands } from '../src/app/GuildCommands.js';
+import type { Session } from '../src/app/Session.js';
+
+/** Local helper for the few tests that construct commands mid-test. */
+const commandsFor = (session: Session): GuildCommands => new GuildCommands(session);
 
 /** Below this, two builds are effectively the same hunter with different numbers. */
 const MEANINGFUL_DIFFERENCE = 0.08;
@@ -362,17 +367,176 @@ describe('plain-language description (REQ-UX-003)', () => {
   });
 });
 
-describe('equipment and card contributions (DL-009)', () => {
-  it('uses null contributions in Phase 1 without distorting the profile', () => {
-    // Equipment and cards carry §16 weight 2 and 1 but contribute nothing yet. The profile
-    // must still normalise, and Phase 2 must be able to swap in real contributions without
-    // touching BuildIdentity.
-    const { session, debug } = testSession('null-contrib');
+describe('equipment and card contributions (DL-009 / conflict B7)', () => {
+  it('normalises with no equipment at all', () => {
+    // A hunter wearing nothing must still produce a coherent profile — equipment and cards
+    // carry §16 weight 2 and 1, and contributing zero must not distort the remainder.
+    const { session, debug } = testSession('no-gear');
     const hunter = debug.spawnHunter({ archetype: 'vanguard', fullyEquipped: true });
     const profile = session.buildIdentity.profileOf(session.roster.require(hunter.id));
 
     expect(ROLES.reduce((s, r) => s + (profile.roleLean[r] ?? 0), 0)).toBeCloseTo(1, 6);
     expect(profile.primaryRole).toBeDefined();
+  });
+
+  it('shifts identity when equipment is put on', () => {
+    const { session, debug } = testSession('gear-shift');
+    const hunter = debug.spawnHunter({ archetype: 'ranger', level: 60, fullyEquipped: true });
+
+    const bare = session.buildIdentity.profileOf(session.roster.require(hunter.id));
+    debug.outfit(hunter.id, { rarity: 'epic' });
+    const geared = session.buildIdentity.profileOf(session.roster.require(hunter.id));
+
+    expect(profileDistance(bare, geared)).toBeGreaterThan(0.01);
+  });
+
+  it('makes gear choice a real identity decision, not just a stat one', () => {
+    // Two identical Vanguards. One takes a shield and a maul; the other takes a stave and
+    // a focus. They should no longer read as the same kind of hunter.
+    const { session, debug } = testSession('gear-identity');
+
+    const defender = debug.spawnHunter({
+      archetype: 'vanguard',
+      personality: 'stoic',
+      level: 60,
+      fullyEquipped: true,
+    });
+    const caster = debug.spawnHunter({
+      archetype: 'vanguard',
+      personality: 'stoic',
+      level: 60,
+      fullyEquipped: true,
+    });
+
+    const before = profileDistance(
+      session.buildIdentity.profileOf(session.roster.require(defender.id)),
+      session.buildIdentity.profileOf(session.roster.require(caster.id)),
+    );
+    expect(before).toBeLessThan(0.01);
+
+    for (const [hunterId, types] of [
+      [defender.id, ['maul', 'shield', 'cuirass']],
+      [caster.id, ['stave', 'focus', 'robes']],
+    ] as const) {
+      for (const typeId of types) {
+        const item = debug.spawnItem({ itemLevel: 60, typeId, rarity: 'epic' });
+        expect(commandsFor(session).equipItem(hunterId, String(item.id)).ok).toBe(true);
+      }
+    }
+
+    const a = session.buildIdentity.profileOf(session.roster.require(defender.id));
+    const b = session.buildIdentity.profileOf(session.roster.require(caster.id));
+
+    expect(profileDistance(a, b)).toBeGreaterThan(before);
+    expect(profileDistance(a, b)).toBeGreaterThan(MEANINGFUL_DIFFERENCE);
+    expect(a.roleLean.tank ?? 0).toBeGreaterThan(b.roleLean.tank ?? 0);
+    expect(b.roleLean.healer ?? 0).toBeGreaterThan(a.roleLean.healer ?? 0);
+    expect(a.rangeBand.melee ?? 0).toBeGreaterThan(b.rangeBand.melee ?? 0);
+  });
+
+  it('lets a boss card visibly change a hunter (§131)', () => {
+    // "Holy shit, that Boss Card completely changed this Hunter" is a stated success
+    // criterion. If a boss card cannot move the profile, it is not changing the build.
+    const { session, commands, debug } = testSession('boss-card');
+    const hunter = debug.spawnHunter({
+      archetype: 'vanguard',
+      personality: 'stoic',
+      level: 60,
+      fullyEquipped: true,
+    });
+
+    const shield = debug.spawnItem({ itemLevel: 60, typeId: 'shield', rarity: 'ancient' });
+    expect(commands.equipItem(hunter.id, String(shield.id)).ok).toBe(true);
+
+    const before = session.buildIdentity.profileOf(session.roster.require(hunter.id));
+
+    debug.giveCard('warden_of_ash_card');
+    expect(commands.socketCard(String(shield.id), 'warden_of_ash_card').ok).toBe(true);
+
+    const after = session.buildIdentity.profileOf(session.roster.require(hunter.id));
+
+    expect(profileDistance(before, after)).toBeGreaterThan(0.01);
+    // The Warden's card is aggressive threat-holding: it should push both tank lean and
+    // risk posture up, which is a behavioural change, not a numeric one.
+    expect(after.roleLean.tank ?? 0).toBeGreaterThan(before.roleLean.tank ?? 0);
+    expect(after.riskPosture).toBeGreaterThan(before.riskPosture);
+  });
+
+  it('lets a legendary unique effect reshape the build (REQ-EQP-007)', () => {
+    const { session, commands, debug } = testSession('legendary-identity');
+    const hunter = debug.spawnHunter({
+      archetype: 'adept',
+      personality: 'stoic',
+      level: 60,
+      fullyEquipped: true,
+    });
+
+    const plain = debug.spawnItem({ itemLevel: 60, typeId: 'sigil', rarity: 'epic' });
+    expect(commands.equipItem(hunter.id, String(plain.id)).ok).toBe(true);
+    const before = session.buildIdentity.profileOf(session.roster.require(hunter.id));
+
+    // The Widow's Ledger: halves ordinary healing, transforms rescue. A hunter carrying it
+    // should read as a rescue specialist rather than a steady healer.
+    const legendary = {
+      ...debug.spawnItem({ itemLevel: 60, typeId: 'sigil', rarity: 'legendary' }),
+      uniqueEffectId: 'widows_ledger',
+    };
+    session.armoury.update(legendary);
+    expect(commands.equipItem(hunter.id, String(legendary.id)).ok).toBe(true);
+
+    const after = session.buildIdentity.profileOf(session.roster.require(hunter.id));
+
+    expect(profileDistance(before, after)).toBeGreaterThan(0.005);
+    expect(after.skillAffinity['rescue'] ?? 0).toBeGreaterThan(
+      before.skillAffinity['rescue'] ?? 0,
+    );
+    expect(after.riskPosture).toBeGreaterThan(before.riskPosture);
+  });
+
+  it('lets a completed set change identity beyond its individual pieces', () => {
+    const { session, commands, debug } = testSession('set-identity');
+    const hunter = debug.spawnHunter({
+      archetype: 'vanguard',
+      personality: 'stoic',
+      level: 60,
+      fullyEquipped: true,
+    });
+
+    // Three pieces of one set, then the fourth. Only the last one completes the 4-piece
+    // tier, which is the tier that shifts an AI weight.
+    const slots = ['head', 'body', 'hands', 'feet'] as const;
+    const items = slots.map((slot) =>
+      debug.spawnItem({ itemLevel: 60, slot, rarity: 'epic', setId: 'ashwardens' }),
+    );
+
+    for (const item of items.slice(0, 3)) {
+      expect(commands.equipItem(hunter.id, String(item.id)).ok).toBe(true);
+    }
+    const threePieces = session.buildIdentity.profileOf(session.roster.require(hunter.id));
+
+    const fourth = items[3];
+    expect(fourth).toBeDefined();
+    if (!fourth) return;
+    expect(commands.equipItem(hunter.id, String(fourth.id)).ok).toBe(true);
+    const fourPieces = session.buildIdentity.profileOf(session.roster.require(hunter.id));
+
+    expect(profileDistance(threePieces, fourPieces)).toBeGreaterThan(0);
+    expect(fourPieces.riskPosture).toBeGreaterThan(threePieces.riskPosture);
+  });
+
+  it('keeps the profile normalised however much gear is worn', () => {
+    const { session, debug } = testSession('gear-normalised');
+    const hunter = debug.spawnHunter({ archetype: 'vanguard', level: 60, fullyEquipped: true });
+
+    debug.outfit(hunter.id, { rarity: 'ancient', setId: 'ashwardens' });
+    debug.giveCard('bulwark_sigil');
+    debug.giveCard('counterpoise');
+    debug.socketAvailable(hunter.id);
+
+    const profile = session.buildIdentity.profileOf(session.roster.require(hunter.id));
+    expect(ROLES.reduce((s, r) => s + (profile.roleLean[r] ?? 0), 0)).toBeCloseTo(1, 6);
+    expect(profile.riskPosture).toBeGreaterThanOrEqual(0.05);
+    expect(profile.riskPosture).toBeLessThanOrEqual(0.95);
   });
 });
 
