@@ -1,0 +1,61 @@
+{
+  "$comment": "Innate traits granted at generation (REQ-HUN-009). Legacy traits earned from chronicle events (REQ-LEG-004) use the same schema with origin: 'legacy' and arrive in Phase 8.",
+  "traits": [
+    {
+      "id": "quick_study",
+      "name": "Quick Study",
+      "origin": "innate",
+      "description": "Learns from doing faster than most.",
+      "effects": { "masteryGainMultiplier": 1.25 }
+    },
+    {
+      "id": "iron_stomach",
+      "name": "Iron Stomach",
+      "origin": "innate",
+      "description": "Suffers far less from hunger in the field.",
+      "effects": { "hungerRateMultiplier": 0.6 }
+    },
+    {
+      "id": "tireless",
+      "name": "Tireless",
+      "origin": "innate",
+      "description": "Recovers from fatigue unusually quickly.",
+      "effects": { "fatigueRecoveryMultiplier": 1.4 }
+    },
+    {
+      "id": "battle_born",
+      "name": "Battle-Born",
+      "origin": "innate",
+      "description": "Grows more dangerous the longer a fight lasts.",
+      "effects": { "riskPostureShift": 0.06, "sustainedCombatBonus": 0.1 }
+    },
+    {
+      "id": "glass_nerves",
+      "name": "Glass Nerves",
+      "origin": "innate",
+      "description": "Capable, but rattled by danger. Morale swings hard.",
+      "effects": { "moraleVolatility": 1.5, "riskPostureShift": -0.08 }
+    },
+    {
+      "id": "sure_hands",
+      "name": "Sure Hands",
+      "origin": "innate",
+      "description": "Rarely fumbles a difficult action.",
+      "effects": { "reliabilityBonus": 0.08 }
+    },
+    {
+      "id": "loyal",
+      "name": "Loyal",
+      "origin": "innate",
+      "description": "Forms strong bonds with fellow hunters, and fights harder beside them.",
+      "effects": { "friendshipGainMultiplier": 1.5, "allySafetyWeightShift": 0.06 }
+    },
+    {
+      "id": "born_leader",
+      "name": "Born Leader",
+      "origin": "innate",
+      "description": "Makes the hunters around them better. Strong Department Head material.",
+      "effects": { "partySupportBonus": 0.08, "departmentHeadAptitude": 0.2 }
+    }
+  ]
+}

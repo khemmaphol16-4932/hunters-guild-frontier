@@ -1,0 +1,92 @@
+{
+  "$comment": "REQ-CLS-004/005, REQ-SKL-005. Only SOME skills cross class boundaries. Compatibility lives here, never in code. defaultPolicy is deny — a skill with no entry cannot be learned by anyone, which fails loudly rather than silently granting access.",
+  "defaultPolicy": "deny",
+  "rules": [
+    {
+      "skill": "shield_bash",
+      "archetypes": ["vanguard"],
+      "advancedClasses": ["sentinel", "templar"],
+      "specializations": [],
+      "crossClass": false
+    },
+    {
+      "skill": "taunt",
+      "archetypes": ["vanguard"],
+      "advancedClasses": ["sentinel", "templar"],
+      "specializations": ["warden", "bulwark"],
+      "crossClass": false
+    },
+    {
+      "skill": "guard_stance",
+      "archetypes": ["vanguard"],
+      "advancedClasses": ["sentinel", "templar", "skirmisher"],
+      "specializations": [],
+      "crossClass": true,
+      "$note": "A defensive stance is the archetypal cross-class skill — a Skirmisher can learn it, an Invoker cannot."
+    },
+    {
+      "skill": "mend",
+      "archetypes": ["adept"],
+      "advancedClasses": ["mender"],
+      "specializations": [],
+      "crossClass": false
+    },
+    {
+      "skill": "renewal",
+      "archetypes": [],
+      "advancedClasses": ["mender"],
+      "specializations": ["lifebinder", "field_medic"],
+      "crossClass": false
+    },
+    {
+      "skill": "drag_to_safety",
+      "archetypes": ["vanguard", "adept", "ranger"],
+      "advancedClasses": ["sentinel", "templar", "mender", "skirmisher", "marksman"],
+      "specializations": [],
+      "crossClass": true,
+      "$note": "Rescue must be broadly available so that rescue viability is a genuine tactical question rather than a class lottery (REQ-CBT-013)."
+    },
+    {
+      "skill": "ember_lance",
+      "archetypes": [],
+      "advancedClasses": ["invoker"],
+      "specializations": ["pyromancer"],
+      "crossClass": false
+    },
+    {
+      "skill": "frost_chain",
+      "archetypes": [],
+      "advancedClasses": ["invoker"],
+      "specializations": ["frostweaver"],
+      "crossClass": false
+    },
+    {
+      "skill": "riposte",
+      "archetypes": [],
+      "advancedClasses": ["templar", "skirmisher", "sentinel"],
+      "specializations": ["duelist"],
+      "crossClass": true
+    },
+    {
+      "skill": "piercing_shot",
+      "archetypes": ["ranger"],
+      "advancedClasses": ["marksman"],
+      "specializations": ["sharpshooter", "trapper"],
+      "crossClass": false
+    },
+    {
+      "skill": "rally",
+      "archetypes": [],
+      "advancedClasses": ["templar", "mender"],
+      "specializations": ["standard_bearer"],
+      "crossClass": true
+    },
+    {
+      "skill": "last_stand",
+      "archetypes": [],
+      "advancedClasses": ["sentinel", "templar", "skirmisher"],
+      "specializations": [],
+      "crossClass": true
+    }
+  ]
+}

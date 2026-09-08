@@ -1,0 +1,118 @@
+# Development Roadmap
+
+Ordered by the dependency graph. Each task carries Goal / Dependencies / Modules / Test criteria / Definition of Done (§134). Phases follow §122.
+
+**Status key:** ✅ done · 🔨 in progress · ⬜ not started
+
+---
+
+## MVP scope split (§132-E)
+
+### Must Have — the MVP is not playable without these
+Hunter model · attributes · levels · class chain · skills · skill loadout · mastery · build identity · equipment + substats · cards (minimal) · party of 5 · party templates · real-time combat · threat · status (subset) · healing · downed/rescue/death · hunter AI pipeline · hard constraints · expedition generation · branching routes · events (subset) · loot · one region with 2 zone tiers · town grid · a handful of buildings · recruitment · gold + 2 resources · guild policy (subset) · save/load · debug console.
+
+### Should Have — needed for the vertical slice to be *fun*
+Chronicle · AI decision log · combat replay timeline · guild report · departments · research (small tree) · contracts · reputation · crafting · market · population · town hunting · offline simulation · 4 zone tiers · bosses.
+
+### Later — full game, not prototype
+World bosses · dungeons · factions · full research tree · defense events · friendship · behavior memory · guild mastery · capability vector · monument · full event catalogue · isometric pixel-art presentation · audio.
+
+### Endgame
+Legacy · NG+ · generational hunters · mentors · legacy traits · endless scaling · challenge contracts · perfect equipment chase · luxury/prestige sinks.
+
+---
+
+## Phase 0 — Design definition ✅
+
+| Task | Deliverable | DoD |
+|---|---|---|
+| P0.1 ✅ | `DESIGN_BIBLE.md` | every spec section mapped to a requirement ID |
+| P0.2 ✅ | `SYSTEM_MAP.md` | every §115 system has a layer, module and owner |
+| P0.3 ✅ | `DEPENDENCY_GRAPH.md` | graph is acyclic; build order derived |
+| P0.4 ✅ | `CONFLICT_AUDIT.md` | all §128 conflicts + newly found ones resolved |
+| P0.5 ✅ | `RISK_AUDIT.md` | risks ranked with mitigations assigned to phases |
+| P0.6 ✅ | this roadmap | MVP scope split; tasks have DoD |
+
+---
+
+## Phase 1 — RPG Foundation ✅
+
+**Goal.** A Hunter exists, grows, learns, specializes, and has a *legible identity* — provable by test and visible in a dashboard.
+
+| Task | Goal | Depends on | Modules | Test criteria | DoD |
+|---|---|---|---|---|---|
+| P1.1 ✅ | Deterministic foundations | — | `core/rng`, `core/clock`, `core/events`, `core/ids`, `core/result` | same seed → identical stream; clock steps fixed; events typed | no `Math.random()` outside `debug/`, enforced by test |
+| P1.2 ✅ | Data layer | P1.1 | `data/schema`, `data/loader`, all JSON | every content file validates; malformed data fails loudly at load | zero balance constants in code |
+| P1.3 ✅ | Attributes & derived stats | P1.2 | `core/hunter/attributes` | fixture table of attribute spreads → expected derived stats | formulas read from `balance/attributes.json` |
+| P1.4 ✅ | Levels, points, respec | P1.3 | `core/hunter/leveling` | XP curve monotonic; points match level; respec round-trips | rebirth behind an interface, unimplemented |
+| P1.5 ✅ | Potential | P1.1, P1.2 | `core/hunter/potential` | deterministic under seed; composite, not scalar | legendary tier is composite (REQ-HUN-009) |
+| P1.6 ✅ | Hunter aggregate | P1.3–P1.5 | `core/hunter/Hunter` | construction, immutable updates | carries every REQ-HUN-006 field or a typed placeholder |
+| P1.7 ✅ | Class chain | P1.2 | `systems/class/ClassSystem` | legal advancement accepted, illegal rejected | 3 archetypes × advanced × specialization in data |
+| P1.8 ✅ | Skill registry & knowledge | P1.2, P1.7 | `systems/skills/SkillRegistry`, `SkillKnowledge` | unlimited knowledge; loadout capped 6–8; unknown skill rejected | no `reaction` category exists |
+| P1.9 ✅ | Skill books & compatibility | P1.8 | `systems/skills/SkillBooks` | cross-class matrix honored per data | compatibility fully data-driven |
+| P1.10 ✅ | Skill mastery | P1.8 | `systems/skills/SkillMastery` | monotonic, uncapped points, saturating effect, survives save | per-skill effect mapping in data |
+| P1.11 ✅ | Personality & condition | P1.2 | `systems/hunter/Personality`, `Condition` | modifiers bounded by config clamp | personality never produces a filter |
+| P1.12 ✅ | **Build identity** | P1.6–P1.11 | `systems/hunter/BuildIdentity` | same class + different attributes/mastery → measurably different profile | equipment/card contributions behind interfaces (null objects) |
+| P1.13 ✅ | Chronicle | P1.1 | `systems/hunter/Chronicle` | recording an entry changes no derived stat | pure subscriber, no outbound edges |
+| P1.14 ✅ | Save + migration chain | P1.6–P1.13 | `save/SaveGame`, `save/migrations/` | round-trip identity; v1→v2 migration test | version bump requires migration + test |
+| P1.15 ✅ | Debug console | all | `debug/` | §118 subset callable | not reachable in a production build |
+| P1.16 ✅ | Build dashboard | P1.12 | `ui/screens/buildDashboard` | renders two hunters with visibly different identities | no game logic in UI |
+| P1.17 ✅ | Architecture test | P1.1 | `tests/architecture.test.ts` | layer violation fails; `Math.random()` fails | runs in `npm test` |
+
+**Phase DoD.** `npm run typecheck` clean · full suite green · dashboard shows two same-class hunters with different build identities in a browser · DEVLOG and DECISION_LOG updated.
+
+---
+
+## Phase 2 — Equipment ⬜
+
+Slots · item definitions · rarity · main stats · substats · cards · set bonuses · refinement (safe/risk) · item generation · trading · sell/dismantle/convert.
+
+Key DoD: substat randomization is seeded and reproducible; refinement risk zone is a real risk/reward decision; `BuildIdentity` picks up real equipment and card contributions with **no change to its interface** (validates the B7 resolution).
+
+## Phase 3 — Hunter System ⬜
+
+Recruitment pools · potential display · personality · traits · growth · preferred role/department · hunger · fatigue · morale · friendship · chronicle expansion.
+
+Key DoD: regional pools produce visibly different recruits (REQ-RCT-002); an exceptional recruit is legible at a glance.
+
+## Phase 4 — Combat + AI ⬜
+
+Real-time combat · entities · targeting · threat · skills in combat · status · healing · downed · rescue · death · positioning · environment · **hunter AI** · party synergy · combat chronicle.
+
+Key DoD: all §140 A–M scenarios produce the specified behavior; scenarios K and L (identical builds differing only in personality, then only in mastery) produce *different* decisions. This is the phase that proves or disproves R2.
+
+## Phase 5 — World + Expedition ⬜
+
+World map · regions · zone tiers · expedition generation · branching · events · dungeons · bosses · world bosses · discovery · exploration memory.
+
+Key DoD: an expedition completes end-to-end in ≤10 minutes with continue/retreat honoring hard constraints.
+
+## Phase 6 — Town + Guild ⬜
+
+Grid · buildings · guild hall · population · housing · services · departments · policies · town hunting · defense · recruitment hall · research.
+
+Key DoD: the town is physically observable and hunters visibly move through it (REQ-PRIME-006).
+
+## Phase 7 — Economy ⬜
+
+Gold · resources · food · production · crafting · market · contracts · reputation · factions · economy simulation.
+
+Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
+
+## Phase 8 — Progression ⬜
+
+Guild mastery · capability · reputation depth · research depth · legacy · NG+ · generational hunters · mentors · legacy traits · endless scaling.
+
+## Phase 9 — UX / Presentation ⬜
+
+Progressive UI · build dashboard polish · chronicle · combat timeline · AI explain · guild report · notifications · town and world presentation · **isometric pixel-art** · audio hooks · accessibility.
+
+## Phase 10 — Technical Hardening ⬜
+
+Performance · save migration · memory · AI profiling · simulation profiling · content validation · error handling · recovery · automated and regression testing.
+
+---
+
+## Vertical slice gate (§124)
+
+Before Phase 7, the project must demonstrate Town → Expedition → Combat → Return with a real town, real hunters, a real party, real AI, a real expedition, real environment, real combat, real loot, a real chronicle and a real upgrade loop — using the actual architecture, no fake systems.

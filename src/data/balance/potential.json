@@ -1,0 +1,39 @@
+{
+  "$comment": "REQ-HUN-008/009, DL-011. Potential is composite (§17): a legendary hunter is not simply the one with the biggest numbers. Tier is derived from the whole facet set, not from a single scalar.",
+  "facets": {
+    "$comment": "Each facet rolls independently. attributeCeiling raises the useful cap of attribute growth; growthRate affects points gained; affinity biases which build the hunter grows into naturally.",
+    "attributeCeiling": { "min": 0.75, "max": 1.45 },
+    "growthRate": { "min": 0.8, "max": 1.35 },
+    "masteryAptitude": { "min": 0.75, "max": 1.5 },
+    "resilience": { "min": 0.8, "max": 1.3 }
+  },
+  "traitSlots": {
+    "$comment": "Number of innate traits. More traits means more identity, not necessarily more power.",
+    "weights": [
+      { "value": 0, "weight": 20 },
+      { "value": 1, "weight": 50 },
+      { "value": 2, "weight": 25 },
+      { "value": 3, "weight": 5 }
+    ]
+  },
+  "uniqueSkillChance": 0.04,
+  "tiers": {
+    "$comment": "Tier is assigned by a composite score over all facets plus trait count plus unique-skill presence. Thresholds are placeholders pending recruitment-feel testing (Phase 3).",
+    "order": ["common", "promising", "exceptional", "prodigy", "legendary"],
+    "thresholds": {
+      "common": 0.0,
+      "promising": 0.42,
+      "exceptional": 0.6,
+      "prodigy": 0.74,
+      "legendary": 0.87
+    },
+    "compositeWeights": {
+      "attributeCeiling": 0.28,
+      "growthRate": 0.22,
+      "masteryAptitude": 0.26,
+      "resilience": 0.14,
+      "traitCount": 0.06,
+      "uniqueSkill": 0.04
+    }
+  }
+}

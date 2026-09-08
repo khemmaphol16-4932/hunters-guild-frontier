@@ -1,0 +1,85 @@
+{
+  "$comment": "REQ-HUN-001/002, DL-011. Every value here is placeholder-calibrated and expected to be retuned by the balance harness. No attribute maths may be hardcoded in TypeScript.",
+  "attributes": ["str", "agi", "vit", "dex", "int", "luk"],
+  "startingValue": 5,
+  "pointsPerLevel": 3,
+  "startingPoints": 5,
+  "minLevel": 1,
+  "maxLevel": 100,
+  "xpCurve": {
+    "base": 100,
+    "exponent": 1.55
+  },
+  "respec": {
+    "resourceId": "insight_crystal",
+    "costPerPointMoved": 1,
+    "freeMovesPerLevel": 0
+  },
+  "derived": {
+    "maxHp": {
+      "base": 80,
+      "perLevel": 6,
+      "from": { "vit": 9, "str": 2 }
+    },
+    "maxResource": {
+      "base": 40,
+      "perLevel": 2,
+      "from": { "int": 4, "vit": 1 }
+    },
+    "physicalAttack": {
+      "base": 5,
+      "perLevel": 1,
+      "from": { "str": 2.2, "dex": 0.6 }
+    },
+    "magicAttack": {
+      "base": 5,
+      "perLevel": 1,
+      "from": { "int": 2.6, "dex": 0.3 }
+    },
+    "physicalDefense": {
+      "base": 3,
+      "perLevel": 0.5,
+      "from": { "vit": 1.4, "str": 0.3 }
+    },
+    "magicDefense": {
+      "base": 3,
+      "perLevel": 0.5,
+      "from": { "int": 1.2, "vit": 0.5 }
+    },
+    "accuracy": {
+      "base": 75,
+      "perLevel": 1,
+      "from": { "dex": 1.5, "luk": 0.3 }
+    },
+    "evasion": {
+      "base": 10,
+      "perLevel": 0.5,
+      "from": { "agi": 1.4, "luk": 0.25 }
+    },
+    "critChance": {
+      "base": 1,
+      "perLevel": 0,
+      "from": { "luk": 0.35, "dex": 0.1 }
+    },
+    "critDamage": {
+      "base": 150,
+      "perLevel": 0,
+      "from": { "luk": 0.4, "str": 0.2 }
+    },
+    "actionSpeed": {
+      "base": 100,
+      "perLevel": 0,
+      "from": { "agi": 0.5, "dex": 0.2 }
+    },
+    "healingPower": {
+      "base": 5,
+      "perLevel": 0.5,
+      "from": { "int": 1.8, "luk": 0.4 }
+    }
+  },
+  "caps": {
+    "critChance": 90,
+    "actionSpeed": 190,
+    "evasion": 300
+  }
+}

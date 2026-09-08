@@ -1,0 +1,108 @@
+/* Functional presentation only. Isometric pixel-art direction (REQ-UX-007) is Phase 9;
+   this exists to make Phase 1 systems observable, not to look like the finished game. */
+
+:root {
+  --bg: #14171c;
+  --panel: #1c2129;
+  --panel-2: #232a34;
+  --line: #2e3742;
+  --text: #dde3ea;
+  --muted: #8c98a8;
+  --accent: #d9a441;
+  --tank: #5b8dd6;
+  --healer: #5fbf87;
+  --damage: #d4685f;
+  --support: #b58bd6;
+  --control: #4fb0b8;
+  --warn: #d97b5f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.5 "Segoe UI", system-ui, sans-serif;
+}
+
+#app { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+}
+header h1 { margin: 0; font-size: 15px; letter-spacing: 0.04em; color: var(--accent); font-weight: 600; }
+header .seed { color: var(--muted); font-size: 11px; font-family: ui-monospace, monospace; }
+header .spacer { flex: 1; }
+
+button {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  padding: 5px 11px; border-radius: 3px; cursor: pointer; font-size: 12px;
+}
+button:hover { border-color: var(--accent); }
+button:disabled { opacity: 0.4; cursor: default; border-color: var(--line); }
+button.small { padding: 1px 7px; font-size: 12px; line-height: 1.4; }
+
+main { display: grid; grid-template-columns: 250px 1fr; min-height: 0; }
+
+#roster { background: var(--panel); border-right: 1px solid var(--line); padding: 10px; overflow-y: auto; }
+#roster h2, .card h3 {
+  margin: 0 0 8px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--muted); font-weight: 600;
+}
+
+.hunter-row {
+  padding: 7px 9px; border: 1px solid transparent; border-radius: 3px;
+  cursor: pointer; margin-bottom: 3px;
+}
+.hunter-row:hover { background: var(--panel-2); }
+.hunter-row.selected { background: var(--panel-2); border-color: var(--accent); }
+.hunter-row.compare { border-color: var(--control); }
+.hunter-row .name { font-weight: 600; }
+.hunter-row .meta { color: var(--muted); font-size: 11px; }
+
+#detail { padding: 14px 18px; overflow-y: auto; display: grid; gap: 14px; align-content: start; }
+
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; }
+
+.headline { font-size: 17px; font-weight: 600; margin: 0 0 2px; }
+.subhead { color: var(--muted); margin: 0 0 4px; }
+
+table.kv { width: 100%; border-collapse: collapse; }
+table.kv td { padding: 3px 0; vertical-align: middle; }
+table.kv td:first-child { color: var(--muted); width: 42%; }
+table.kv td.num { text-align: right; font-family: ui-monospace, monospace; }
+
+.bar { position: relative; height: 14px; background: var(--panel-2); border-radius: 2px; overflow: hidden; }
+.bar > span { position: absolute; inset: 0 auto 0 0; display: block; }
+.bar.tank > span { background: var(--tank); }
+.bar.healer > span { background: var(--healer); }
+.bar.damage > span { background: var(--damage); }
+.bar.support > span { background: var(--support); }
+.bar.control > span { background: var(--control); }
+.bar.neutral > span { background: var(--accent); }
+
+.bar-row { display: grid; grid-template-columns: 78px 1fr 44px; gap: 8px; align-items: center; margin-bottom: 4px; }
+.bar-row .label { color: var(--muted); }
+.bar-row .value { text-align: right; font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+
+.tag {
+  display: inline-block; padding: 1px 7px; margin: 0 4px 4px 0; border-radius: 10px;
+  background: var(--panel-2); border: 1px solid var(--line); font-size: 11px;
+}
+.tag.equipped { border-color: var(--accent); color: var(--accent); }
+
+ul.notes { margin: 4px 0 0; padding-left: 17px; }
+ul.notes li { margin-bottom: 3px; }
+ul.notes.weak li { color: var(--warn); }
+
+.attr-row { display: grid; grid-template-columns: 44px 1fr auto auto; gap: 6px; align-items: center; margin-bottom: 3px; }
+.attr-row .key { color: var(--muted); text-transform: uppercase; font-size: 11px; }
+.attr-row .val { font-family: ui-monospace, monospace; text-align: right; min-width: 26px; }
+
+.empty { color: var(--muted); font-style: italic; }
+.err { color: var(--warn); }
+.points { color: var(--accent); font-size: 11px; }

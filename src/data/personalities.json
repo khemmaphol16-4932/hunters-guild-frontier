@@ -1,0 +1,59 @@
+{
+  "$comment": "REQ-HUN-010, DL-007. Every modifier here is a WEIGHT. None is a filter. Values are clamped by balance/personality.json before use, so a personality can break a near-tie but never overturn Guild Policy.",
+  "personalities": [
+    {
+      "id": "cautious",
+      "name": "Cautious",
+      "description": "Prefers a survivable outcome over a decisive one. Retreats early, heals early.",
+      "riskPostureShift": -0.15,
+      "roleLeanShift": { "tank": 0.05, "healer": 0.05 },
+      "utilityWeightShift": { "survival": 0.12, "aggression": -0.1 },
+      "moraleResilience": 0.9
+    },
+    {
+      "id": "reckless",
+      "name": "Reckless",
+      "description": "Commits hard and worries later. Excellent when it works, expensive when it does not.",
+      "riskPostureShift": 0.16,
+      "roleLeanShift": { "damage": 0.08 },
+      "utilityWeightShift": { "aggression": 0.14, "survival": -0.12 },
+      "moraleResilience": 1.1
+    },
+    {
+      "id": "stoic",
+      "name": "Stoic",
+      "description": "Unmoved by circumstance. Consistent performance regardless of morale.",
+      "riskPostureShift": 0.0,
+      "roleLeanShift": { "tank": 0.04 },
+      "utilityWeightShift": { "consistency": 0.12 },
+      "moraleResilience": 1.4
+    },
+    {
+      "id": "protective",
+      "name": "Protective",
+      "description": "Weighs ally safety above personal efficiency. Attempts rescues others would decline.",
+      "riskPostureShift": 0.05,
+      "roleLeanShift": { "support": 0.09, "healer": 0.05 },
+      "utilityWeightShift": { "allySafety": 0.15, "personalOutput": -0.08 },
+      "moraleResilience": 1.0
+    },
+    {
+      "id": "methodical",
+      "name": "Methodical",
+      "description": "Optimises resource use and setup over immediate output. Slow starts, strong finishes.",
+      "riskPostureShift": -0.06,
+      "roleLeanShift": { "control": 0.07 },
+      "utilityWeightShift": { "efficiency": 0.13, "burst": -0.09 },
+      "moraleResilience": 1.05
+    },
+    {
+      "id": "opportunist",
+      "name": "Opportunist",
+      "description": "Waits for openings and spends everything when one appears.",
+      "riskPostureShift": 0.09,
+      "roleLeanShift": { "damage": 0.07, "control": 0.03 },
+      "utilityWeightShift": { "burst": 0.14, "consistency": -0.1 },
+      "moraleResilience": 0.95
+    }
+  ]
+}

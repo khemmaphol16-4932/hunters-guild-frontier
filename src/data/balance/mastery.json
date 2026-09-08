@@ -1,0 +1,23 @@
+{
+  "$comment": "REQ-MAS-001/002/003, DL-005. Points are permanent and unbounded; effects saturate. effect(points) = maxBonus * points / (points + halfPoint).",
+  "gainPerUse": 1,
+  "gainMultiplierBySignificance": {
+    "routine": 1,
+    "difficult": 2,
+    "decisive": 4
+  },
+  "milestones": [10, 25, 50, 100, 250, 500, 1000, 2500],
+  "effectCurves": {
+    "power": { "maxBonus": 0.45, "halfPoint": 400 },
+    "efficiency": { "maxBonus": 0.35, "halfPoint": 350 },
+    "cooldown": { "maxBonus": 0.3, "halfPoint": 500 },
+    "reliability": { "maxBonus": 0.25, "halfPoint": 300 },
+    "duration": { "maxBonus": 0.4, "halfPoint": 450 },
+    "range": { "maxBonus": 0.2, "halfPoint": 600 }
+  },
+  "buildIdentityInfluence": {
+    "$comment": "How strongly mastery sharpens a hunter's skill affinities. Saturating in the same way.",
+    "maxWeight": 1.0,
+    "halfPoint": 250
+  }
+}

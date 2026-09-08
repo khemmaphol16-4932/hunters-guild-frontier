@@ -1,0 +1,37 @@
+{
+  "$comment": "REQ-CHR-001/002/003, DL-006. Counters are permanent and unbounded; notable entries are a bounded significance-ranked ring. Nothing here converts history into mechanical effect — that is BehaviorMemory's job alone.",
+  "counters": [
+    "expeditions",
+    "bossesDefeated",
+    "nearDeaths",
+    "timesRescued",
+    "rescuesPerformed",
+    "rareItemsFound",
+    "companionsLost",
+    "longestExpeditionSeconds",
+    "zonesFirstEntered"
+  ],
+  "notableRing": {
+    "capacity": 40,
+    "$comment": "Entries below minSignificance never enter the ring. When full, the lowest-significance entry is displaced."
+    ,
+    "minSignificance": 2
+  },
+  "significance": {
+    "$comment": "1 = routine, 5 = historic. Drives both ring retention and whether the entry is worth surfacing to the player (REQ-UX-005).",
+    "firstZoneEntry": 3,
+    "firstRedZone": 4,
+    "firstBlackZone": 5,
+    "bossDefeated": 4,
+    "worldBossDefeated": 5,
+    "nearDeath": 3,
+    "rescued": 3,
+    "rescuePerformed": 3,
+    "companionLost": 5,
+    "rareDiscovery": 3,
+    "legendaryEquipment": 4,
+    "masteryMilestone": 2,
+    "levelMilestone": 2,
+    "classAdvancement": 3
+  }
+}

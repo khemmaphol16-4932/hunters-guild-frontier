@@ -1,0 +1,18 @@
+{
+  "$comment": "Hunter name pools. Regional pools (REQ-RCT-002 — different regions produce clearly different hunter pools) arrive in Phase 3; this is the single default pool the prototype recruits from.",
+  "pools": [
+    {
+      "id": "frontier",
+      "given": [
+        "Aldric", "Bryn", "Cassia", "Doran", "Elsa", "Fenn", "Gerda", "Halvor",
+        "Isolde", "Jorund", "Ketil", "Liesel", "Maren", "Nils", "Orla", "Perrin",
+        "Quill", "Roskva", "Sten", "Thora", "Ulf", "Verena", "Wulfric", "Yvette"
+      ],
+      "family": [
+        "Ashdown", "Brackwater", "Coldfell", "Drakemoor", "Eastmarch", "Fernhollow",
+        "Greyholt", "Hartwind", "Ironvale", "Karsthold", "Lowmarsh", "Mirefen",
+        "Northgate", "Oakenshield", "Pinecross", "Ravensmoot", "Stonebrook", "Thornbury"
+      ]
+    }
+  ]
+}

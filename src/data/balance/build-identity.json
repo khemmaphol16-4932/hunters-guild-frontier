@@ -1,0 +1,65 @@
+{
+  "$comment": "REQ-BLD-001/002/003. Source weights are the §16 ratios verbatim. Equipment and cards are weighted here even though Phase 1 supplies null contributions (DL-009) so Phase 2 needs no reweighting.",
+  "sourceWeights": {
+    "class": 2,
+    "attributes": 2,
+    "skills": 2,
+    "equipment": 2,
+    "cards": 1,
+    "skillBooks": 1
+  },
+  "roles": ["tank", "healer", "damage", "support", "control"],
+  "rangeBands": ["melee", "mid", "ranged"],
+  "attributeRoleAffinity": {
+    "$comment": "How each attribute pushes the role lean. Read by BuildIdentity, never hardcoded.",
+    "str": { "damage": 0.7, "tank": 0.3 },
+    "vit": { "tank": 0.85, "support": 0.15 },
+    "agi": { "damage": 0.55, "control": 0.25, "tank": 0.2 },
+    "dex": { "damage": 0.6, "control": 0.4 },
+    "int": { "healer": 0.45, "damage": 0.35, "control": 0.2 },
+    "luk": { "damage": 0.4, "support": 0.35, "control": 0.25 }
+  },
+  "attributeRangeAffinity": {
+    "str": { "melee": 0.9, "mid": 0.1 },
+    "vit": { "melee": 0.8, "mid": 0.2 },
+    "agi": { "melee": 0.55, "mid": 0.45 },
+    "dex": { "ranged": 0.7, "mid": 0.3 },
+    "int": { "ranged": 0.5, "mid": 0.5 },
+    "luk": { "melee": 0.34, "mid": 0.33, "ranged": 0.33 }
+  },
+  "riskPosture": {
+    "$comment": "0 = maximally cautious, 1 = maximally aggressive. Base 0.5, shifted by the listed sources, then clamped.",
+    "base": 0.5,
+    "fromAttributeRatio": {
+      "$comment": "Offensive attributes push aggressive, defensive attributes push cautious.",
+      "offensive": ["str", "int", "dex"],
+      "defensive": ["vit", "agi", "luk"],
+      "influence": 0.3
+    },
+    "fromRoleLean": {
+      "tank": -0.1,
+      "healer": -0.15,
+      "damage": 0.15,
+      "support": -0.05,
+      "control": 0.0
+    },
+    "clamp": { "min": 0.05, "max": 0.95 }
+  },
+  "resourceProfile": {
+    "$comment": "0 = burst (few expensive decisive actions), 1 = sustain (many cheap actions). Derived from the cost and cooldown shape of the active loadout.",
+    "base": 0.5,
+    "costInfluence": 0.35,
+    "cooldownInfluence": 0.35,
+    "clamp": { "min": 0.0, "max": 1.0 }
+  },
+  "versatility": {
+    "$comment": "Breadth of known-but-unequipped skills. This is the Skill Books contribution (§16) and is what makes a well-read hunter distinct from a narrow specialist.",
+    "perUnequippedKnownSkill": 0.08,
+    "cap": 1.0
+  },
+  "confidence": {
+    "$comment": "How sharply defined the identity is. A hunter with a flat role lean is a generalist; one with a dominant lean is a specialist. Used by the AI to decide how strictly to hold to build identity (REQ-BLD-004).",
+    "specialistThreshold": 0.45,
+    "generalistThreshold": 0.28
+  }
+}

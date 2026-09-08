@@ -1,0 +1,24 @@
+{
+  "$comment": "REQ-HUN-010, DL-007. Personality contributes WEIGHTS ONLY and is applied as the final weight stage, clamped so it can break near-ties but never overturn a strong policy signal. It never produces a filter.",
+  "clamp": {
+    "riskPostureShift": { "min": -0.18, "max": 0.18 },
+    "roleLeanShift": { "min": -0.12, "max": 0.12 },
+    "utilityWeightShift": { "min": -0.15, "max": 0.15 }
+  },
+  "moraleInfluence": {
+    "$comment": "REQ-HUN-011 — morale has a smaller but meaningful effect than hunger/fatigue.",
+    "riskPostureAtLowMorale": -0.08,
+    "riskPostureAtHighMorale": 0.05
+  },
+  "conditionInfluence": {
+    "$comment": "Hunger and fatigue may affect stats, AI, recovery and productivity (§48). Effects are multiplicative on derived stats and additive on risk posture.",
+    "fatigue": {
+      "statPenaltyAtMax": 0.25,
+      "riskPostureShiftAtMax": -0.12
+    },
+    "hunger": {
+      "statPenaltyAtMax": 0.2,
+      "riskPostureShiftAtMax": -0.06
+    }
+  }
+}
