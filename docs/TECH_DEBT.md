@@ -14,7 +14,7 @@ Every entry names what is owed, why it was deferred, and what triggers repayment
 | Behavior memory | `systems/hunter/` | Phase 5+ | first behavior-memory-driven decision |
 | `zone.firstEntered` never fires, so `zonesFirstEntered` is always zero — needs per-hunter discovery state | `app/GuildCommands` | Phase 5 exploration memory |
 | `no_rescues` and `save_ultimates` orders have no dedicated scenario coverage | `tests/scenarios.test.ts` | next AI pass |
-| Friendship | `systems/hunter/` | Phase 3 | recruitment lands |
+| Friendship | `systems/hunter/` | Phase 6 | recruitment lands (the Recruitment Hall is a Phase 6 building) |
 
 ## Balance values needing simulation calibration
 
@@ -48,7 +48,7 @@ All are data values; none require code changes to retune.
 |---|---|---|
 | **No specialization-exclusive skills.** With a 12-skill budget, every skill a Bulwark can learn is also available to its parent Sentinel. The third class stage currently expresses itself through class weights only, not through new capability. | REQ-CLS-003 says specialization is expressed through skills. Right now it is expressed through numbers. | Phase 2–4, as the skill pool grows past ~30. Each specialization should gain at least one exclusive skill. |
 | **Advancement moves a build profile ~0.08** on the 0–1 distance metric, against ~0.15+ for an attribute rebuild. | Follows from §16 weighting class at 2 of 10 plus the small skill pool. Acceptable now; the expectation is that it rises. Named as `ADVANCEMENT_DIFFERENCE` in `tests/buildIdentity.test.ts` with the reasoning attached. | Re-measure whenever the skill pool grows; if it ever reads ~0, REQ-BLD-002 has been broken. |
-| **One name pool.** REQ-RCT-002 requires regions to produce clearly different hunter pools. | Recruitment identity is a Phase 3 promise. | Phase 3 |
+| **One name pool.** REQ-RCT-002 requires regions to produce clearly different hunter pools. | Recruitment identity arrives with the Recruitment Hall, not with the vertical slice. | Phase 6 |
 
 ## Known limitations after Phase 4
 
