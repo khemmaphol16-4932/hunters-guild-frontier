@@ -14,13 +14,11 @@
 import type { AttributeBalance, Role } from '../../data/schema.js';
 import { EQUIPMENT_SLOTS, type EquipmentSlot } from '../../data/itemSchema.js';
 import type {
-  AdvancedClassId,
   ArchetypeId,
   HunterId,
   ItemId,
   PersonalityId,
   SkillId,
-  SpecializationId,
   TraitId,
 } from '../ids.js';
 import { baseAttributes, type Attributes } from './attributes.js';
@@ -38,12 +36,6 @@ export interface HunterCondition {
   readonly morale: number;
 }
 
-export interface HunterClassChain {
-  readonly archetype: ArchetypeId;
-  readonly advanced: AdvancedClassId | undefined;
-  readonly specialization: SpecializationId | undefined;
-}
-
 export interface Hunter {
   readonly id: HunterId;
   readonly name: string;
@@ -52,7 +44,14 @@ export interface Hunter {
   readonly xp: number;
 
   readonly attributes: Attributes;
-  readonly classChain: HunterClassChain;
+  /**
+   * The hunter's starting position in the skill constellation (v1.0 §5).
+   *
+   * Immutable, and deliberately not a 'current class': under the constellation model there
+   * is no advancement step to record. What a hunter *is* now derives from which regions
+   * their taken nodes fall in — see Constellation.describeIdentity.
+   */
+  readonly archetype: ArchetypeId;
 
   /** Unlimited (REQ-SKL-001). */
   readonly knownSkills: readonly SkillId[];
@@ -118,11 +117,7 @@ export function createHunter(
     level: options.level ?? balance.minLevel,
     xp: 0,
     attributes: options.attributes ?? baseAttributes(balance),
-    classChain: {
-      archetype: options.archetype,
-      advanced: undefined,
-      specialization: undefined,
-    },
+    archetype: options.archetype,
     knownSkills: options.knownSkills ?? [],
     loadout: [],
     mastery: {},
@@ -147,10 +142,6 @@ export function withAttributes(hunter: Hunter, attributes: Attributes): Hunter {
 
 export function withLevel(hunter: Hunter, level: number, xp: number): Hunter {
   return { ...hunter, level, xp };
-}
-
-export function withClassChain(hunter: Hunter, classChain: HunterClassChain): Hunter {
-  return { ...hunter, classChain };
 }
 
 export function withKnownSkills(hunter: Hunter, knownSkills: readonly SkillId[]): Hunter {
@@ -193,21 +184,6 @@ export function equippedItemIds(hunter: Hunter): readonly ItemId[] {
 }
 
 // --- Derived queries --------------------------------------------------------
-
-/** The most specific class node the hunter has reached — what they actually *are*. */
-export function currentClassId(hunter: Hunter): string {
-  return (
-    hunter.classChain.specialization ?? hunter.classChain.advanced ?? hunter.classChain.archetype
-  );
-}
-
-/** Every class node in the chain, from archetype to current stage. */
-export function classChainIds(hunter: Hunter): readonly string[] {
-  const ids: string[] = [hunter.classChain.archetype];
-  if (hunter.classChain.advanced) ids.push(hunter.classChain.advanced);
-  if (hunter.classChain.specialization) ids.push(hunter.classChain.specialization);
-  return ids;
-}
 
 export function unspentAttributePoints(hunter: Hunter, balance: AttributeBalance): number {
   return unspentPoints(hunter.attributes, hunter.level, balance);

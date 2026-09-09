@@ -14,43 +14,54 @@ import { withKnownSkills, withLoadout } from '../../core/hunter/Hunter.js';
 import { err, ok, type Result } from '../../core/result.js';
 import type { EventBus } from '../../core/events.js';
 import type { SkillRegistry } from './SkillRegistry.js';
+import type { Constellation } from '../constellation/Constellation.js';
 
 export const MIN_LOADOUT_SIZE = 6;
 export const MAX_LOADOUT_SIZE = 8;
 
 export interface SkillKnowledgeDeps {
   readonly registry: SkillRegistry;
+  readonly constellation: Constellation;
   readonly events: EventBus;
 }
 
 export class SkillKnowledge {
   private readonly registry: SkillRegistry;
+  private readonly constellation: Constellation;
   private readonly events: EventBus;
 
   constructor(deps: SkillKnowledgeDeps) {
     this.registry = deps.registry;
+    this.constellation = deps.constellation;
     this.events = deps.events;
   }
 
   /**
-   * Record that a hunter now knows a skill.
-   * Compatibility is checked here rather than at the call site so that skill books, class
-   * advancement and the debug console cannot diverge on what is legal.
+   * Record that a hunter now knows a skill — equivalently, that they have taken its
+   * constellation node. The two are the same act (v1.0 §5).
+   *
+   * Eligibility is checked here rather than at the call site so that skill books, node
+   * selection and the debug console cannot diverge on what is legal.
    */
   learn(
     hunter: Hunter,
     skillId: SkillId,
-    source: 'book' | 'advancement' | 'debug',
+    source: 'book' | 'node' | 'debug',
   ): Result<Hunter, string> {
     if (hunter.knownSkills.includes(skillId)) {
       return err(`${hunter.name} already knows ${this.label(skillId)}`);
     }
 
-    // Debug bypasses compatibility deliberately — it exists to construct impossible
-    // hunters for AI scenario testing (§118). Nothing in gameplay uses this source.
+    // Debug bypasses eligibility deliberately — it exists to construct impossible hunters
+    // for AI scenario testing (§118). Nothing in gameplay uses this source.
     if (source !== 'debug') {
-      const verdict = this.registry.canLearn(hunter, skillId);
-      if (!verdict.allowed) return err(verdict.reason);
+      const node = this.constellation.nodeForSkill(String(skillId));
+      if (!node) {
+        return err(`no constellation node teaches ${this.label(skillId)}`);
+      }
+
+      const verdict = this.constellation.eligibility(hunter, node.id);
+      if (!verdict.eligible) return err(verdict.unmet.join('; '));
     }
 
     const updated = withKnownSkills(hunter, [...hunter.knownSkills, skillId]);

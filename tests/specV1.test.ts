@@ -479,6 +479,7 @@ describe('build tags (v1.0 §5, §6, §19)', () => {
   it('generates tags from the actual build', () => {
     const { session, debug } = testSession('tags');
     const hunter = debug.spawnHunter({ archetype: 'vanguard', level: 40, fullyEquipped: true });
+    debug.maxOut(hunter.id, 'vit');
     const profile = session.buildIdentity.profileOf(session.roster.require(hunter.id));
 
     const tags = generateBuildTags(profile);

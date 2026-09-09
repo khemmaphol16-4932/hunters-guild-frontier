@@ -16,6 +16,7 @@ import { err, ok, type Result } from '../../core/result.js';
 import type { EventBus } from '../../core/events.js';
 import type { SkillKnowledge } from './SkillKnowledge.js';
 import type { SkillRegistry } from './SkillRegistry.js';
+import type { Constellation } from '../constellation/Constellation.js';
 
 export interface SkillBook {
   readonly id: string;
@@ -32,16 +33,19 @@ export interface ReadResult {
 export interface SkillBooksDeps {
   readonly registry: SkillRegistry;
   readonly knowledge: SkillKnowledge;
+  readonly constellation: Constellation;
   readonly events: EventBus;
 }
 
 export class SkillBooks {
   private readonly registry: SkillRegistry;
   private readonly knowledge: SkillKnowledge;
+  private readonly constellation: Constellation;
 
   constructor(deps: SkillBooksDeps) {
     this.registry = deps.registry;
     this.knowledge = deps.knowledge;
+    this.constellation = deps.constellation;
   }
 
   /** Construct the book that teaches a given skill. Phase 2 replaces this with loot. */
@@ -67,7 +71,13 @@ export class SkillBooks {
     if (hunter.knownSkills.includes(book.skillId)) {
       return err(`${hunter.name} already knows this skill`);
     }
-    const verdict = this.registry.canLearn(hunter, book.skillId);
-    return verdict.allowed ? ok(true) : err(verdict.reason);
+
+    // Eligibility is the constellation's to decide (v1.0 §5) — a book cannot teach past a
+    // node's prerequisites, level or archetype reach.
+    const node = this.constellation.nodeForSkill(String(book.skillId));
+    if (!node) return err(`no constellation node teaches this skill`);
+
+    const verdict = this.constellation.eligibility(hunter, node.id);
+    return verdict.eligible ? ok(true) : err(verdict.unmet.join('; '));
   }
 }

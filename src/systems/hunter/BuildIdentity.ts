@@ -27,7 +27,7 @@ import type {
 import type { HunterId, SkillId } from '../../core/ids.js';
 import type { Hunter } from '../../core/hunter/Hunter.js';
 import { unequippedKnownSkills } from '../../core/hunter/Hunter.js';
-import type { ClassSystem } from '../class/ClassSystem.js';
+import type { Constellation } from '../constellation/Constellation.js';
 import type { SkillMastery } from '../skills/SkillMastery.js';
 import type { SkillRegistry } from '../skills/SkillRegistry.js';
 import type { Condition } from './Condition.js';
@@ -71,7 +71,7 @@ export interface BuildProfile {
 
 export interface BuildIdentityDeps {
   readonly balance: BuildIdentityBalance;
-  readonly classSystem: ClassSystem;
+  readonly constellation: Constellation;
   readonly registry: SkillRegistry;
   readonly mastery: SkillMastery;
   readonly personality: Personality;
@@ -120,7 +120,7 @@ const GEAR_AFFINITY_SCALE = 0.25;
 
 export class BuildIdentity {
   private readonly balance: BuildIdentityBalance;
-  private readonly classSystem: ClassSystem;
+  private readonly constellation: Constellation;
   private readonly registry: SkillRegistry;
   private readonly mastery: SkillMastery;
   private readonly personality: Personality;
@@ -134,7 +134,7 @@ export class BuildIdentity {
 
   constructor(deps: BuildIdentityDeps) {
     this.balance = deps.balance;
-    this.classSystem = deps.classSystem;
+    this.constellation = deps.constellation;
     this.registry = deps.registry;
     this.mastery = deps.mastery;
     this.personality = deps.personality;
@@ -157,7 +157,7 @@ export class BuildIdentity {
     let classRiskShift = 0;
 
     // --- Class (weight 2) ---------------------------------------------------
-    const classProfile = this.classSystem.blendedClassProfile(hunter);
+    const classProfile = this.constellation.blendedClassProfile(hunter);
     addWeights(roleLean, classProfile.roleLean, weights.class);
     addWeights(rangeBand, classProfile.rangeBand, weights.class);
     classRiskShift = classProfile.riskPostureShift;

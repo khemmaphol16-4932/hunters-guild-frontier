@@ -19,7 +19,7 @@ import type { Item } from '../core/items/Item.js';
 import type { AuditRecord } from '../core/audit.js';
 import type { EmergencyAuthorisation } from '../ai/policy/emergency.js';
 
-export const CURRENT_SAVE_VERSION = 4;
+export const CURRENT_SAVE_VERSION = 5;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -97,7 +97,20 @@ export interface SavePayloadV4 {
   readonly emergencyAuthorisations: readonly EmergencyAuthorisation[];
 }
 
-export type CurrentSavePayload = SavePayloadV4;
+/**
+ * v5 — the class chain collapses to a constellation starting position, and the armoury
+ * gains skill-book possession (v1.0 §5).
+ */
+export interface SavePayloadV5 extends Omit<SavePayloadV4, 'armoury'> {
+  readonly armoury: {
+    readonly items: readonly Item[];
+    readonly cardCounts: Readonly<Record<string, number>>;
+    readonly cardsSeen: readonly string[];
+    readonly skillBooks: readonly string[];
+  };
+}
+
+export type CurrentSavePayload = SavePayloadV5;
 
 export interface Migration {
   readonly from: number;

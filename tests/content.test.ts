@@ -18,50 +18,36 @@ const content = loadContent();
 describe('content loads and cross-validates', () => {
   it('loads every content file', () => {
     expect(content.archetypes.length).toBeGreaterThan(0);
-    expect(content.advancedClasses.length).toBeGreaterThan(0);
-    expect(content.specializations.length).toBeGreaterThan(0);
+    expect(content.regions.length).toBeGreaterThan(0);
+    expect(content.constellation.nodes.length).toBeGreaterThan(0);
     expect(content.skills.length).toBeGreaterThanOrEqual(10);
     expect(content.personalities.length).toBeGreaterThan(0);
     expect(content.traits.length).toBeGreaterThan(0);
     expect(content.namePools.length).toBeGreaterThan(0);
   });
 
-  it('indexes every class node uniquely across all three stages', () => {
-    const total =
-      content.archetypes.length + content.advancedClasses.length + content.specializations.length;
-    expect(content.classNodes.size).toBe(total);
-  });
-
-  it('gives every advanced class a real archetype parent', () => {
+  it('gives every region a real archetype', () => {
     const archetypeIds = new Set(content.archetypes.map((a) => a.id));
-    for (const advanced of content.advancedClasses) {
-      expect(archetypeIds.has(advanced.parent ?? '')).toBe(true);
+    for (const region of content.regions) {
+      expect(archetypeIds.has(region.archetype)).toBe(true);
     }
   });
 
-  it('gives every specialization a real advanced-class parent', () => {
-    const advancedIds = new Set(content.advancedClasses.map((a) => a.id));
-    for (const spec of content.specializations) {
-      expect(advancedIds.has(spec.parent ?? '')).toBe(true);
-    }
-  });
-
-  it('gives every archetype at least two advanced options and each of those two specializations', () => {
-    // Fewer would make the class chain a formality rather than a decision (REQ-CLS-001).
+  it('gives every archetype at least two tier-1 regions, each with two tier-2 regions', () => {
     for (const archetype of content.archetypes) {
-      const advanced = content.advancedClasses.filter((a) => a.parent === archetype.id);
-      expect(advanced.length).toBeGreaterThanOrEqual(2);
-      for (const node of advanced) {
-        const specs = content.specializations.filter((s) => s.parent === node.id);
-        expect(specs.length).toBeGreaterThanOrEqual(2);
+      const tier1 = content.regions.filter((r) => r.archetype === archetype.id && r.tier === 1);
+      expect(tier1.length).toBeGreaterThanOrEqual(2);
+      for (const region of tier1) {
+        const tier2 = content.regions.filter((r) => r.parent === region.id);
+        expect(tier2.length).toBeGreaterThanOrEqual(2);
       }
     }
   });
 
-  it('makes every skill learnable by someone', () => {
-    const ruled = new Set(content.skillCompatibility.rules.map((r) => r.skill));
+  it('makes every skill reachable through the constellation', () => {
+    const taught = new Set(content.constellation.nodes.map((n) => n.skill));
     for (const skill of content.skills) {
-      expect(ruled.has(skill.id)).toBe(true);
+      expect(taught.has(skill.id)).toBe(true);
     }
   });
 
@@ -93,15 +79,7 @@ describe('content loads and cross-validates', () => {
     }
   });
 
-  it('marks some but not all skills as cross-class (REQ-CLS-004)', () => {
-    const crossClass = content.skillCompatibility.rules.filter((r) => r.crossClass);
-    expect(crossClass.length).toBeGreaterThan(0);
-    expect(crossClass.length).toBeLessThan(content.skillCompatibility.rules.length);
-  });
 
-  it('defaults to deny so unruled content cannot silently become universal', () => {
-    expect(content.skillCompatibility.defaultPolicy).toBe('deny');
-  });
 });
 
 describe('validation rejects malformed content', () => {

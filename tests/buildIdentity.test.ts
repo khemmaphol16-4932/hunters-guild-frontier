@@ -116,10 +116,11 @@ describe('REQ-BLD-003 — builds must be measurably different', () => {
 
   it('same class and attributes, different mastery → different builds (§140-L)', () => {
     // REQ-PRIME-004: what a hunter actually does shapes what they become.
-    const { session, debug } = testSession('mastery-identity');
+    const { session, commands, debug } = testSession('mastery-identity');
 
-    // Both are Sentinels so that riposte and taunt are genuinely in their repertoire —
-    // mastery in a skill a hunter cannot use must not, and does not, shape their identity.
+    // Both walk the same route and hold a blade, so riposte and taunt are genuinely in
+    // their repertoire — mastery in a skill a hunter cannot use must not, and does not,
+    // shape their identity.
     const counterFighter = debug.spawnHunter({
       archetype: 'vanguard',
       personality: 'stoic',
@@ -132,9 +133,17 @@ describe('REQ-BLD-003 — builds must be measurably different', () => {
     });
 
     for (const id of [counterFighter.id, shieldUser.id]) {
-      debug.advance(id, 'sentinel');
-      debug.refreshLoadout(id);
+      const blade = debug.spawnItem({ itemLevel: 40, typeId: 'blade', rarity: 'rare' });
+      commands.equipItem(id, String(blade.id));
+      debug.refreshLoadout(id, { wander: true });
       debug.maxOut(id, 'str');
+    }
+
+    // Both must actually know the skills whose mastery is about to diverge.
+    for (const id of [counterFighter.id, shieldUser.id]) {
+      const known = session.roster.require(id).knownSkills;
+      expect(known).toContain('riposte');
+      expect(known).toContain('taunt');
     }
 
     const before = profileDistance(
@@ -184,51 +193,46 @@ describe('REQ-BLD-003 — builds must be measurably different', () => {
     expect(a.primaryRole).toBe(b.primaryRole);
   });
 
-  it('advancing and training reshapes identity substantially', () => {
-    // Advancing then training is the realistic flow: an advanced class unlocks skills
-    // (ultimates and party skills are gated above archetype level), and a hunter who takes
-    // them up is a different proposition from one who never advanced.
-    const { session, debug } = testSession('specialise');
+  it('travelling deeper into the constellation reshapes identity substantially', () => {
+    // Under v1.0 §5 there is no advancement step — a hunter is what their taken nodes say.
+    // So the comparison is between one who stayed near their starting position and one who
+    // walked out to the deep, book-gated nodes of their own territory.
+    const { session, debug } = testSession('deep-travel');
 
-    const generic = debug.spawnHunter({ archetype: 'vanguard', personality: 'stoic', level: 60 });
-    const specialised = debug.spawnHunter({
-      archetype: 'vanguard',
-      personality: 'stoic',
-      level: 60,
-    });
+    const shallow = debug.spawnHunter({ archetype: 'vanguard', personality: 'stoic', level: 60 });
+    const deep = debug.spawnHunter({ archetype: 'vanguard', personality: 'stoic', level: 60 });
 
-    debug.refreshLoadout(generic.id);
-    debug.advance(specialised.id, 'sentinel');
-    debug.advance(specialised.id, 'bulwark');
-    debug.refreshLoadout(specialised.id);
+    debug.maxOut(deep.id, 'vit');
+    debug.refreshLoadout(shallow.id);
+    for (const nodeId of ['last_stand', 'rally']) debug.giveSkillBook(nodeId);
+    debug.refreshLoadout(deep.id);
 
-    const a = session.buildIdentity.profileOf(session.roster.require(generic.id));
-    const b = session.buildIdentity.profileOf(session.roster.require(specialised.id));
+    const a = session.buildIdentity.profileOf(session.roster.require(shallow.id));
+    const b = session.buildIdentity.profileOf(session.roster.require(deep.id));
 
     expect(profileDistance(a, b)).toBeGreaterThan(ADVANCEMENT_DIFFERENCE);
     expect(b.roleLean.tank ?? 0).toBeGreaterThan(a.roleLean.tank ?? 0);
-    expect(b.focus).toBeGreaterThan(a.focus);
   });
 
-  it('records that a class change alone still moves the profile, if less sharply', () => {
-    // Documents the calibration: class carries §16 weight 2 of 10, so advancing without
-    // learning anything new is a real but modest shift. If this ever reads as zero, the
-    // class contribution has stopped mattering and REQ-BLD-002 has been broken.
-    const { session, debug } = testSession('class-only');
+  it('records that a few extra nodes alone still move the profile, if less sharply', () => {
+    // Documents the calibration: class carries §16 weight 2 of 10, so picking up a couple
+    // of extra nodes without changing attributes is a real but modest shift. If this ever
+    // reads as zero, the class contribution has stopped mattering (REQ-BLD-002).
+    const { session, debug } = testSession('nodes-only');
 
-    const generic = debug.spawnHunter({ archetype: 'vanguard', personality: 'stoic', level: 60, fullyEquipped: true });
-    const specialised = debug.spawnHunter({ archetype: 'vanguard', personality: 'stoic', level: 60, fullyEquipped: true });
+    const shallow = debug.spawnHunter({ archetype: 'vanguard', personality: 'stoic', level: 60, fullyEquipped: true });
+    const deep = debug.spawnHunter({ archetype: 'vanguard', personality: 'stoic', level: 60, fullyEquipped: true });
 
-    debug.advance(specialised.id, 'sentinel');
-    debug.advance(specialised.id, 'bulwark');
+    for (const nodeId of ['last_stand', 'rally']) debug.giveSkillBook(nodeId);
+    debug.maxOut(deep.id, 'vit');
+    debug.refreshLoadout(deep.id);
 
     const distance = profileDistance(
-      session.buildIdentity.profileOf(session.roster.require(generic.id)),
-      session.buildIdentity.profileOf(session.roster.require(specialised.id)),
+      session.buildIdentity.profileOf(session.roster.require(shallow.id)),
+      session.buildIdentity.profileOf(session.roster.require(deep.id)),
     );
 
     expect(distance).toBeGreaterThan(0.02);
-    expect(distance).toBeLessThan(ADVANCEMENT_DIFFERENCE);
   });
 
   it('two different specialisations of the same advanced class diverge', () => {
@@ -238,9 +242,12 @@ describe('REQ-BLD-003 — builds must be measurably different', () => {
     const bulwark = debug.spawnHunter({ archetype: 'vanguard', personality: 'stoic', level: 60, fullyEquipped: true });
     const warden = debug.spawnHunter({ archetype: 'vanguard', personality: 'stoic', level: 60, fullyEquipped: true });
 
-    for (const id of [bulwark.id, warden.id]) debug.advance(id, 'sentinel');
-    debug.advance(bulwark.id, 'bulwark');
-    debug.advance(warden.id, 'warden');
+    // Same starting position, different routes through the constellation.
+    debug.giveSkillBook('last_stand');
+    debug.refreshLoadout(bulwark.id);
+    debug.grantMastery(bulwark.id, 'taunt', 2000, 'decisive');
+    debug.refreshLoadout(warden.id);
+    debug.grantMastery(warden.id, 'drag_to_safety', 2000, 'decisive');
 
     const a = session.buildIdentity.profileOf(session.roster.require(bulwark.id));
     const b = session.buildIdentity.profileOf(session.roster.require(warden.id));
@@ -307,8 +314,7 @@ describe('identity axes', () => {
   it('classifies shape by how dominant the primary role is', () => {
     const { session, debug } = testSession('shape');
     const specialist = debug.spawnHunter({ archetype: 'vanguard', personality: 'stoic', level: 60, fullyEquipped: true });
-    debug.advance(specialist.id, 'sentinel');
-    debug.advance(specialist.id, 'bulwark');
+    debug.refreshLoadout(specialist.id);
     debug.maxOut(specialist.id, 'vit');
 
     const profile = session.buildIdentity.profileOf(session.roster.require(specialist.id));

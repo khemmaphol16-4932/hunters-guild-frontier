@@ -50,11 +50,11 @@ Target tone: **casual tycoon + RPG flavor**. Death matters; the game stays appro
 
 | ID | Requirement |
 |---|---|
-| REQ-CLS-001 | Three stages: Archetype → Advanced Class → Specialization. (§11) |
-| REQ-CLS-002 | Hunters begin with a class identity. Class changes are limited. (§11) |
+| REQ-CLS-001 **[v1.0]** | **One node-based skill constellation** with class starting positions. Archetypes are entry points, not silos; the former advanced classes and specializations are now descriptive *regions* of that constellation. *(v1.0 §5; supersedes §11 three-stage chain.)* |
+| REQ-CLS-002 **[v1.0]** | A hunter begins at a starting position and never "advances". Class identity is *derived* from which regions their taken nodes fall in, so it changes as they travel. *(v1.0 §5.)* |
 | REQ-CLS-003 | Specialization is expressed through skills, weapons, skill books, attributes, equipment, cards and mastery. (§11) |
-| REQ-CLS-004 | After advancement, only *some* skills cross class boundaries. Compatibility is data-driven, never hardcoded. (§12) |
-| REQ-CLS-005 | Hybrid builds must be meaningful without dissolving class identity. (§12) |
+| REQ-CLS-004 **[v1.0]** | Node eligibility depends on level, class affinity, weapon, build compatibility, prerequisites and skill books — all data-driven. Affinity above zero means reachable but *further*: the level cost is divided by affinity, so distance is progression cost rather than a hard wall. *(v1.0 §5.)* |
+| REQ-CLS-005 **[v1.0]** | Hybrid builds are a gradient, not three discrete gates. A hunter may walk into another archetype's territory at a cost; identity follows where they actually went. *(v1.0 §5.)* |
 
 ### Skills
 

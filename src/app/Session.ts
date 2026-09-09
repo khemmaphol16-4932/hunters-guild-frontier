@@ -26,7 +26,7 @@ import {
   type Hunter,
 } from '../core/hunter/Hunter.js';
 import { rollPotential } from '../core/hunter/potential.js';
-import { ClassSystem } from '../systems/class/ClassSystem.js';
+import { Constellation } from '../systems/constellation/Constellation.js';
 import { SkillRegistry } from '../systems/skills/SkillRegistry.js';
 import { SkillKnowledge } from '../systems/skills/SkillKnowledge.js';
 import { SkillBooks } from '../systems/skills/SkillBooks.js';
@@ -110,7 +110,7 @@ export class Session {
   readonly streams: RngStreams;
   readonly roster: Roster;
 
-  readonly classSystem: ClassSystem;
+  readonly constellation: Constellation;
   readonly registry: SkillRegistry;
   readonly knowledge: SkillKnowledge;
   readonly books: SkillBooks;
@@ -150,24 +150,6 @@ export class Session {
     this.roster = new Roster();
     this.policyVersion = this.content.policyPrecedence.version;
 
-    this.classSystem = new ClassSystem({ content: this.content });
-    this.registry = new SkillRegistry(this.content);
-    this.knowledge = new SkillKnowledge({ registry: this.registry, events: this.events });
-    this.books = new SkillBooks({
-      registry: this.registry,
-      knowledge: this.knowledge,
-      events: this.events,
-    });
-    this.mastery = new SkillMastery({
-      balance: this.content.balance.mastery,
-      registry: this.registry,
-      events: this.events,
-    });
-    this.personality = new Personality(this.content);
-    this.condition = new Condition({
-      balance: this.content.balance.personality,
-      events: this.events,
-    });
     // v1.0 §14/§18: consequential changes must be explainable from an audit record.
     this.audit = new AuditLog({
       currentTick: () => this.clock.tick,
@@ -176,6 +158,10 @@ export class Session {
     // Empty by default, so hard constraints stay absolute until the player says otherwise.
     this.emergency = new EmergencyPolicy();
 
+    this.registry = new SkillRegistry(this.content);
+
+    // Items are built before the constellation because node eligibility reads the equipped
+    // weapon and the guild's skill books (v1.0 §5's weapon and skill-book axes).
     this.armoury = new Armoury(this.content);
     this.cards = new Cards(this.content);
     this.sets = new Sets(this.content);
@@ -188,6 +174,38 @@ export class Session {
     this.refinement = new Refinement(this.content.balance.refinement);
     this.itemGenerator = new ItemGenerator(this.content);
 
+    this.constellation = new Constellation({
+      content: this.content,
+      weaponTypesOf: (hunter) =>
+        this.equipment
+          .equippedItems(hunter)
+          .filter((item) => item.slot === 'weapon')
+          .map((item) => item.typeId),
+      hasSkillBook: (_hunter, nodeId) => this.armoury.hasSkillBook(nodeId),
+    });
+
+    this.knowledge = new SkillKnowledge({
+      registry: this.registry,
+      constellation: this.constellation,
+      events: this.events,
+    });
+    this.books = new SkillBooks({
+      registry: this.registry,
+      knowledge: this.knowledge,
+      constellation: this.constellation,
+      events: this.events,
+    });
+    this.mastery = new SkillMastery({
+      balance: this.content.balance.mastery,
+      registry: this.registry,
+      events: this.events,
+    });
+    this.personality = new Personality(this.content);
+    this.condition = new Condition({
+      balance: this.content.balance.personality,
+      events: this.events,
+    });
+
     const itemIdentityDeps = {
       content: this.content,
       equipment: this.equipment,
@@ -199,7 +217,7 @@ export class Session {
     // is unchanged — see systems/items/identityContributions.ts and DL-009.
     this.buildIdentity = new BuildIdentity({
       balance: this.content.balance.buildIdentity,
-      classSystem: this.classSystem,
+      constellation: this.constellation,
       registry: this.registry,
       mastery: this.mastery,
       personality: this.personality,
@@ -246,12 +264,12 @@ export class Session {
 
     const potential = rollPotential(rng, balance.potential, this.content.traits);
 
-    const archetype = this.content.classNodes.get(archetypeId);
+    const archetype = this.content.archetypesById.get(archetypeId);
     const preferredRole =
       options.preferredRole ??
-      (Object.entries(archetype?.roleLean ?? {}).sort((a, b) => b[1] - a[1])[0]?.[0] as
-        | Role
-        | undefined) ??
+      ((Object.entries(archetype?.roleLean ?? {}) as [Role, number][]).sort(
+        (a, b) => b[1] - a[1],
+      )[0]?.[0] as Role | undefined) ??
       'damage';
 
     const preferredDepartment =

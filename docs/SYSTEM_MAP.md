@@ -40,7 +40,7 @@ Every system from spec §115, assigned a layer, an owner module, the data it own
 | Attributes | `core/hunter/attributes.ts` | attribute → derived-stat maths | — |
 | Leveling | `core/hunter/leveling.ts` | XP curve, attribute points, respec, rebirth hook | `hunter.leveled`, `hunter.rebirth` |
 | Potential | `core/hunter/potential.ts` | composite potential generation & growth effect | — |
-| Class | `systems/class/ClassSystem.ts` | archetype → advanced → specialization chain, advancement legality | `hunter.advanced` |
+| Constellation | `systems/constellation/Constellation.ts` | the skill node graph: eligibility, region investment, derived class identity (v1.0 §5) | `constellation.nodeTaken` |
 | Skill registry | `systems/skills/SkillRegistry.ts` | skill definitions, tags, conditions | — |
 | Skill knowledge | `systems/skills/SkillKnowledge.ts` | known skills, active loadout (6–8) | `skill.learned`, `loadout.changed` |
 | Skill books | `systems/skills/SkillBooks.ts` | book → skill teaching, compatibility gate | `skillbook.consumed` |

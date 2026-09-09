@@ -33,6 +33,8 @@ export class Armoury {
   private readonly cardCounts = new Map<string, number>();
   /** Whether the guild has ever seen a card, for duplicate detection (REQ-CRD-003). */
   private readonly cardsSeen = new Set<string>();
+  /** Constellation node ids whose skill book the guild holds (v1.0 §5). */
+  private readonly skillBooks = new Set<string>();
 
   constructor(private readonly content: GameContent) {}
 
@@ -116,6 +118,24 @@ export class Armoury {
 
   loseCards(): ReadonlyMap<string, number> {
     return new Map([...this.cardCounts].filter(([, count]) => count > 0));
+  }
+
+  // --- Skill books ----------------------------------------------------------
+  //
+  // v1.0 §5 makes skill books a visible requirement in the constellation tree, so possession
+  // has to be real state rather than assumed. Guild-wide like everything else here: a book
+  // is read by whoever needs it, which is why it is a set rather than a per-hunter flag.
+
+  addSkillBook(nodeId: string): void {
+    this.skillBooks.add(nodeId);
+  }
+
+  hasSkillBook(nodeId: string): boolean {
+    return this.skillBooks.has(nodeId);
+  }
+
+  skillBooksHeld(): readonly string[] {
+    return [...this.skillBooks];
   }
 
   // --- Disposal -------------------------------------------------------------
@@ -207,11 +227,13 @@ export class Armoury {
     items: readonly Item[];
     cardCounts: Readonly<Record<string, number>>;
     cardsSeen: readonly string[];
+    skillBooks: readonly string[];
   } {
     return {
       items: this.all(),
       cardCounts: Object.fromEntries(this.cardCounts),
       cardsSeen: [...this.cardsSeen],
+      skillBooks: [...this.skillBooks],
     };
   }
 
@@ -219,21 +241,25 @@ export class Armoury {
     items?: readonly Item[];
     cardCounts?: Readonly<Record<string, number>>;
     cardsSeen?: readonly string[];
+    skillBooks?: readonly string[];
   }): void {
     this.items.clear();
     this.cardCounts.clear();
     this.cardsSeen.clear();
+    this.skillBooks.clear();
 
     for (const item of state.items ?? []) this.items.set(item.id, item);
     for (const [key, count] of Object.entries(state.cardCounts ?? {})) {
       this.cardCounts.set(key, count);
     }
     for (const key of state.cardsSeen ?? []) this.cardsSeen.add(key);
+    for (const key of state.skillBooks ?? []) this.skillBooks.add(key);
   }
 
   clear(): void {
     this.items.clear();
     this.cardCounts.clear();
     this.cardsSeen.clear();
+    this.skillBooks.clear();
   }
 }

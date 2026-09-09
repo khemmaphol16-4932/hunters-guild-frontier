@@ -29,6 +29,14 @@ All are data values; none require code changes to retune.
 | Rescue risk/benefit threshold | Phase 4 | Phase 4 §140-F scenario |
 | Build-identity axis weights beyond the §16 ratios | `balance/build-identity.json` | Phase 4 behavioral differentiation |
 
+## Content gaps found during the constellation migration
+
+| Gap | Why it matters | Repay when |
+|---|---|---|
+| **The Ranger line is content-thin.** Only two nodes sit in Ranger regions (`piercing_shot`, `riposte`), and `riposte` needs a weapon, so a Ranger tops out at one or two skills while a Vanguard reaches four. | Not a model failure — the 12-skill prototype budget — but it makes the Ranger the weakest demonstration of the constellation, and any Ranger-based balance reading is currently unreliable. | Next content pass. Each archetype wants roughly equal node coverage before balance means anything. |
+| **10 of 18 regions contain no nodes.** Templar, Invoker, Crusader, Field Medic, Shadowblade, Sharpshooter, Trapper and others exist as definitions with nothing in them. | They still contribute to identity *if* a hunter reaches them, but nobody can. Harmless now, misleading later. | As the skill pool grows past ~30. |
+| **Affinity values are unvalidated.** `archetypeAffinity` was authored by judgement and then corrected once by measurement (DL-024). The current numbers produce good separation but have not been swept. | Distance-as-cost makes these numbers load-bearing for build diversity. | Balance harness, Phase 7. |
+
 ## Content gaps found during Phase 1
 
 | Gap | Why it matters | Repay when |

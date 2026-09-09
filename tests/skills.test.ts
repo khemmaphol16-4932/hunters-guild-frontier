@@ -1,6 +1,6 @@
 /**
- * Class chain, skill compatibility, loadout rules, skill books, mastery.
- * REQ-CLS-001..005, REQ-SKL-001..008, REQ-MAS-001..003.
+ * Skill knowledge, loadout rules, skill books and mastery.
+ * REQ-SKL-001..008, REQ-MAS-001..003.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -8,128 +8,11 @@ import { testSession } from './helpers.js';
 import { asSkillId } from '../src/core/ids.js';
 import { MAX_LOADOUT_SIZE } from '../src/systems/skills/SkillKnowledge.js';
 
-describe('class chain', () => {
-  it('advances archetype → advanced → specialization in order', () => {
-    const { session, debug } = testSession('chain');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard', level: 50 });
-
-    const advanced = debug.advance(hunter.id, 'sentinel');
-    expect(advanced.ok).toBe(true);
-
-    const specialised = debug.advance(hunter.id, 'bulwark');
-    expect(specialised.ok).toBe(true);
-
-    const final = session.roster.require(hunter.id);
-    expect(session.classSystem.describeChain(final)).toBe('Vanguard → Sentinel → Bulwark');
-  });
-
-  it('refuses to skip the advanced stage', () => {
-    const { debug } = testSession('skip');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard', level: 50 });
-    const result = debug.advance(hunter.id, 'bulwark');
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/requires an advanced class first/);
-  });
-
-  it("refuses to advance into another archetype's branch (REQ-CLS-002)", () => {
-    const { debug } = testSession('branch');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard', level: 50 });
-    const result = debug.advance(hunter.id, 'invoker');
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/advances from adept/);
-  });
-
-  it('refuses to advance under-level', () => {
-    const { debug } = testSession('underlevel');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard', level: 5 });
-    const result = debug.advance(hunter.id, 'sentinel');
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/requires level 20/);
-  });
-
-  it('refuses to advance twice at the same stage', () => {
-    const { debug } = testSession('twice');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard', level: 50 });
-    expect(debug.advance(hunter.id, 'sentinel').ok).toBe(true);
-    const second = debug.advance(hunter.id, 'templar');
-    expect(second.ok).toBe(false);
-    if (!second.ok) expect(second.error).toMatch(/already taken an advanced class/);
-  });
-
-  it('reports blocked options with a reason rather than hiding them', () => {
-    const { session, debug } = testSession('options');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard', level: 5 });
-    const options = session.classSystem.availableAdvancements(hunter);
-
-    expect(options.length).toBeGreaterThan(0);
-    expect(options.every((o) => !o.available)).toBe(true);
-    expect(options[0]?.reason).toMatch(/requires level/);
-  });
-
-  it('weights the most specific stage most heavily in the blended profile', () => {
-    const { session, debug } = testSession('blend');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard', level: 50 });
-    debug.advance(hunter.id, 'sentinel');
-    debug.advance(hunter.id, 'bulwark');
-
-    const blended = session.classSystem.blendedClassProfile(session.roster.require(hunter.id));
-    // Bulwark is 90% tank; a plain Vanguard is 55%. The blend must land above the archetype.
-    expect(blended.roleLean.tank ?? 0).toBeGreaterThan(0.55);
-  });
-});
-
-describe('skill compatibility', () => {
-  it('allows a skill listed for the hunter archetype', () => {
-    const { session, debug } = testSession('compat-allow');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard' });
-    expect(session.registry.canLearn(hunter, 'shield_bash').allowed).toBe(true);
-  });
-
-  it('denies a skill belonging to another class (REQ-CLS-004)', () => {
-    const { session, debug } = testSession('compat-deny');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard' });
-    const verdict = session.registry.canLearn(hunter, 'ember_lance');
-    expect(verdict.allowed).toBe(false);
-    expect(verdict.reason).toMatch(/not available to/);
-  });
-
-  it('lets a genuine cross-class skill cross (REQ-CLS-005)', () => {
-    const { session, debug } = testSession('cross');
-    const hunter = debug.spawnHunter({ archetype: 'ranger', level: 50 });
-    debug.advance(hunter.id, 'skirmisher');
-    const updated = session.roster.require(hunter.id);
-
-    // guard_stance is a Vanguard skill explicitly opened to Skirmishers.
-    expect(session.registry.canLearn(updated, 'guard_stance').allowed).toBe(true);
-    // But an Invoker skill still does not cross.
-    expect(session.registry.canLearn(updated, 'frost_chain').allowed).toBe(false);
-  });
-
-  it('unlocks specialization-gated skills only after specialising', () => {
-    const { session, debug } = testSession('spec-gate');
-    const hunter = debug.spawnHunter({ archetype: 'adept', level: 50 });
-    expect(session.registry.canLearn(session.roster.require(hunter.id), 'ember_lance').allowed).toBe(
-      false,
-    );
-
-    debug.advance(hunter.id, 'invoker');
-    expect(session.registry.canLearn(session.roster.require(hunter.id), 'ember_lance').allowed).toBe(
-      true,
-    );
-  });
-
-  it('names the class node that granted access', () => {
-    const { session, debug } = testSession('granted');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard' });
-    expect(session.registry.canLearn(hunter, 'shield_bash').grantedBy).toBe('vanguard');
-  });
-
-  it('rejects an unknown skill id', () => {
-    const { session, debug } = testSession('unknown');
-    const hunter = debug.spawnHunter({ archetype: 'vanguard' });
-    expect(session.registry.canLearn(hunter, 'not_a_skill').allowed).toBe(false);
-  });
-});
+/**
+ * The class-chain and skill-compatibility blocks that used to live here were superseded by
+ * the constellation (v1.0 §5) and now live in tests/constellation.test.ts. What remains is
+ * knowledge, loadout, books and mastery — the parts unchanged by that migration.
+ */
 
 describe('skill knowledge and loadout', () => {
   it('separates unlimited knowledge from a capped loadout (REQ-SKL-001/002)', () => {

@@ -2,22 +2,22 @@
  * Content loading and cross-reference validation.
  *
  * Validation happens once, at load. Two layers:
- *   1. per-file shape validation (schema.ts)
- *   2. cross-file referential integrity (here) — a skill compatibility rule naming a class
- *      that does not exist, or a specialization whose parent is missing, is a content bug
- *      that must fail at startup rather than producing a hunter who can never learn anything.
+ *   1. per-file shape validation (schema.ts, itemSchema.ts, constellationSchema.ts)
+ *   2. cross-file referential integrity (here) — a constellation node pointing at a skill or
+ *      region that does not exist is a content bug that must fail at startup rather than
+ *      producing a hunter who can never learn anything.
  *
  * REQ-TEC-002, §134 (reasonable error handling).
  */
 
 import archetypesJson from './archetypes.json';
-import advancedClassesJson from './advanced-classes.json';
-import specializationsJson from './specializations.json';
 import skillsJson from './skills.json';
-import skillCompatibilityJson from './skill-compatibility.json';
 import personalitiesJson from './personalities.json';
 import traitsJson from './traits.json';
 import namesJson from './names.json';
+
+import regionsJson from './constellation/regions.json';
+import constellationJson from './constellation/nodes.json';
 
 import raritiesJson from './items/rarities.json';
 import itemTypesJson from './items/item-types.json';
@@ -38,7 +38,6 @@ import chronicleBalanceJson from './balance/chronicle.json';
 
 import {
   ContentValidationError,
-  parseAdvancedClasses,
   parseArchetypes,
   parseAttributeBalance,
   parseBuildIdentityBalance,
@@ -47,9 +46,7 @@ import {
   parsePersonalities,
   parsePersonalityBalance,
   parsePotentialBalance,
-  parseSkillCompatibility,
   parseSkills,
-  parseSpecializations,
   parseTraits,
   parseNamePools,
   type AttributeBalance,
@@ -61,10 +58,18 @@ import {
   type PersonalityBalance,
   type PersonalityDef,
   type PotentialBalance,
-  type SkillCompatibilityData,
   type SkillDef,
   type TraitDef,
 } from './schema.js';
+
+import {
+  parseConstellation,
+  parseRegions,
+  validateConstellationGraph,
+  type ConstellationData,
+  type ConstellationNodeDef,
+  type RegionDef,
+} from './constellationSchema.js';
 
 import {
   parseCards,
@@ -80,24 +85,28 @@ import {
   type ItemTypeData,
   type ItemTypeDef,
   type LootBalance,
+  type PolicyPrecedence,
   type RarityData,
   type RarityDef,
   type RefinementBalance,
   type SetDef,
   type SubstatData,
   type UniqueEffectDef,
-  type PolicyPrecedence,
 } from './itemSchema.js';
 
 export interface GameContent {
+  /** Starting positions in the constellation (v1.0 §5). */
   readonly archetypes: readonly ClassNodeDef[];
-  readonly advancedClasses: readonly ClassNodeDef[];
-  readonly specializations: readonly ClassNodeDef[];
-  /** Every class node from all three stages, indexed by id. */
-  readonly classNodes: ReadonlyMap<string, ClassNodeDef>;
+  readonly archetypesById: ReadonlyMap<string, ClassNodeDef>;
+
+  /** Named areas of the constellation. Descriptive, never gates. */
+  readonly regions: readonly RegionDef[];
+  readonly regionsById: ReadonlyMap<string, RegionDef>;
+  readonly constellation: ConstellationData;
+  readonly constellationNodesById: ReadonlyMap<string, ConstellationNodeDef>;
+
   readonly skills: readonly SkillDef[];
   readonly skillsById: ReadonlyMap<string, SkillDef>;
-  readonly skillCompatibility: SkillCompatibilityData;
   readonly personalities: readonly PersonalityDef[];
   readonly personalitiesById: ReadonlyMap<string, PersonalityDef>;
   readonly traits: readonly TraitDef[];
@@ -131,68 +140,69 @@ export interface GameContent {
   };
 }
 
-function crossValidate(content: {
+/**
+ * Constellation referential integrity.
+ *
+ * The failures this prevents are all silent: a node teaching a skill that does not exist, a
+ * skill no node teaches (unlearnable content), or a region belonging to an archetype that
+ * was deleted. None of these crash — they just quietly remove capability.
+ */
+function crossValidateConstellation(content: {
   archetypes: readonly ClassNodeDef[];
-  advancedClasses: readonly ClassNodeDef[];
-  specializations: readonly ClassNodeDef[];
+  regions: readonly RegionDef[];
+  constellation: ConstellationData;
   skills: readonly SkillDef[];
-  skillCompatibility: SkillCompatibilityData;
+  itemTypes: ItemTypeData;
 }): void {
   const archetypeIds = new Set(content.archetypes.map((a) => a.id));
-  const advancedIds = new Set(content.advancedClasses.map((a) => a.id));
-  const specializationIds = new Set(content.specializations.map((s) => s.id));
+  const regionIds = new Set(content.regions.map((r) => r.id));
   const skillIds = new Set(content.skills.map((s) => s.id));
+  const itemTypeIds = new Set(content.itemTypes.types.map((t) => t.id));
 
-  for (const advanced of content.advancedClasses) {
-    if (advanced.parent === undefined || !archetypeIds.has(advanced.parent)) {
+  for (const region of content.regions) {
+    if (!archetypeIds.has(region.archetype)) {
       throw new ContentValidationError(
-        `advanced-classes.json:${advanced.id}`,
-        `archetype "${advanced.parent ?? '<missing>'}" does not exist`,
+        `regions.json:${region.id}`,
+        `unknown archetype "${region.archetype}"`,
+      );
+    }
+    if (region.parent !== undefined && !regionIds.has(region.parent)) {
+      throw new ContentValidationError(
+        `regions.json:${region.id}`,
+        `parent region "${region.parent}" does not exist`,
       );
     }
   }
 
-  for (const spec of content.specializations) {
-    if (spec.parent === undefined || !advancedIds.has(spec.parent)) {
+  for (const node of content.constellation.nodes) {
+    if (!skillIds.has(node.skill)) {
       throw new ContentValidationError(
-        `specializations.json:${spec.id}`,
-        `advancedClass "${spec.parent ?? '<missing>'}" does not exist`,
+        `nodes.json:${node.id}`,
+        `teaches skill "${node.skill}", which does not exist`,
       );
     }
-  }
-
-  for (const rule of content.skillCompatibility.rules) {
-    const where = `skill-compatibility.json:${rule.skill}`;
-    if (!skillIds.has(rule.skill)) {
-      throw new ContentValidationError(where, 'names a skill that does not exist');
-    }
-    for (const id of rule.archetypes) {
-      if (!archetypeIds.has(id)) {
-        throw new ContentValidationError(where, `unknown archetype "${id}"`);
-      }
-    }
-    for (const id of rule.advancedClasses) {
-      if (!advancedIds.has(id)) {
-        throw new ContentValidationError(where, `unknown advanced class "${id}"`);
-      }
-    }
-    for (const id of rule.specializations) {
-      if (!specializationIds.has(id)) {
-        throw new ContentValidationError(where, `unknown specialization "${id}"`);
+    for (const weaponType of node.requiresWeaponTypes ?? []) {
+      if (!itemTypeIds.has(weaponType)) {
+        throw new ContentValidationError(
+          `nodes.json:${node.id}`,
+          `requires weapon type "${weaponType}", which does not exist`,
+        );
       }
     }
   }
 
-  // Every skill must be reachable by someone, or it is dead content.
-  const ruledSkills = new Set(content.skillCompatibility.rules.map((r) => r.skill));
+  // Every skill must be taught by some node, or it is unlearnable content.
+  const taught = new Set(content.constellation.nodes.map((n) => n.skill));
   for (const skill of content.skills) {
-    if (!ruledSkills.has(skill.id) && content.skillCompatibility.defaultPolicy === 'deny') {
+    if (!taught.has(skill.id)) {
       throw new ContentValidationError(
         `skills.json:${skill.id}`,
-        'has no compatibility rule and the default policy is deny, so no hunter could ever learn it',
+        'no constellation node teaches this skill, so no hunter could ever learn it',
       );
     }
   }
+
+  validateConstellationGraph(content.constellation, regionIds, archetypeIds);
 }
 
 /**
@@ -229,7 +239,6 @@ function crossValidateItems(content: {
         `unknown rarity "${card.rarity}"`,
       );
     }
-    // A card must fit at least one item type that exists, or it is unsocketable.
     const fits = content.itemTypes.types.some((type) => {
       if (!card.compatibleSlots.includes(type.slot)) return false;
       if (card.compatibleTags.length === 0) return true;
@@ -243,8 +252,6 @@ function crossValidateItems(content: {
     }
   }
 
-  // Tags referenced by cards, sets and unique effects should exist on real skills, or the
-  // effect silently applies to nothing.
   const skillTags = new Set(content.skills.flatMap((s) => s.tags));
   const checkTags = (source: string, effects: readonly { tag: string | undefined }[]): void => {
     for (const effect of effects) {
@@ -263,8 +270,6 @@ function crossValidateItems(content: {
     checkTags(`unique-effects.json:${unique.id}`, unique.effects);
   }
 
-  // A rarity that can carry a unique effect needs at least one to exist for each slot it
-  // can occupy, or legendary generation would sometimes produce a legendary with no effect.
   const uniqueSlots = new Set(content.uniqueEffects.flatMap((e) => e.slots));
   const legendaryCapable = content.rarities.rarities.some((r) => r.canCarryUniqueEffect);
   if (legendaryCapable && uniqueSlots.size === 0) {
@@ -285,10 +290,9 @@ export function loadContent(): GameContent {
   if (cached) return cached;
 
   const archetypes = parseArchetypes(archetypesJson);
-  const advancedClasses = parseAdvancedClasses(advancedClassesJson);
-  const specializations = parseSpecializations(specializationsJson);
+  const regions = parseRegions(regionsJson);
+  const constellation = parseConstellation(constellationJson);
   const skills = parseSkills(skillsJson);
-  const skillCompatibility = parseSkillCompatibility(skillCompatibilityJson);
   const personalities = parsePersonalities(personalitiesJson);
   const traits = parseTraits(traitsJson);
 
@@ -299,28 +303,20 @@ export function loadContent(): GameContent {
   const sets = parseSets(setsJson);
   const uniqueEffects = parseUniqueEffects(uniqueEffectsJson);
 
-  crossValidate({ archetypes, advancedClasses, specializations, skills, skillCompatibility });
+  crossValidateConstellation({ archetypes, regions, constellation, skills, itemTypes });
   crossValidateItems({ rarities, itemTypes, substats, cards, uniqueEffects, skills });
-
-  const classNodes = new Map<string, ClassNodeDef>();
-  for (const node of [...archetypes, ...advancedClasses, ...specializations]) {
-    if (classNodes.has(node.id)) {
-      throw new ContentValidationError(
-        `class chain:${node.id}`,
-        'id collides across class stages; ids must be unique across the whole chain',
-      );
-    }
-    classNodes.set(node.id, node);
-  }
 
   cached = Object.freeze({
     archetypes,
-    advancedClasses,
-    specializations,
-    classNodes,
+    archetypesById: new Map(archetypes.map((a) => [a.id, a])),
+
+    regions,
+    regionsById: new Map(regions.map((r) => [r.id, r])),
+    constellation,
+    constellationNodesById: new Map(constellation.nodes.map((n) => [n.id, n])),
+
     skills,
     skillsById: new Map(skills.map((s) => [s.id, s])),
-    skillCompatibility,
     personalities,
     personalitiesById: new Map(personalities.map((p) => [p.id, p])),
     traits,

@@ -20,15 +20,11 @@ import type { HunterId, SkillId, ItemId } from './ids.js';
 export interface DomainEventMap {
   'hunter.created': { hunterId: HunterId; name: string };
   'hunter.leveled': { hunterId: HunterId; level: number };
-  'hunter.advanced': {
-    hunterId: HunterId;
-    stage: 'advanced' | 'specialization';
-    classId: string;
-  };
+  'constellation.nodeTaken': { hunterId: HunterId; nodeId: string; regionId: string };
   'hunter.respec': { hunterId: HunterId };
   'hunter.died': { hunterId: HunterId; zoneTier: string };
 
-  'skill.learned': { hunterId: HunterId; skillId: SkillId; source: 'book' | 'advancement' | 'debug' };
+  'skill.learned': { hunterId: HunterId; skillId: SkillId; source: 'book' | 'node' | 'debug' };
   'loadout.changed': { hunterId: HunterId; skills: readonly SkillId[] };
 
   'mastery.gained': { hunterId: HunterId; skillId: SkillId; points: number; total: number };

@@ -154,17 +154,23 @@ describe('slots, autosave and backups', () => {
 
 describe('migration chain (risk R4)', () => {
   it('migrates a v1 payload up through every version to the current one', () => {
-    // Walks v1 -> v2 (clock and RNG state) -> v3 (armoury, pity, equipment slots).
-    const v1 = { hunters: [{ id: 'h1', name: 'Old Hand' }], chronicles: [] };
+    // v1 -> v2 (clock, RNG) -> v3 (armoury, pity, equipment) -> v4 (audit, emergency,
+    // availability) -> v5 (constellation starting position, skill books).
+    const v1 = {
+      hunters: [{ id: 'h1', name: 'Old Hand', classChain: { archetype: 'vanguard' } }],
+      chronicles: [],
+    };
     const migrated = migratePayload(v1, 1, CURRENT_SAVE_VERSION) as Record<string, unknown>;
 
     expect(migrated['clock']).toEqual({ tick: 0, accumulatorMs: 0 });
     expect(migrated['rngStreams']).toEqual({});
-    expect(migrated['armoury']).toEqual({ items: [], cardCounts: {}, cardsSeen: [] });
     expect(migrated['lootPity']).toEqual({ sinceTier: 0 });
+    expect(migrated['audit']).toEqual([]);
+    expect(migrated['emergencyAuthorisations']).toEqual([]);
+    expect(migrated['armoury']).toMatchObject({ items: [], cardCounts: {}, skillBooks: [] });
 
-    // The hunter is carried through with its original fields intact and the new equipment
-    // map added — a migration adds structure, it does not invent or discard data.
+    // The hunter is carried through with its original fields intact and the new structure
+    // added — a migration adds structure, it does not invent or discard data.
     const hunters = migrated['hunters'] as Record<string, unknown>[];
     expect(hunters).toHaveLength(1);
     expect(hunters[0]).toMatchObject({ id: 'h1', name: 'Old Hand' });
@@ -177,6 +183,16 @@ describe('migration chain (risk R4)', () => {
       feet: null,
       trinket: null,
     });
+    expect(hunters[0]?.['availability']).toMatchObject({ state: 'available' });
+
+    // v5: the class chain collapses to a starting position, carried across from classChain.
+    expect(hunters[0]?.['archetype']).toBe('vanguard');
+    expect(hunters[0]?.['classChain']).toBeUndefined();
+  });
+
+  it('refuses a v4 hunter with no archetype rather than inventing one', () => {
+    // Guessing a starting position would silently rewrite who a hunter is.
+    expect(() => migratePayload({ hunters: [{ id: 'h1' }] }, 4, 5)).toThrow(/no archetype/);
   });
 
   it('does not overwrite equipment a hunter already has', () => {

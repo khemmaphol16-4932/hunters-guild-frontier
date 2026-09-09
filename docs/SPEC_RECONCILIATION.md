@@ -82,7 +82,22 @@ Assigned to the party phase. `PartyTemplate.author` stays, now scoped to formati
 
 Combat does not exist yet, so this is a mistake *prevented* rather than repaired. Recorded as a hard requirement on the combat phase: elements and reactions must be authored data tables (reaction matrix, not a cycle), legible in combat, able to affect build tags and AI choices. REQ-CBT-003 is amended in `DESIGN_BIBLE.md`.
 
-### C5 ⚠️ Class model: three-stage chain vs one skill constellation — **needs your decision**
+### C5 ✅ Class model: migrated to one skill constellation — **Option B, approved and done**
+
+**Resolved.** The three-stage chain has been replaced by a single node graph. See DL-022/023/024 and the "constellation migration" DEVLOG entry.
+
+What changed: archetypes are now *starting positions*; the 6 advanced classes and 12 specializations became 18 descriptive **regions**; every skill is a node with prerequisites and six-axis eligibility; class identity is **derived** from region investment rather than declared. `ClassSystem` and `skill-compatibility.json` are gone. Save at v5.
+
+Two design problems surfaced during the migration and were fixed at the source rather than papered over — both are recorded in the DEVLOG because they are the kind of thing that would otherwise have shipped silently:
+
+1. **Affinity above zero meant *free* travel**, so every archetype reached everything and all three converged on `primary role: tank` — an Adept out-tanking a Vanguard. Fixed by making affinity a *distance*: a node's level cost is divided by the hunter's affinity for it, so foreign territory is reachable but late.
+2. **A build's role tag could be crowded out of its own summary** by higher-confidence affinity tags, so a dedicated front-liner could be described without the word "front-liner". Fixed by reserving the strongest role and range tags before filling the remaining budget.
+
+The original decision text is kept below for the record.
+
+---
+
+### C5 (original) ⚠️ Class model: three-stage chain vs one skill constellation
 
 **v1.0 §5:** *"Classes are flexible starting identities, not rigid content silos. Skill knowledge is one large node-based constellation with different class starting positions."* §20 lists the launch class roster as an ambiguity requiring approval.
 

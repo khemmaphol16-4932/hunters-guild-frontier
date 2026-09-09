@@ -730,48 +730,6 @@ export function parseArchetypes(raw: unknown, path = 'archetypes.json'): readonl
   return parsed;
 }
 
-export function parseAdvancedClasses(
-  raw: unknown,
-  path = 'advanced-classes.json',
-): readonly ClassNodeDef[] {
-  const o = expectObject(raw, path);
-  const list = expectArray(field(o, 'advancedClasses', path), `${path}.advancedClasses`);
-  const parsed = list.map((entry, i) => {
-    const p = `${path}.advancedClasses[${i}]`;
-    const e = expectObject(entry, p);
-    return parseClassNodeBody(
-      e,
-      p,
-      'advanced',
-      expectString(field(e, 'archetype', p), `${p}.archetype`),
-      expectNumber(field(e, 'requiredLevel', p), `${p}.requiredLevel`),
-    );
-  });
-  assertUniqueIds(parsed.map((a) => a.id), `${path}.advancedClasses`);
-  return parsed;
-}
-
-export function parseSpecializations(
-  raw: unknown,
-  path = 'specializations.json',
-): readonly ClassNodeDef[] {
-  const o = expectObject(raw, path);
-  const list = expectArray(field(o, 'specializations', path), `${path}.specializations`);
-  const parsed = list.map((entry, i) => {
-    const p = `${path}.specializations[${i}]`;
-    const e = expectObject(entry, p);
-    return parseClassNodeBody(
-      e,
-      p,
-      'specialization',
-      expectString(field(e, 'advancedClass', p), `${p}.advancedClass`),
-      expectNumber(field(e, 'requiredLevel', p), `${p}.requiredLevel`),
-    );
-  });
-  assertUniqueIds(parsed.map((a) => a.id), `${path}.specializations`);
-  return parsed;
-}
-
 // ---------------------------------------------------------------------------
 // Content: skills
 // ---------------------------------------------------------------------------
@@ -861,49 +819,6 @@ export function parseSkills(raw: unknown, path = 'skills.json'): readonly SkillD
   });
   assertUniqueIds(parsed.map((s) => s.id), `${path}.skills`);
   return parsed;
-}
-
-// ---------------------------------------------------------------------------
-// Content: skill compatibility
-// ---------------------------------------------------------------------------
-
-export interface SkillCompatibilityRule {
-  readonly skill: string;
-  readonly archetypes: readonly string[];
-  readonly advancedClasses: readonly string[];
-  readonly specializations: readonly string[];
-  readonly crossClass: boolean;
-}
-
-export interface SkillCompatibilityData {
-  readonly defaultPolicy: 'deny' | 'allow';
-  readonly rules: readonly SkillCompatibilityRule[];
-}
-
-export function parseSkillCompatibility(
-  raw: unknown,
-  path = 'skill-compatibility.json',
-): SkillCompatibilityData {
-  const o = expectObject(raw, path);
-  const rules = expectArray(field(o, 'rules', path), `${path}.rules`).map((entry, i) => {
-    const p = `${path}.rules[${i}]`;
-    const e = expectObject(entry, p);
-    return {
-      skill: expectString(field(e, 'skill', p), `${p}.skill`),
-      archetypes: expectStringArray(field(e, 'archetypes', p), `${p}.archetypes`),
-      advancedClasses: expectStringArray(field(e, 'advancedClasses', p), `${p}.advancedClasses`),
-      specializations: expectStringArray(field(e, 'specializations', p), `${p}.specializations`),
-      crossClass: expectBoolean(field(e, 'crossClass', p), `${p}.crossClass`),
-    };
-  });
-  assertUniqueIds(rules.map((r) => r.skill), `${path}.rules`);
-  return {
-    defaultPolicy: expectEnum(field(o, 'defaultPolicy', path), `${path}.defaultPolicy`, [
-      'deny',
-      'allow',
-    ] as const),
-    rules,
-  };
 }
 
 // ---------------------------------------------------------------------------

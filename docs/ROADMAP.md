@@ -75,11 +75,23 @@ Master Build Specification v1.0 arrived after Phase 2 and supersedes several loc
 
 **Delivered.** Audit/replay model (`core/audit.ts`) with the §14 minimum field set and a rejection for entries lacking a reason code · dual-resolution simulation clock, coarse and fine cadences from one elapsed-time source · canonical policy precedence as data (`data/policy/precedence.json`) with validation that filters always outrank weights · emergency overrides for hard constraints (`ai/policy/emergency.ts`) — named constraint only, player-authored only, trigger-conditional, always audited · five canonical availability states with legal transitions and recall transition time · recovery varying with food, housing and services · generated build tags · Chronicle Minor/Major/Historic. Save at v4 with a v3→v4 migration.
 
-**Open:** the class-model divergence (SPEC_RECONCILIATION C5) is flagged for approval and is the one item blocking a clean run at the vertical slice.
+**Open at the time:** the class-model divergence (SPEC_RECONCILIATION C5) — since approved and delivered as Phase 2.6 below.
 
 ---
 
 > **Sequencing note (v1.0 §17).** v1.0 orders the work: schemas/clock/RNG/audit/migration/precedence → **vertical slice** → town → AI Operations → economy → world knowledge → equipment/cards/theorycraft → legacy. Equipment was already built as Phase 2 under the previous roadmap, which is not reversible work and earned its place (it validated the DL-009 interface and caught a live `BuildIdentity` bug). The remaining order below is resequenced to match v1.0, and §17's closing instruction stands: **no further content production until the vertical slice is measurable and replayable.**
+
+## Phase 2.6 — Skill constellation ✅
+
+v1.0 §5, approved as SPEC_RECONCILIATION option B. The three-stage class chain is replaced by one node graph: archetypes are starting positions, the former advanced classes and specializations are descriptive regions, every skill is a node with prerequisite groups and six-axis eligibility (level, class affinity, weapon, build, prerequisites, skill books), and class identity is derived from region investment rather than declared.
+
+**Delivered.** `systems/constellation/Constellation` · `data/constellation/{nodes,regions}.json` · affinity-as-distance so foreign territory is reachable but late (DL-024) · skill-book possession as real armoury state · `ClassSystem` and `skill-compatibility.json` removed · save v5 with a v4→v5 migration.
+
+**Found by measurement, fixed at the source:** all three archetypes had converged on the same role because affinity above zero meant free travel; and a build's role tag could be crowded out of its own summary. Both are written up in DEVLOG.
+
+**Open:** the Ranger line is content-thin and 10 of 18 regions hold no nodes — the 12-skill prototype budget, tracked in TECH_DEBT.
+
+---
 
 ## Phase 3 — Vertical slice ⬜ ← **next**
 

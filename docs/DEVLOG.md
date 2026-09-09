@@ -80,3 +80,45 @@ Two Vanguards gear-differentiated: one in a completed 4-piece Ashwarden set with
 ### Open
 
 Refinement and selling compute their gold cost but do not move gold — the Resources system is Phase 7, and half-implementing it here is the temporary architecture §126 warns against. The *risk* half of refinement's risk/reward is fully live. Tracked in TECH_DEBT.md.
+
+---
+
+## 2026-09-09 — v1.0 reconciliation, then the constellation migration
+
+Two pieces of work in one session. The reconciliation is written up in `SPEC_RECONCILIATION.md`; this entry records what the migration actually taught us.
+
+### Reconciliation (v1.0 §17 step 1)
+
+Audit/replay model · dual-resolution clock · canonical precedence as data · emergency overrides for hard constraints · five availability states · generated build tags · Chronicle Minor/Major/Historic. Save v3 → v4.
+
+The override path was the change worth being careful about. §2.1 makes hard constraints overridable, replacing the absolute rule this project was built on, and an override path is precisely how "hard constraint" degrades into "strong suggestion". So it is narrow by construction: one named constraint, player-authored only, trigger-conditional, always audited. With none configured, behaviour is identical to before.
+
+### The constellation (approved Option B)
+
+Replaced the three-stage Archetype → Advanced → Specialization chain with one node graph. Archetypes became starting positions; the 18 advanced/specialization definitions became descriptive **regions**; every skill became a node with prerequisite groups and six-axis eligibility; class identity is now derived from region investment. `ClassSystem` and `skill-compatibility.json` deleted. Save v4 → v5.
+
+**271 tests across 12 suites.** Typecheck and production build clean.
+
+### What the migration exposed — two real bugs, found by measurement
+
+Neither would have thrown an error. Both would have shipped.
+
+**1. Every archetype converged on the same role.** After the migration I probed actual profiles rather than trusting the tests, and found that at level 20+ a Vanguard, an Adept and a Ranger *all* read `primary role: tank`, with near-identical role spreads. The cause: `archetypeAffinity > 0` meant free access, so every hunter simply took every reachable node, and an Adept holding Shield Bash and Guard Stance out-tanked an actual Vanguard.
+
+The fix was to make affinity mean *distance*: `effectiveLevel = ceil(requiredLevel / affinity)`. Foreign territory stays reachable — v1.0 §5 explicitly wants that — but it arrives late, and deep foreign nodes become effectively unreachable without needing a hard wall. After the fix: vanguard → tank (focus 0.49), adept → healer (0.53), ranger → damage (0.67).
+
+A second contributor was my own test helper: `refreshLoadout` took *every* available node, which no player would do. It now builds toward the hunter's own territory, with an explicit `wander` option for the cross-training case. Modelling "a developed hunter" as "one who took everything" was quietly wrong.
+
+**2. A build's role could vanish from its own summary.** `generateBuildTags` sorted purely by confidence and truncated to eight. Skill-affinity tags routinely hit 1.0, so they crowded out the role tag — a dedicated front-liner could be described as "defensive, threat-holding, martial" while never being called a front-liner. The strongest role and range tags are now reserved before the remaining budget is filled.
+
+### Design decisions recorded
+
+DL-022 (regions, not deletion) · DL-023 (v4 advanced/spec dropped, not translated — identity reconstructs from `knownSkills`; a missing archetype throws rather than being guessed) · DL-024 (affinity as distance).
+
+### Verified in the browser
+
+Fresh guild: Vanguard · Sentinel (tank), Adept · Mender (healer), Ranger · Marksman (damage) — identity derived, not declared. A level-45 Vanguard walked deeper reads "Vanguard · Bulwark/Sentinel", offers Mend and Piercing Shot as cross-territory options, and shows Renewal/Riposte/Rally greyed on the frontier with their unmet requirements on hover. Skill books appear as visible requirements, which is what §5 asks for.
+
+### Open
+
+The Ranger line is content-thin: only two nodes sit in Ranger regions, so a Ranger tops out at one or two skills. That is the 12-skill prototype budget, not a model failure, and it is tracked in TECH_DEBT — but it means the Ranger is the weakest demonstration of the constellation right now.

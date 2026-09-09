@@ -154,14 +154,8 @@ export class Chronicle {
       }
     });
 
-    on('hunter.advanced', ({ hunterId, stage, classId }) => {
-      this.record(
-        hunterId,
-        'classAdvancement',
-        stage === 'specialization'
-          ? `Specialised as ${classId}.`
-          : `Advanced to ${classId}.`,
-      );
+    on('constellation.nodeTaken', ({ hunterId, nodeId, regionId }) => {
+      this.record(hunterId, 'constellationNode', `Learned ${nodeId}, deepening into ${regionId}.`);
     });
 
     on('zone.firstEntered', ({ hunterId, zoneId, tier }) => {

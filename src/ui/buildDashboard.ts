@@ -154,7 +154,7 @@ export class BuildDashboard {
         el(
           'div',
           'meta',
-          `Lv ${hunter.level} · ${this.session.classSystem.describeChain(hunter)} · ${profile.primaryRole}`,
+          `Lv ${hunter.level} · ${this.session.constellation.describeIdentity(hunter)} · ${profile.primaryRole}`,
         ),
       );
 
@@ -222,7 +222,7 @@ export class BuildDashboard {
       el(
         'p',
         'subhead',
-        `Level ${hunter.level} · ${this.session.classSystem.describeChain(hunter)} · ` +
+        `Level ${hunter.level} · ${this.session.constellation.describeIdentity(hunter)} · ` +
           `${this.session.personality.definition(hunter.personalityId)?.name ?? 'unknown'} · ` +
           `${hunter.potential.tier} potential`,
       ),
@@ -247,25 +247,37 @@ export class BuildDashboard {
       el('p', 'subhead', `Status: ${describeAvailability(hunter.availability)}`),
     );
 
-    const advancement = el('div');
-    for (const option of this.session.classSystem.availableAdvancements(hunter)) {
-      const button = el(
-        'button',
-        'small',
-        option.available ? `Advance: ${option.node.name}` : `${option.node.name} (${option.reason})`,
-      ) as HTMLButtonElement;
-      button.disabled = !option.available;
+    // v1.0 §5: the constellation replaces class advancement. Available nodes are offered;
+    // the frontier is shown with its unmet requirements so the tree explains itself.
+    const constellation = el('div');
+
+    for (const node of this.session.constellation.availableNodes(hunter)) {
+      const skillName = this.session.registry.get(node.skill)?.name ?? node.skill;
+      const regionName = this.session.constellation.region(node.region)?.name ?? node.region;
+
+      const button = el('button', 'small', `Learn: ${skillName}`) as HTMLButtonElement;
       button.style.marginRight = '6px';
+      button.title = `${regionName} region`;
       button.onclick = () => {
-        const result = this.commands.advanceClass(hunter.id, option.node.id);
-        this.notify(
-          result.ok ? `${hunter.name} is now a ${option.node.name}.` : result.error,
-          !result.ok,
-        );
+        const result = this.commands.takeNode(hunter.id, node.id);
+        this.notify(result.ok ? `${hunter.name} learned ${skillName}.` : result.error, !result.ok);
       };
-      advancement.append(button);
+      constellation.append(button);
     }
-    card.append(advancement);
+
+    // The frontier: reachable but not yet takeable, with every unmet requirement on hover.
+    // v1.0 §5 wants skill books visible as requirements in the tree; this is where they show.
+    for (const blocked of this.session.constellation.frontierNodes(hunter).slice(0, 5)) {
+      const node = this.session.constellation.node(blocked.nodeId);
+      const label = this.session.registry.get(node?.skill ?? '')?.name ?? blocked.nodeId;
+
+      const chip = el('span', 'tag', label);
+      chip.title = blocked.unmet.join('\n');
+      chip.style.opacity = '0.55';
+      constellation.append(chip);
+    }
+
+    card.append(constellation);
 
     return card;
   }
@@ -442,9 +454,12 @@ export class BuildDashboard {
       card.append(train);
     }
 
-    const learnable = this.session.registry
-      .learnableBy(hunter)
-      .filter((s) => !hunter.knownSkills.includes(asSkillId(s.id)));
+    const learnable = this.session.constellation
+      .availableNodes(hunter)
+      .map((node) => this.session.registry.get(node.skill))
+      .filter((def): def is NonNullable<typeof def> => def !== undefined)
+      .filter((def) => !hunter.knownSkills.includes(asSkillId(def.id)));
+
     if (learnable.length > 0) {
       card.append(el('h3', undefined, 'Can learn'));
       for (const def of learnable) {
@@ -751,7 +766,7 @@ export class BuildDashboard {
     head.append(el('td', 'num', other.name));
     table.append(head);
 
-    addRow('class', this.session.classSystem.describeChain(hunter), this.session.classSystem.describeChain(other));
+    addRow('class', this.session.constellation.describeIdentity(hunter), this.session.constellation.describeIdentity(other));
     addRow('primary role', a.primaryRole, b.primaryRole);
     addRow('shape', a.shape, b.shape);
     addRow('range', a.primaryRange, b.primaryRange);

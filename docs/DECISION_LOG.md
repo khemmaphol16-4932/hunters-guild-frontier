@@ -120,6 +120,36 @@ Assumptions made under §127 (ambiguity resolved conservatively, documented, wor
 
 ---
 
+## DL-022 — Advanced classes and specializations became constellation *regions*
+
+**Ambiguity.** v1.0 §5 describes one skill constellation with class starting positions, and says nothing about advanced classes or specializations. §20 lists the class roster as needing approval, so neither keeping nor deleting them could be assumed.
+
+**Decision.** The 6 advanced classes and 12 specializations became 18 **regions** — named areas of the constellation that are purely descriptive. They gate nothing. A hunter who has taken Sentinel-region nodes *reads as* a Sentinel.
+
+**Why conservative.** It preserves every piece of authored content (role lean, range, attribute affinity, risk posture, tags — all tuned in Phase 1) while removing the thing v1.0 rejected, which was the *gating*. Deleting them would have thrown away working content to satisfy a paragraph; keeping them as gates would have ignored it. Regions also give the constellation legible structure and let class identity be derived, which is §5's own principle applied one level up.
+
+---
+
+## DL-023 — A v4 hunter's advanced class and specialization are dropped, not translated
+
+**Ambiguity.** Migrating v4 → v5, a hunter carries `classChain: { archetype, advanced, specialization }`. Only `archetype` survives into v5.
+
+**Decision.** Carry the archetype forward; drop the other two. Refuse the migration outright if a hunter has no archetype rather than guessing one.
+
+**Why this is not lossy.** Under the constellation, identity derives from known skills. A v4 hunter who advanced to Sentinel necessarily *knows Sentinel-region skills*, because that advancement is what gated them. Their identity therefore reconstructs itself from `knownSkills` with nothing invented. Guessing a missing archetype, by contrast, would silently rewrite who a hunter is — so that case throws.
+
+---
+
+## DL-024 — Affinity is distance, expressed as progression cost
+
+**Ambiguity.** v1.0 §5 wants "flexible starting identities, not rigid content silos" and permits eligibility to depend on class, but does not say what non-zero affinity should *cost*.
+
+**Decision.** A node's level requirement is divided by the hunter's affinity for it: `effectiveLevel = ceil(requiredLevel / affinity)`. Affinity 0 remains genuinely unreachable.
+
+**Why.** Found by measurement, not by reasoning. With affinity above zero meaning *free* access, every archetype reached everything and all three converged on the same profile — an Adept who picked up Shield Bash and Guard Stance out-tanked a Vanguard, and class identity collapsed entirely. Distance-as-cost keeps the door open (a determined Ranger can still become a counter-fighter) while making it a real investment, and it needs no new mechanism: deeper nodes already cost more level, so the penalty scales naturally with how far into foreign territory a hunter is reaching.
+
+---
+
 ## DL-018 — Master Build Specification v1.0 overrides the 350-decision prompt on conflicts
 
 **Ambiguity.** v1.0 arrived after Phases 0–2 were built, labelled "source of truth", and conflicts with the original prompt on several locked points.

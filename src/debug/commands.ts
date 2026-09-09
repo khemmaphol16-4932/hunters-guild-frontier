@@ -55,21 +55,34 @@ export class DebugConsole {
 
   // --- Spawning and mutation ------------------------------------------------
 
-  /** §118 "Spawn Hunter". */
+  /**
+   * §118 "Spawn Hunter".
+   *
+   * `fullyEquipped` walks the hunter as far through the constellation as their starting
+   * position legitimately reaches — it does **not** grant every skill. Granting everything
+   * would make a Vanguard and an Adept hold identical loadouts, which silently destroys the
+   * role differentiation the REQ-BLD-003 tests exist to prove. Use `grantSkill` when you
+   * genuinely want an impossible hunter for an AI scenario.
+   */
   spawnHunter(options: SpawnOptions = {}): Hunter {
     const { fullyEquipped, ...generateOptions } = options;
-    let hunter = this.session.generateHunter(generateOptions);
+    const hunter = this.session.generateHunter(generateOptions);
 
-    if (fullyEquipped) {
-      for (const skill of this.session.registry.learnableBy(hunter)) {
-        const learned = this.session.knowledge.learn(hunter, asSkillId(skill.id), 'book');
-        if (learned.ok) hunter = learned.value;
-      }
-      const filled = this.session.knowledge.autoFill(hunter);
-      if (filled.ok) hunter = filled.value;
-      this.session.roster.update(hunter);
+    if (!fullyEquipped) return hunter;
+    return this.refreshLoadout(hunter.id);
+  }
+
+  /** Grant every skill in the game, bypassing the constellation. For AI scenarios only. */
+  grantAllSkills(hunterId: HunterId): Hunter {
+    let hunter = this.session.roster.require(hunterId);
+    for (const skill of this.session.registry.all()) {
+      const learned = this.session.knowledge.learn(hunter, asSkillId(skill.id), 'debug');
+      if (learned.ok) hunter = learned.value;
     }
+    const filled = this.session.knowledge.autoFill(hunter);
+    if (filled.ok) hunter = filled.value;
 
+    this.session.roster.update(hunter);
     return hunter;
   }
 
@@ -114,8 +127,14 @@ export class DebugConsole {
     return this.commands.respec(hunterId);
   }
 
-  advance(hunterId: HunterId, classId: string): Result<Hunter, string> {
-    return this.commands.advanceClass(hunterId, classId);
+  /** Take a constellation node through the normal rules. */
+  takeNode(hunterId: HunterId, nodeId: string): Result<Hunter, string> {
+    return this.commands.takeNode(hunterId, nodeId);
+  }
+
+  /** Grant the guild a skill book, making book-gated nodes reachable (v1.0 §5). */
+  giveSkillBook(nodeId: string): void {
+    this.session.armoury.addSkillBook(nodeId);
   }
 
   /**
@@ -125,13 +144,31 @@ export class DebugConsole {
    * that class — so this models the realistic post-advancement flow. Phase 3 gives this to
    * the player as a training action; for now it keeps scenario setup honest.
    */
-  refreshLoadout(hunterId: HunterId): Hunter {
+  refreshLoadout(hunterId: HunterId, options: { wander?: boolean } = {}): Hunter {
     let hunter = this.session.roster.require(hunterId);
+    const home = hunter.archetype;
 
-    for (const skill of this.session.registry.learnableBy(hunter)) {
-      const learned = this.session.knowledge.learn(hunter, asSkillId(skill.id), 'advancement');
-      if (learned.ok) hunter = learned.value;
+    let progressed = true;
+    while (progressed) {
+      progressed = false;
+      for (const node of this.session.constellation.availableNodes(hunter)) {
+        // Build toward the hunter's own territory unless explicitly told to wander.
+        // Taking every reachable node is not what a player does, and modelling it that way
+        // made every archetype converge on the same profile — a Ranger who picks up Shield
+        // Bash and Guard Stance simply because they *can* is not a Ranger any more.
+        if (!options.wander) {
+          const region = this.session.constellation.region(node.region);
+          if (region && region.archetype !== home) continue;
+        }
+
+        const learned = this.session.knowledge.learn(hunter, asSkillId(node.skill), 'node');
+        if (learned.ok) {
+          hunter = learned.value;
+          progressed = true;
+        }
+      }
     }
+
     const filled = this.session.knowledge.autoFill(hunter);
     if (filled.ok) hunter = filled.value;
 
@@ -273,7 +310,7 @@ export class DebugConsole {
     return {
       name: hunter.name,
       level: hunter.level,
-      classChain: this.session.classSystem.describeChain(hunter),
+      identity: this.session.constellation.describeIdentity(hunter),
       attributes: hunter.attributes,
       derived: Object.fromEntries(
         DERIVED_STAT_DISPLAY_ORDER.map((k) => [k, Math.round((stats[k] ?? 0) * 10) / 10]),
@@ -310,9 +347,18 @@ export class DebugConsole {
     };
   }
 
-  learnableSkills(hunterId: HunterId): readonly string[] {
+  /** Nodes takeable right now. */
+  availableNodes(hunterId: HunterId): readonly string[] {
     const hunter = this.session.roster.require(hunterId);
-    return this.session.registry.learnableBy(hunter).map((s) => s.id);
+    return this.session.constellation.availableNodes(hunter).map((n) => n.id);
+  }
+
+  /** Reachable but not yet takeable, with the reasons — what the player is working toward. */
+  frontier(hunterId: HunterId): readonly { nodeId: string; unmet: readonly string[] }[] {
+    const hunter = this.session.roster.require(hunterId);
+    return this.session.constellation
+      .frontierNodes(hunter)
+      .map((e) => ({ nodeId: e.nodeId, unmet: e.unmet }));
   }
 
   // --- Time and persistence -------------------------------------------------

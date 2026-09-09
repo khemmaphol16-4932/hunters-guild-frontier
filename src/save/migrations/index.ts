@@ -137,7 +137,58 @@ const v3ToV4: Migration = {
   },
 };
 
-export const MIGRATIONS: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4];
+/**
+ * v4 → v5: the class chain becomes a starting position in the skill constellation.
+ *
+ * v1.0 §5 replaces Archetype → Advanced → Specialization with one node graph, so
+ * `classChain: { archetype, advanced, specialization }` collapses to `archetype`.
+ *
+ * The advanced class and specialization are *dropped rather than translated*, and that is
+ * the right call rather than a lossy one: under the constellation, identity is derived from
+ * which regions a hunter's known skills fall in, and a v4 hunter who advanced to Sentinel
+ * necessarily knows Sentinel-region skills — because those skills were what the advancement
+ * gated. Their identity therefore reconstructs itself from `knownSkills` without the
+ * migration having to invent anything. See DL-023.
+ */
+const v4ToV5: Migration = {
+  from: 4,
+  to: 5,
+  describe: 'collapse the class chain to a constellation starting position',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) {
+      throw new SaveMigrationError('v4 payload is not an object');
+    }
+    const v4 = payload as Record<string, unknown>;
+
+    const hunters = Array.isArray(v4['hunters']) ? v4['hunters'] : [];
+    const upgraded = hunters.map((hunter) => {
+      if (typeof hunter !== 'object' || hunter === null) return hunter;
+      const { classChain, ...rest } = hunter as Record<string, unknown>;
+
+      const archetype =
+        rest['archetype'] ??
+        (typeof classChain === 'object' && classChain !== null
+          ? (classChain as Record<string, unknown>)['archetype']
+          : undefined);
+
+      if (archetype === undefined) {
+        throw new SaveMigrationError('a v4 hunter has no archetype to carry forward');
+      }
+      return { ...rest, archetype };
+    });
+
+    const armoury = (v4['armoury'] ?? {}) as Record<string, unknown>;
+
+    return {
+      ...v4,
+      hunters: upgraded,
+      // Skill books became real state in the same change; a v4 guild held none.
+      armoury: { ...armoury, skillBooks: armoury['skillBooks'] ?? [] },
+    };
+  },
+};
+
+export const MIGRATIONS: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */
 export function migratePayload(

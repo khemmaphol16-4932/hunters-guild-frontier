@@ -203,9 +203,32 @@ export function generateBuildTags(
     });
   }
 
-  return dedupe(tags)
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, options.maxTags ?? DEFAULT_MAX_TAGS);
+  return truncate(dedupe(tags), options.maxTags ?? DEFAULT_MAX_TAGS);
+}
+
+/**
+ * Trim to the tag budget without losing the answer to "what kind of hunter is this?".
+ *
+ * Sorting purely by confidence lets a crowd of skill-affinity tags — which routinely reach
+ * 1.0 — push the role and range tags out of the list entirely, so a dedicated front-liner
+ * could be described as "defensive, threat-holding, martial" while never being called a
+ * front-liner. The strongest role and range tags are therefore reserved first, and the
+ * remaining budget is filled by confidence.
+ */
+function truncate(tags: readonly BuildTag[], limit: number): readonly BuildTag[] {
+  const byConfidence = [...tags].sort((a, b) => b.confidence - a.confidence);
+  if (byConfidence.length <= limit) return byConfidence;
+
+  const reserved: BuildTag[] = [];
+  for (const kind of ['role', 'range'] as const) {
+    const best = byConfidence.find((t) => t.kind === kind);
+    if (best) reserved.push(best);
+  }
+
+  const rest = byConfidence.filter((t) => !reserved.includes(t));
+  return [...reserved, ...rest]
+    .slice(0, limit)
+    .sort((a, b) => b.confidence - a.confidence);
 }
 
 /** Keep the highest-confidence instance of each label. */

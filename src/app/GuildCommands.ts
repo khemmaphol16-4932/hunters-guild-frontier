@@ -35,14 +35,32 @@ import type { RefineResult } from '../systems/items/Refinement.js';
 export class GuildCommands {
   constructor(private readonly session: Session) {}
 
-  /** Recruit a hunter and give them a working loadout. Phase 3 replaces this with pools. */
+  /**
+   * Recruit a hunter and walk them out from their starting position.
+   *
+   * Takes every node currently reachable, repeatedly, because taking one node can unlock
+   * another — a recruit should arrive having actually travelled their constellation rather
+   * than holding only their entry node. Phase 3 replaces this with recruitment pools.
+   */
   recruit(options: GenerateHunterOptions = {}): Hunter {
     let hunter = this.session.generateHunter(options);
 
-    for (const skill of this.session.registry.learnableBy(hunter)) {
-      const learned = this.session.knowledge.learn(hunter, asSkillId(skill.id), 'advancement');
-      if (learned.ok) hunter = learned.value;
+    let progressed = true;
+    while (progressed) {
+      progressed = false;
+      for (const node of this.session.constellation.availableNodes(hunter)) {
+        // A recruit develops toward their own territory, not into everything they can reach.
+        const region = this.session.constellation.region(node.region);
+        if (region && region.archetype !== hunter.archetype) continue;
+
+        const learned = this.session.knowledge.learn(hunter, asSkillId(node.skill), 'node');
+        if (learned.ok) {
+          hunter = learned.value;
+          progressed = true;
+        }
+      }
     }
+
     const filled = this.session.knowledge.autoFill(hunter);
     if (filled.ok) hunter = filled.value;
 
@@ -87,19 +105,30 @@ export class GuildCommands {
     return updated;
   }
 
-  advanceClass(hunterId: HunterId, classId: string): Result<Hunter, string> {
+  /**
+   * Take a constellation node — the act that replaces class advancement (v1.0 §5).
+   * Learning the skill and taking the node are the same thing, so this delegates to
+   * SkillKnowledge and lets the Constellation adjudicate eligibility.
+   */
+  takeNode(hunterId: HunterId, nodeId: string): Result<Hunter, string> {
     const hunter = this.session.roster.require(hunterId);
-    const result = this.session.classSystem.advance(hunter, classId);
-    if (isErr(result)) return result;
 
-    this.session.roster.update(result.value);
-    const node = this.session.classSystem.node(classId);
-    this.session.events.emit('hunter.advanced', {
+    const node = this.session.constellation.node(nodeId);
+    if (!node) return err(`unknown constellation node "${nodeId}"`);
+
+    const taken = this.session.constellation.canTake(hunter, nodeId);
+    if (isErr(taken)) return taken;
+
+    const learned = this.session.knowledge.learn(hunter, asSkillId(node.skill), 'node');
+    if (isErr(learned)) return learned;
+
+    this.session.roster.update(learned.value);
+    this.session.events.emit('constellation.nodeTaken', {
       hunterId,
-      stage: node?.stage === 'specialization' ? 'specialization' : 'advanced',
-      classId,
+      nodeId,
+      regionId: node.region,
     });
-    return result;
+    return ok(learned.value);
   }
 
   equipSkill(hunterId: HunterId, skillId: string): Result<Hunter, string> {
