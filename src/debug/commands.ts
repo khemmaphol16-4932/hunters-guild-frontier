@@ -15,13 +15,14 @@
 import type { Session } from '../app/Session.js';
 import { GuildCommands } from '../app/GuildCommands.js';
 import type { AttributeKey, Role } from '../data/schema.js';
+import { ATTRIBUTE_KEYS } from '../data/schema.js';
 import {
   computeDerivedStats,
   DERIVED_STAT_DISPLAY_ORDER,
 } from '../core/hunter/attributes.js';
-import { applyExperience } from '../core/hunter/leveling.js';
+import { allocate, applyExperience, attributePointBudget } from '../core/hunter/leveling.js';
 import { asSkillId, type HunterId, type SkillId } from '../core/ids.js';
-import { withLevel, type DepartmentId, type Hunter } from '../core/hunter/Hunter.js';
+import { withAttributes, withLevel, type DepartmentId, type Hunter } from '../core/hunter/Hunter.js';
 import { describeBuild, profileDistance } from '../systems/hunter/describeBuild.js';
 import { err, isErr, ok, type Result } from '../core/result.js';
 import type { UseSignificance } from '../systems/skills/SkillMastery.js';
@@ -69,7 +70,60 @@ export class DebugConsole {
     const hunter = this.session.generateHunter(generateOptions);
 
     if (!fullyEquipped) return hunter;
+    // Attributes before skills: constellation nodes have attribute requirements, so a
+    // hunter with unspent points cannot reach the nodes their level entitles them to.
+    this.spendPoints(hunter.id);
     return this.refreshLoadout(hunter.id);
+  }
+
+  /**
+   * Spend a hunter's whole attribute budget along their archetype's affinity.
+   *
+   * Without this, a "level 50" debug hunter had every attribute still at its level-1 value
+   * of 5 and 147 points unspent — which silently blocked every attribute-gated node and
+   * left a level-50 Ranger knowing exactly one skill. The harness was describing a hunter
+   * the game would never produce, and every scenario built on it was testing that fiction.
+   *
+   * Distribution follows `attributeAffinity` from the archetype rather than a flat spread,
+   * because a developed hunter is developed in a *direction* (§16).
+   */
+  spendPoints(hunterId: HunterId): Hunter {
+    const hunter = this.session.roster.require(hunterId);
+    const balance = this.session.content.balance.attributes;
+    const affinity = this.session.content.archetypesById.get(hunter.archetype)?.attributeAffinity;
+    if (!affinity) return hunter;
+
+    const spent = ATTRIBUTE_KEYS.reduce(
+      (sum, key) => sum + (hunter.attributes[key] - balance.startingValue),
+      0,
+    );
+    let remaining = attributePointBudget(hunter.level, balance) - spent;
+    if (remaining <= 0) return hunter;
+
+    const total = ATTRIBUTE_KEYS.reduce((sum, key) => sum + (affinity[key] ?? 0), 0);
+    if (total <= 0) return hunter;
+
+    let updated = hunter;
+    for (const key of ATTRIBUTE_KEYS) {
+      const share = Math.floor((remaining * (affinity[key] ?? 0)) / total);
+      if (share <= 0) continue;
+      const result = allocate(updated.attributes, updated.level, [{ attribute: key, amount: share }], balance);
+      if (result.ok) updated = withAttributes(updated, result.value);
+    }
+
+    // Rounding leaves a few points over; they go to the strongest affinity, which is where
+    // a player optimising the same build would have put them.
+    remaining =
+      attributePointBudget(updated.level, balance) -
+      ATTRIBUTE_KEYS.reduce((sum, key) => sum + (updated.attributes[key] - balance.startingValue), 0);
+    const best = [...ATTRIBUTE_KEYS].sort((a, b) => (affinity[b] ?? 0) - (affinity[a] ?? 0))[0];
+    if (remaining > 0 && best) {
+      const result = allocate(updated.attributes, updated.level, [{ attribute: best, amount: remaining }], balance);
+      if (result.ok) updated = withAttributes(updated, result.value);
+    }
+
+    this.session.roster.update(updated);
+    return updated;
   }
 
   /** Grant every skill in the game, bypassing the constellation. For AI scenarios only. */

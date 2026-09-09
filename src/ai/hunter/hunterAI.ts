@@ -36,6 +36,7 @@ import {
   type Candidate,
   type FilterStage,
   type HardConstraint,
+  type ScoredCandidate,
   type WeightStage,
 } from '../policy/pipeline.js';
 import type {
@@ -49,7 +50,42 @@ import type {
 // Actions
 // ---------------------------------------------------------------------------
 
-export type ActionKind = 'skill' | 'attack' | 'approach' | 'rescue' | 'wait';
+export type ActionKind = 'skill' | 'attack' | 'approach' | 'rescue' | 'retreat' | 'dodge' | 'wait';
+
+/**
+ * What the fight's surroundings mean, reduced to what a hunter could actually perceive.
+ *
+ * `lethal` is not "this looks dangerous" — it is REQ-ZON-001's fact that this zone is
+ * permitted to kill, which the guild knows before it sets out and tells its hunters.
+ */
+export interface CombatEnvironment {
+  readonly zoneTier: string;
+  readonly lethal: boolean;
+  readonly canInjure: boolean;
+}
+
+/** A BLUE-zone default, so a caller that has no zone still gets defined behaviour. */
+export const SAFE_ENVIRONMENT: CombatEnvironment = {
+  zoneTier: 'blue',
+  lethal: false,
+  canInjure: false,
+};
+
+/**
+ * The guild's objective, as combat sees it.
+ *
+ * Deliberately only what combat can act on. The full `ObjectiveDef` lives in the party
+ * system; passing it whole would let a future weight stage reach into party-planning
+ * concepts that have no meaning once the fight has started.
+ */
+export interface CombatObjective {
+  readonly id: string;
+  /** 0 = the guild wants everyone home, 1 = the guild wants this thing dead. */
+  readonly riskPreference: number;
+}
+
+/** A middling objective, for callers running a fight outside an expedition. */
+export const NEUTRAL_OBJECTIVE: CombatObjective = { id: 'none', riskPreference: 0.5 };
 
 export interface CombatAction extends Candidate {
   readonly id: string;
@@ -67,6 +103,22 @@ export interface CombatView {
   readonly elapsedSeconds: number;
   /** Enemy wind-ups the hunter can see (REQ-BOS-001 telegraphs, REQ-AI-008 prediction). */
   readonly incomingTelegraphs: readonly { casterId: string; secondsRemaining: number; aoe: boolean }[];
+  /**
+   * Where this fight is happening (§140-M). The same party in a BLUE and a BLACK zone must
+   * reach different decisions, and the only honest way to get that is to tell the AI where
+   * it is — inferring danger from the monsters would make a hard zone and a hard fight
+   * indistinguishable, which is exactly the distinction REQ-ZON-001 draws.
+   */
+  readonly environment: CombatEnvironment;
+  /**
+   * What the guild sent them to do (§28's ObjectiveWeights tier, REQ-POL-002).
+   *
+   * Without this the objective stopped at the party planner: a "bring everyone home" party
+   * and a "kill the boss" party picked different members and then fought identically, which
+   * makes the objective a recruitment filter rather than a strategy. It sits above personal
+   * priority and below hard constraints, exactly where §28 puts it.
+   */
+  readonly objective: CombatObjective;
   /** Player policy compiled into hard constraints (REQ-POL-005). */
   readonly constraints: readonly HardConstraint<CombatAction, CombatView>[];
   readonly emergency: EmergencyPolicy | undefined;
@@ -78,6 +130,15 @@ export interface Decision {
   /** Player-readable, for the decision log (REQ-AI-011). */
   readonly explanation: string;
   readonly overrides: readonly OverrideDecision[];
+  /**
+   * Per-stage score contributions for every candidate, best first.
+   *
+   * REQ-UX-002's advanced view, and the only honest way to debug a utility AI: when a
+   * hunter does something surprising, the answer is always which stage outvoted which, and
+   * reconstructing that by reasoning about the code is how you convince yourself of the
+   * wrong cause. Player-facing text never shows these numbers (REQ-AI-011).
+   */
+  readonly trace: readonly ScoredCandidate<CombatAction>[];
 }
 
 // ---------------------------------------------------------------------------
@@ -89,6 +150,8 @@ export interface HunterAIDeps {
   readonly skillOf: (skillId: string) => SkillDef | undefined;
   readonly masteryOf: (hunterId: string, skillId: string) => number;
   readonly rangeDistance: (band: SkillDef['rangeBand']) => number;
+  /** Monster definitions, for estimating what a fight is about to cost (§140-F). */
+  readonly monsterOf?: (id: string) => { attackCooldown: number; tier: string } | undefined;
 }
 
 export class HunterAI {
@@ -117,6 +180,39 @@ export class HunterAI {
         skill: undefined,
         targetId: ally.id,
         basePriority: 80,
+      });
+    }
+
+    // Retreat is always a candidate while there is anything to retreat from. It is offered
+    // unconditionally rather than only when the hunter is hurt, because §29 lets the player
+    // *forbid* retreat and §140-I lets policy *require* it — both need the action to exist
+    // in the candidate set for a filter to act on, and a candidate that is conditionally
+    // absent cannot be vetoed or mandated (REQ-POL-004).
+    if (livingEnemies.length > 0) {
+      actions.push({
+        id: 'retreat',
+        kind: 'retreat',
+        skill: undefined,
+        targetId: undefined,
+        basePriority: 10,
+      });
+    }
+
+    // Dodging a telegraphed area attack (§140-C). Only worth offering to someone actually
+    // in its path, so a ranged hunter already outside it is not asked to consider it.
+    const aoeIncoming = view.incomingTelegraphs.some((t) => t.aoe);
+    const inThreatenedSpace =
+      livingEnemies.length > 0 &&
+      livingEnemies.some(
+        (e) => distanceBetween(self, e) <= this.deps.balance.movement.rangeBands.mid,
+      );
+    if (aoeIncoming && inThreatenedSpace) {
+      actions.push({
+        id: 'dodge',
+        kind: 'dodge',
+        skill: undefined,
+        targetId: undefined,
+        basePriority: 60,
       });
     }
 
@@ -151,6 +247,58 @@ export class HunterAI {
     }
 
     return actions;
+  }
+
+  /**
+   * How likely a rescue is to succeed, 0..1 (§140-F, REQ-CBT-013).
+   *
+   * This is deliberately an *estimate a hunter could make*, not a solved probability: can I
+   * get there, will the timer still be running when I arrive, how much of the enemy's
+   * attention is standing over them, and can I take that while I am channelling and unable
+   * to defend myself.
+   *
+   * Without this the AI had only risk posture to go on, which meant a bold hunter would
+   * walk into a hopeless rescue every time and a cautious one would decline a trivial one.
+   * Posture should decide how much risk is *acceptable*, not substitute for knowing what
+   * the risk is.
+   */
+  rescueViability(rescuer: Combatant, downed: Combatant, view: CombatView): number {
+    const { balance } = this.deps;
+
+    const travel =
+      distanceBetween(rescuer, downed) / Math.max(0.01, balance.movement.unitsPerSecond);
+    const needed = travel + balance.downed.rescueSeconds;
+
+    // If the timer runs out mid-channel the rescue was never possible.
+    if (downed.downedRemaining <= needed) return 0;
+    const timeMargin = Math.min(1, (downed.downedRemaining - needed) / needed);
+
+    // Enemies standing over the body are what makes a rescue expensive: the rescuer is
+    // channelling, so everything in reach hits them uncontested.
+    const guarding = view.enemies.filter(
+      (e) => !e.dead && distanceBetween(e, downed) <= balance.movement.rangeBands.melee,
+    );
+    const incoming = guarding.reduce(
+      (sum, e) => sum + stat(e, 'physicalAttack', 10) / Math.max(0.1, this.attackInterval(e)),
+      0,
+    );
+    const mitigated = Math.max(0, incoming - stat(rescuer, 'physicalDefense', 0) * 0.5);
+    const expectedDamage = mitigated * needed;
+
+    // Survivability is what fraction of the channel the rescuer can absorb.
+    const survivability =
+      expectedDamage <= 0 ? 1 : Math.min(1, rescuer.health / Math.max(1, expectedDamage));
+
+    // A tank being the one to go is meaningfully different from the healer going.
+    const suitability = 0.6 + 0.4 * (rescuer.profile?.roleLean.tank ?? 0);
+
+    return clamp01(timeMargin * survivability * suitability);
+  }
+
+  /** Rough seconds between an enemy's attacks, for threat estimation. */
+  private attackInterval(enemy: Combatant): number {
+    const def = enemy.monsterId ? this.deps.monsterOf?.(enemy.monsterId) : undefined;
+    return def?.attackCooldown ?? 2;
   }
 
   /** REQ-SKL-006: resource + cooldown + condition. Cooldown and resource checked by caller. */
@@ -276,12 +424,13 @@ export class HunterAI {
       reasonCodes,
       explanation: this.explain(chosen, view),
       overrides,
+      trace: decision.scored,
     };
   }
 
   private isPerformable(action: CombatAction, view: CombatView): boolean {
     const { self } = view;
-    if (action.kind === 'wait') return true;
+    if (action.kind === 'wait' || action.kind === 'retreat' || action.kind === 'dodge') return true;
 
     const target = [...view.allies, ...view.enemies].find((c) => c.id === action.targetId);
     if (action.targetId !== undefined && !target) return false;
@@ -338,15 +487,28 @@ export class HunterAI {
         },
       },
       {
-        // Skill affinity: what this hunter gravitates toward, including via mastery.
+        /**
+         * Skill affinity: what this hunter gravitates toward, including via mastery.
+         *
+         * Averaged over the skill's tags, not summed. Summing made the stage grow with tag
+         * count, so a three-tag skill scored roughly triple a one-tag skill for reasons that
+         * had nothing to do with the hunter or the fight. In practice it reached ~4.9 against
+         * an urgency term of ~2.5, which meant preference silently outvoted *every*
+         * situational consideration — the AI always reached for its favourite skill, and
+         * telegraphs, zone danger and objective could not change a decision.
+         *
+         * That is precisely the R2 failure this whole design exists to prevent, and it
+         * survived a green test suite because the Phase 3 test compared a tank with a healer,
+         * whose favourite skills differ anyway.
+         */
         name: 'skillAffinity',
         weigh: (action, view) => {
           const profile = view.self.profile;
-          if (!profile || !action.skill) return 0;
+          if (!profile || !action.skill || action.skill.tags.length === 0) return 0;
 
           let score = 0;
           for (const tag of action.skill.tags) score += profile.skillAffinity[tag] ?? 0;
-          return score * (w['skillAffinity'] ?? 1);
+          return (score / action.skill.tags.length) * (w['skillAffinity'] ?? 1);
         },
       },
       {
@@ -371,8 +533,18 @@ export class HunterAI {
           if (action.kind === 'attack' || action.skill?.roleContribution.damage) {
             return profile.riskPosture * weight;
           }
-          if (action.skill?.tags.includes('defensive')) {
+          // Dodging and breaking off are defensive play without being defensive *skills*.
+          // Leaving them out gave every skill a constant identity head start that no
+          // situational stage could close (§140-C).
+          if (action.skill?.tags.includes('defensive') || action.kind === 'dodge') {
             return (1 - profile.riskPosture) * weight;
+          }
+          if (action.kind === 'retreat') {
+            // Scaled by injury, unlike the others. A flat preference for leaving made an
+            // unharmed hunter with every skill on cooldown walk away rather than keep
+            // swinging — caution is about how much danger you accept, and at full health
+            // there is no danger yet to accept.
+            return (1 - profile.riskPosture) * weight * (1 - healthFraction(view.self));
           }
           if (action.kind === 'rescue') {
             // A bold hunter attempts rescues a cautious one declines (REQ-CBT-013).
@@ -397,6 +569,193 @@ export class HunterAI {
         },
       },
       {
+        /**
+         * What we were sent to do (§28 ObjectiveWeights, REQ-POL-002).
+         *
+         * Placed above the identity stages and below hard constraints. A high-risk objective
+         * pushes the party through a fight a cautious objective would break off; it never
+         * *forbids* breaking off, because that is a hard constraint's job and this is a
+         * weight.
+         */
+        name: 'objectiveAlignment',
+        weigh: (action, view) => {
+          const preference = view.objective.riskPreference;
+          const weight = w['objectiveAlignment'] ?? 2;
+
+          switch (action.kind) {
+            case 'retreat': {
+              // The whole point: "bring everyone home" leaves early, "kill the boss" does
+              // not. Scaled by how much trouble the hunter is actually in, because an
+              // objective shifts the *threshold* for leaving — it does not make leaving
+              // attractive on its own. Unscaled, a cautious objective produced a party that
+              // withdrew at full health without throwing a punch.
+              const hurt = 1 - healthFraction(view.self);
+              return (0.5 - preference) * 2 * weight * hurt;
+            }
+            case 'attack':
+              return (preference - 0.5) * weight;
+            case 'rescue':
+              // Getting people back is worth more the more the objective is about people.
+              return (0.5 - preference) * weight * 0.6;
+            default:
+              if (action.skill?.tags.includes('restorative')) {
+                return (0.5 - preference) * weight * 0.5;
+              }
+              if (action.skill?.roleContribution.damage) {
+                return (preference - 0.5) * weight * 0.5;
+              }
+              return 0;
+          }
+        },
+      },
+      {
+        /**
+         * Where we are (§140-M).
+         *
+         * A lethal zone does not make every hunter cautious — it makes caution *worth
+         * more*, and how much more depends on the hunter. A reckless duelist in a BLACK
+         * zone still fights; they simply stop discounting the exit as hard. Scaling by
+         * `1 - riskPosture` is what keeps this an interaction between build and place
+         * rather than a global modifier that flattens everyone into the same hunter.
+         */
+        name: 'zoneCaution',
+        weigh: (action, view) => {
+          if (!view.environment.lethal) return 0;
+          const caution = 1 - (view.self.profile?.riskPosture ?? 0.5);
+          const weight = w['zoneCaution'] ?? 1;
+
+          switch (action.kind) {
+            case 'retreat':
+              return caution * weight * (1 - healthFraction(view.self));
+            case 'dodge':
+              return caution * weight * 0.8;
+            case 'rescue':
+              // Losing someone here is permanent, which cuts both ways: the rescue matters
+              // more and costs more. Viability decides which, so this only amplifies.
+              return (this.viabilityOf(action, view) - 0.5) * weight;
+            default: {
+              const skill = action.skill;
+              if (!skill) return 0;
+
+              // Where death is permanent, keeping people alive is worth more than it is
+              // anywhere else — that is the whole content of REQ-ZON-001's BLACK tier, and
+              // an AI that only reacted to it by running away would be treating a lethal
+              // zone as a scary zone. So preservation gains and commitment loses.
+              if (skill.tags.includes('restorative')) {
+                const target = view.allies.find((a) => a.id === action.targetId);
+                const injury = target ? 1 - healthFraction(target) : 0;
+                return caution * weight * injury * 1.6;
+              }
+              if (skill.tags.includes('defensive')) return caution * weight * 0.8;
+              // Pulling a monster off a fragile ally, likewise.
+              if (skill.tags.includes('threat')) return caution * weight * 0.9;
+
+              // Spending a long cast or a big cooldown is how a hurt hunter dies here.
+              // Scaled by injury, so a healthy party still fights normally.
+              const committing =
+                action.kind === 'attack' || (skill.roleContribution.damage ?? 0) >= 0.4;
+              if (!committing) return 0;
+              return -caution * weight * (1 - healthFraction(view.self));
+            }
+          }
+        },
+      },
+      {
+        /**
+         * Is this rescue worth attempting (§140-F)?
+         *
+         * Viability enters as a signed term centred on a half-chance, so a good rescue is
+         * promoted and a hopeless one actively pushed below the alternatives rather than
+         * merely un-boosted. A hunter who charges a rescue they cannot complete dies for
+         * nothing and the downed ally still bleeds out.
+         */
+        name: 'rescueViability',
+        weigh: (action, view) => {
+          if (action.kind !== 'rescue') return 0;
+          const viability = this.viabilityOf(action, view);
+          // How good the odds have to be before this hunter will go. A bold hunter accepts
+          // a long shot; a cautious one wants a sure thing. Written as a *threshold* rather
+          // than as a bonus because the previous form subtracted boldness directly, which
+          // made braver hunters less likely to attempt a rescue — the opposite of
+          // REQ-CBT-013 and of what the word means.
+          const threshold = 0.75 - (view.self.profile?.riskPosture ?? 0.5) * 0.5;
+          return (viability - threshold) * (w['rescueViability'] ?? 3);
+        },
+      },
+      {
+        /**
+         * Spending an ultimate (§140-D).
+         *
+         * An ultimate is not "the highest-priority skill" — it is a resource that is wrong
+         * to spend on a fight that was already won. Worth is the fight's significance: a
+         * boss, a crowd, or a party in real trouble.
+         */
+        name: 'ultimateTiming',
+        weigh: (action, view) => {
+          if (action.skill?.category !== 'ultimate') return 0;
+          const weight = w['ultimateTiming'] ?? 2;
+
+          const enemies = view.enemies.filter((e) => !e.dead);
+          const bossPresent = enemies.some(
+            (e) => e.monsterId !== undefined && this.deps.monsterOf?.(e.monsterId)?.tier === 'boss',
+          );
+          const remaining =
+            enemies.reduce((sum, e) => sum + healthFraction(e), 0) / Math.max(1, enemies.length);
+          const partyPressure =
+            1 -
+            view.allies.filter(isActive).reduce((sum, a) => sum + healthFraction(a), 0) /
+              Math.max(1, view.allies.filter(isActive).length);
+
+          const significance = Math.max(
+            bossPresent ? 1 : 0,
+            enemies.length >= 3 ? 0.7 : 0,
+            partyPressure,
+          );
+          // Held back against a nearly-dead enemy even when the fight was significant.
+          return (significance * remaining - 0.35) * weight;
+        },
+      },
+      {
+        /**
+         * What the rest of the party is already doing.
+         *
+         * Not a coordination *protocol* — nobody is issuing orders, and REQ-AI-009 gives
+         * each hunter only what they can see. It is the ordinary thing a person does when a
+         * teammate is already handling something: they go and do something else. Without it
+         * two hunters channel a rescue on the same body and one of them is simply wasted,
+         * and three focus a target the first was already going to kill.
+         */
+        name: 'partyCoordination',
+        weigh: (action, view) => {
+          const weight = w['partyCoordination'] ?? 1;
+          const others = view.allies.filter((a) => a.id !== view.self.id && isActive(a));
+
+          if (action.kind === 'rescue') {
+            // A rescue in progress does not need a second pair of hands, and the timer runs
+            // on whoever is already there rather than on how many came.
+            const covered = others.some((a) => a.rescuingId === action.targetId);
+            return covered ? -weight * 2 : 0;
+          }
+
+          if (action.skill?.tags.includes('restorative')) {
+            // Overhealing is the most common waste: several healers converge on the lowest
+            // ally, and everyone else keeps taking damage untreated.
+            const alsoTreating = others.filter((a) => a.targetId === action.targetId).length;
+            return -alsoTreating * weight * 0.8;
+          }
+
+          if (action.kind === 'attack' || (action.skill?.roleContribution.damage ?? 0) > 0) {
+            // Mild the other way: focus fire is good, so agreeing with an ally's target is
+            // rewarded rather than penalised — just not enough to override a build's own
+            // judgement about what to cast.
+            const focusing = others.filter((a) => a.targetId === action.targetId).length;
+            return Math.min(focusing, 2) * weight * 0.25;
+          }
+
+          return 0;
+        },
+      },
+      {
         // Urgency: the situation, weighted the same for everyone. This is what stops build
         // identity from overriding an emergency — a glass cannon still heals a dying ally
         // if nothing else can, because urgency outweighs preference.
@@ -404,6 +763,12 @@ export class HunterAI {
         weigh: (action, view) => this.urgency(action, view) * (w['urgency'] ?? 2),
       },
     ];
+  }
+
+  /** Viability of a rescue action, or 0 if the target is gone. */
+  private viabilityOf(action: CombatAction, view: CombatView): number {
+    const target = view.allies.find((a) => a.id === action.targetId);
+    return target ? this.rescueViability(view.self, target, view) : 0;
   }
 
   private urgency(action: CombatAction, view: CombatView): number {
@@ -423,10 +788,50 @@ export class HunterAI {
       return 0.1;
     }
 
+    if (action.kind === 'dodge') {
+      // The nearer the landing, the less anything else matters (§140-C). A hunter who is
+      // holding threat has a reason to stay, so a tank weighs this less than a caster.
+      const soonest = view.incomingTelegraphs
+        .filter((t) => t.aoe)
+        .reduce((min, t) => Math.min(min, t.secondsRemaining), Infinity);
+      if (!Number.isFinite(soonest)) return 0;
+      const imminence = 1 - Math.min(1, soonest / 3);
+      const anchored = view.self.profile?.roleLean.tank ?? 0;
+      return 3.0 * imminence * (1 - anchored);
+    }
+
+    if (action.kind === 'retreat') {
+      /**
+       * Continuous in health, deliberately.
+       *
+       * This was originally a step: nothing above the low-health threshold, a jump at it,
+       * another at critical. A step means the *crossing point* is fixed, so no other stage
+       * can move it — zone danger, guild objective and risk posture all became decorative,
+       * shifting scores on either side of a cliff they could never relocate. A hunter broke
+       * off at exactly 35% health whether they were a reckless duelist on a boss kill in a
+       * safe zone or a cautious healer told to bring everyone home from a BLACK zone.
+       *
+       * Squared so that urgency stays low while the hunter is merely scuffed and climbs
+       * sharply as they approach death, which is the shape the step was reaching for.
+       */
+      const health = healthFraction(view.self);
+      const ramp = (1 - health) ** 2 * balance.ai.retreatUrgencyScale;
+      // Below the critical threshold, leaving stops being a judgement call.
+      return health <= balance.ai.criticalHealthFraction ? Math.max(ramp, 1.3) : ramp;
+    }
+
     if (action.skill?.tags.includes('defensive')) {
       // Bracing matters when the hunter is hurt, or when something is winding up.
+      // Bracing matters when the hunter is hurt, and matters most when something is
+      // visibly winding up. A hunter holding a shield should raise it rather than run —
+      // that is the difference between the tank's answer to a telegraph and everyone
+      // else's (§140-C).
       const hurt = healthFraction(view.self) <= balance.ai.lowHealthFraction ? 0.7 : 0;
-      const incoming = view.incomingTelegraphs.length > 0 ? 0.6 : 0;
+      const soonest = view.incomingTelegraphs.reduce(
+        (min, t) => Math.min(min, t.secondsRemaining),
+        Infinity,
+      );
+      const incoming = Number.isFinite(soonest) ? 1.6 * (1 - Math.min(1, soonest / 3)) : 0;
       return hurt + incoming;
     }
 
@@ -453,6 +858,12 @@ export class HunterAI {
         return `${name} closed on ${target?.name ?? 'the enemy'}.`;
       case 'attack':
         return `${name} attacked ${target?.name ?? 'the enemy'}.`;
+      case 'retreat':
+        return view.environment.lethal
+          ? `${name} broke off — this is not a place to be caught out.`
+          : `${name} broke off and gave ground.`;
+      case 'dodge':
+        return `${name} moved clear of what was coming.`;
       case 'wait':
         return `${name} held position — nothing worth doing.`;
       case 'skill': {
@@ -484,3 +895,7 @@ function emergencyContext(view: CombatView): EmergencyContext {
 
 /** Stat helper re-export so the encounter can share the same accessor. */
 export { stat };
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}

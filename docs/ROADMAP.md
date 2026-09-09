@@ -101,13 +101,13 @@ Party of five with objective-first creation (AI proposal → player adjustment, 
 
 Key DoD (v1.0 §16): the player can make a strategy/policy decision, watch the guild execute it, understand *why* the result occurred from the audit trail, and see the outcome affect the living guild. Same seed must reproduce the same run.
 
-## Phase 4 — Combat depth + AI ⬜ ← **next**
+## Phase 4 — Combat depth + AI ✅
 
 Real-time combat · entities · targeting · threat · skills in combat · status · healing · downed · rescue · death · positioning · environment · **hunter AI** · party synergy · combat chronicle.
 
 Key DoD: all §140 A–M scenarios produce the specified behavior; scenarios K and L (identical builds differing only in personality, then only in mastery) produce *different* decisions. This is the phase that proves or disproves R2.
 
-## Phase 5 — World + Expedition ⬜
+## Phase 5 — World + Expedition ⬜ ← **next**
 
 World map · regions · zone tiers · expedition generation · branching · events · dungeons · bosses · world bosses · discovery · exploration memory.
 

@@ -17,6 +17,7 @@
 import type { CombatBalance, MonsterDef, StatusDef } from '../../data/combatSchema.js';
 import type { SkillDef } from '../../data/schema.js';
 import type { Rng } from '../../core/rng.js';
+import type { HunterId } from '../../core/ids.js';
 import type { Combatant } from '../../core/combat/Combatant.js';
 import {
   addThreat,
@@ -27,7 +28,14 @@ import {
   threatAgainst,
 } from '../../core/combat/Combatant.js';
 import { DamagePipeline } from '../../systems/combat/damage.js';
-import type { CombatAction, CombatView, HunterAI } from '../../ai/hunter/hunterAI.js';
+import type {
+  CombatAction,
+  CombatEnvironment,
+  CombatObjective,
+  CombatView,
+  HunterAI,
+} from '../../ai/hunter/hunterAI.js';
+import { NEUTRAL_OBJECTIVE, SAFE_ENVIRONMENT } from '../../ai/hunter/hunterAI.js';
 import type { HardConstraint } from '../../ai/policy/pipeline.js';
 import type { EmergencyPolicy } from '../../ai/policy/emergency.js';
 
@@ -40,7 +48,28 @@ export interface CombatLogEntry {
   readonly reasonCodes: readonly string[];
 }
 
-export type EncounterOutcome = 'victory' | 'defeat' | 'timeout' | 'ongoing';
+/**
+ * The slice of the event bus combat writes to.
+ *
+ * Narrowed to these five deliberately. The Chronicle is a *passive* recorder (§19,
+ * CONFLICT_AUDIT) — it subscribes and never feeds back — and handing combat the whole bus
+ * would make it easy to start emitting things that do.
+ */
+export interface CombatEventSink {
+  emit(event: 'combat.nearDeath', payload: { hunterId: HunterId }): void;
+  emit(event: 'combat.rescued', payload: { hunterId: HunterId; byHunterId: HunterId }): void;
+  emit(event: 'combat.rescuePerformed', payload: { hunterId: HunterId; targetId: HunterId }): void;
+  emit(
+    event: 'combat.bossDefeated',
+    payload: { hunterId: HunterId; bossId: string; worldBoss: boolean },
+  ): void;
+  emit(
+    event: 'combat.companionLost',
+    payload: { hunterId: HunterId; lostHunterId: HunterId },
+  ): void;
+}
+
+export type EncounterOutcome = 'victory' | 'defeat' | 'withdrawal' | 'timeout' | 'ongoing';
 
 export interface EncounterResult {
   readonly outcome: EncounterOutcome;
@@ -60,6 +89,16 @@ export interface EncounterDeps {
   readonly monsterOf: (id: string) => MonsterDef | undefined;
   readonly constraints: readonly HardConstraint<CombatAction, CombatView>[];
   readonly emergency: EmergencyPolicy | undefined;
+  /** Where the fight is (§140-M). Defaults to a safe zone when the caller has none. */
+  readonly environment?: CombatEnvironment;
+  /** What the guild sent this party to do (§28). Defaults to neutral. */
+  readonly objective?: CombatObjective;
+  /**
+   * The guild's memory (§19). Optional so an encounter can be run headless for balance
+   * work without writing to anyone's Chronicle, but supplied in play: a fight nobody
+   * remembers is exactly what REQ-PRIME-005 says a hunter's history must not be.
+   */
+  readonly events?: CombatEventSink;
   /** Called on every meaningful decision, so the caller can audit it (v1.0 §14). */
   readonly onDecision?: (combatant: Combatant, explanation: string, codes: readonly string[]) => void;
 }
@@ -69,6 +108,8 @@ export class CombatEncounter {
   private readonly log: CombatLogEntry[] = [];
   private elapsed = 0;
   private finished: EncounterOutcome = 'ongoing';
+  /** Elapsed time at which the whole standing party first committed to breaking off. */
+  private disengagingSince: number | undefined;
 
   constructor(
     private readonly deps: EncounterDeps,
@@ -187,6 +228,12 @@ export class CombatEncounter {
     c.dead = true;
     c.downed = false;
     this.record(c, `${c.name} did not get back up.`, true, ['death']);
+
+    // Deliberately no `combat.companionLost` here. Whether a hunter is *permanently* lost is
+    // the zone's decision, not combat's (REQ-ZON-001) — and an encounter ends the instant the
+    // last hunter falls, so in a wipe this path never runs at all. Emitting the loss from
+    // here recorded nothing in the cases that matter most. `sendExpedition` owns it, because
+    // that is where death is actually adjudicated.
   }
 
   // -------------------------------------------------------------------------
@@ -213,6 +260,8 @@ export class CombatEncounter {
           secondsRemaining: m.telegraph?.remaining ?? 0,
           aoe: this.skillIsAoe(m),
         })),
+      environment: this.deps.environment ?? SAFE_ENVIRONMENT,
+      objective: this.deps.objective ?? NEUTRAL_OBJECTIVE,
       constraints: this.deps.constraints,
       emergency: this.deps.emergency,
     };
@@ -232,6 +281,7 @@ export class CombatEncounter {
     codes: readonly string[],
   ): void {
     const target = this.all().find((t) => t.id === action.targetId);
+    actor.disengaging = action.kind === 'retreat';
 
     switch (action.kind) {
       case 'wait':
@@ -242,6 +292,25 @@ export class CombatEncounter {
         const speed = this.deps.balance.movement.unitsPerSecond * this.deps.balance.ai.reevaluateEverySeconds;
         const direction = target.position > actor.position ? 1 : -1;
         actor.position += direction * speed;
+        return;
+      }
+
+      case 'dodge':
+      case 'retreat': {
+        // Both are movement away from the enemy line; they differ in intent and in how far
+        // the hunter means to go, which the AI has already decided by choosing one.
+        const speed =
+          this.deps.balance.movement.unitsPerSecond * this.deps.balance.ai.reevaluateEverySeconds;
+        const nearest = this.monsters.filter((m) => !m.dead)[0];
+        const direction = nearest && nearest.position > actor.position ? -1 : 1;
+        actor.position += direction * speed * (action.kind === 'retreat' ? 1.5 : 1);
+
+        // Backing off sheds threat: a hunter who leaves the line stops being the problem.
+        for (const monster of this.monsters) {
+          const held = actor.threat.get(monster.id);
+          if (held !== undefined) actor.threat.set(monster.id, held * 0.6);
+        }
+        this.record(actor, explanation, action.kind === 'retreat', codes);
         return;
       }
 
@@ -341,6 +410,20 @@ export class CombatEncounter {
     this.record(rescuer, `${rescuer.name} pulled ${target.name} back to their feet.`, true, [
       'rescue_completed',
     ]);
+
+    // Both sides of a rescue are worth remembering, and they are separate events because
+    // they mean different things in the two Chronicles: one hunter was saved, the other
+    // went in for them (§19).
+    if (rescuer.hunterId && target.hunterId) {
+      this.deps.events?.emit('combat.rescued', {
+        hunterId: target.hunterId,
+        byHunterId: rescuer.hunterId,
+      });
+      this.deps.events?.emit('combat.rescuePerformed', {
+        hunterId: rescuer.hunterId,
+        targetId: target.hunterId,
+      });
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -539,6 +622,20 @@ export class CombatEncounter {
       for (const hunter of this.guild) {
         if (hunter.targetId === target.id) hunter.targetId = undefined;
       }
+
+      const def = target.monsterId ? this.deps.monsterOf(target.monsterId) : undefined;
+      if (def?.tier === 'boss') {
+        // Everyone who was still standing for it earns the memory.
+        for (const hunter of this.guild) {
+          if (hunter.hunterId && !hunter.dead) {
+            this.deps.events?.emit('combat.bossDefeated', {
+              hunterId: hunter.hunterId,
+              bossId: def.id,
+              worldBoss: false,
+            });
+          }
+        }
+      }
       return;
     }
 
@@ -547,6 +644,7 @@ export class CombatEncounter {
     target.downedRemaining = this.deps.balance.downed.timerSeconds;
     target.rescuingId = undefined;
     this.record(target, `${target.name} went down.`, true, ['downed', `source:${sourceId}`]);
+    if (target.hunterId) this.deps.events?.emit('combat.nearDeath', { hunterId: target.hunterId });
   }
 
   private applyStatus(
@@ -610,7 +708,43 @@ export class CombatEncounter {
       this.finished = 'victory';
       return;
     }
-    if (this.guild.every((c) => c.dead || c.downed)) this.finished = 'defeat';
+    if (this.guild.every((c) => c.dead || c.downed)) {
+      this.finished = 'defeat';
+      return;
+    }
+
+    // Everyone still standing has decided to leave. Ending here rather than letting them
+    // kite to the encounter cap is what gives retreat a consequence: the party keeps what
+    // it has left, abandons the fight, and the expedition decides what that costs.
+    //
+    // But breaking off is *contested*, and has to be. When the withdrawal completed the
+    // instant the last hunter decided to leave, escape was free and unfailable — across 25
+    // runs of a hopelessly outmatched party in a BLACK zone, every single one withdrew
+    // intact and not one hunter ever died. Permanent death cannot be a rule the AI is
+    // always able to opt out of. So the party must *sustain* the withdrawal while the
+    // monsters keep acting, and a hunter can still fall during it.
+    const standing = this.guild.filter(isActive);
+    const allLeaving = standing.length > 0 && standing.every((c) => c.disengaging);
+
+    if (!allLeaving) {
+      this.disengagingSince = undefined;
+      return;
+    }
+
+    if (this.disengagingSince === undefined) {
+      this.disengagingSince = this.elapsed;
+      this.record(standing[0] as Combatant, 'The party starts to break off.', false, [
+        'disengage_started',
+      ]);
+      return;
+    }
+
+    if (this.elapsed - this.disengagingSince < this.deps.balance.movement.disengageSeconds) return;
+
+    this.finished = 'withdrawal';
+    this.record(standing[0] as Combatant, 'The party broke contact and pulled out.', true, [
+      'party_withdrew',
+    ]);
   }
 
   private result(): EncounterResult {

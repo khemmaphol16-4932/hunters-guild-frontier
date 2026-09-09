@@ -291,3 +291,43 @@ Assumptions made under §127 (ambiguity resolved conservatively, documented, wor
 **Decision.** An encounter ends the moment every hunter is down or dead. Hunters still downed at that point are *lost*, and the zone decides what that means — death in BLACK, injury in YELLOW/RED, nothing in BLUE.
 
 **Why.** Relying on the downed timer alone produced a silent bug: because the encounter stops stepping when the last hunter falls, no timer could ever expire in a wipe, so no hunter could ever die anywhere. The rule above makes the zone tier the only thing that decides lethality, which is what REQ-ZON-001 actually asks for.
+
+---
+
+## DL-028 — The objective reaches combat, not just the party planner
+
+**Ambiguity.** §28 places ObjectiveWeights above personal priority in the validation order. §26 says party strategy provides context and cannot override build identity. Neither says whether the objective is visible *inside* a fight.
+
+**Decision.** `CombatView` carries a `CombatObjective` — an id and a risk preference — and an `objectiveAlignment` weight stage sits directly below hard constraints, above every identity stage.
+
+**Why.** Without it the objective stopped at recruitment: a "bring everyone home" party and a "kill the boss" party picked different members and then fought identically. That makes the objective a roster filter rather than a strategy, and §28 clearly intends otherwise. It is a weight and not a filter, so it shifts *when* a party breaks off without ever being able to forbid it — forbidding is a hard constraint's job.
+
+---
+
+## DL-029 — Breaking off is contested, and takes time
+
+**Ambiguity.** §7 gives hunters a retreat action. Nothing says what it costs.
+
+**Decision.** A withdrawal completes only after the whole standing party sustains it for `movement.disengageSeconds`, during which the monsters keep acting.
+
+**Why conservative.** With an instant withdrawal, escape was free and unfailable. Across 25 runs of a hopelessly outmatched party in a BLACK zone, every single one withdrew intact and not one hunter died — permanent death had become a rule the AI could always opt out of, which empties REQ-ZON-001 of content. The cost is deliberately small (three seconds); what matters is that it is not zero.
+
+---
+
+## DL-030 — Retreat urgency is continuous, not a threshold
+
+**Ambiguity.** §29 mentions "retreat thresholds" as a policy the player may set.
+
+**Decision.** The AI's own inclination to withdraw rises continuously with injury (squared, scaled by `ai.retreatUrgencyScale`). A *player-set* threshold remains a hard constraint, which is absolute; this is only the AI's judgement in the absence of one.
+
+**Why.** Written as a step, the crossing point was fixed, so no other consideration could move it. Zone danger, guild objective and risk posture all shifted scores on either side of a cliff they could never relocate — a hunter broke off at exactly 35% health whether they were a reckless duelist on a boss kill in a safe zone or a cautious healer told to bring everyone home from a BLACK zone. Those stages were decorative until the curve became smooth. A threshold the player sets is a different thing and stays a threshold.
+
+---
+
+## DL-031 — A standing order states its route meaning explicitly
+
+**Ambiguity.** §29 lets the player forbid retreat. Abandoning an engagement and abandoning the expedition are decided by different systems, and the spec does not distinguish them.
+
+**Decision.** A `StandingOrder` declares an optional `route` force — `forbidsRetreat` or `requiresRetreat` — which the expedition's continue/retreat decision consults *before* any threshold, objective or condition.
+
+**Why.** An order that governed only combat was quietly ignored by the route: a player who ordered "hold the line" watched their party turn back at the next node anyway. From the player's side that is one instruction being disobeyed, and they are right. Making the route meaning part of the order's declaration keeps the two layers from disagreeing about what the player said.

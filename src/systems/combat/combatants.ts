@@ -60,6 +60,7 @@ export function hunterCombatant(hunter: Hunter, deps: HunterCombatantDeps): Comb
     rescueProgress: 0,
     telegraph: undefined,
     phase: 0,
+    disengaging: false,
     secondsSinceAttacked: 999,
   };
 }
@@ -97,6 +98,7 @@ export function monsterCombatant(def: MonsterDef, index: number, position: numbe
     rescueProgress: 0,
     telegraph: undefined,
     phase: 0,
+    disengaging: false,
     secondsSinceAttacked: 999,
   };
 }

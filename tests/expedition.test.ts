@@ -13,6 +13,9 @@ import { withAvailability, type Hunter } from '../src/core/hunter/Hunter.js';
 import { createRng } from '../src/core/rng.js';
 import { CombatEncounter } from '../src/sim/combat/CombatEncounter.js';
 import { hunterCombatant, monsterCombatant } from '../src/systems/combat/combatants.js';
+import { NEUTRAL_OBJECTIVE, SAFE_ENVIRONMENT } from '../src/ai/hunter/hunterAI.js';
+import { SCENARIO_CONSTRAINTS } from '../src/debug/scenarios.js';
+import { NEVER_RETREAT, NO_RESCUES, WITHDRAW_NOW } from '../src/ai/policy/orders.js';
 
 /** A four-hunter guild covering the roles a standard formation wants. */
 function stockGuild(session: Session, debug: ReturnType<typeof testSession>['debug']): Hunter[] {
@@ -228,6 +231,8 @@ describe('build identity changes decisions', () => {
       enemies: [enemy],
       elapsedSeconds: 5,
       incomingTelegraphs: [],
+      environment: SAFE_ENVIRONMENT,
+      objective: NEUTRAL_OBJECTIVE,
       constraints: [],
       emergency: session.emergency,
     });
@@ -255,6 +260,8 @@ describe('build identity changes decisions', () => {
       enemies: [enemy],
       elapsedSeconds: 1,
       incomingTelegraphs: [],
+      environment: SAFE_ENVIRONMENT,
+      objective: NEUTRAL_OBJECTIVE,
       constraints: [],
       emergency: session.emergency,
     });
@@ -320,50 +327,76 @@ describe('expedition', () => {
     }
   });
 
-  it('a survival objective turns back where a boss kill presses on', () => {
-    // An outmatched party, so the retreat threshold is actually reached. A healthy party
-    // never turns back, which would make this assertion pass without testing anything.
-    function weak(objective: 'survive' | 'slay') {
-      const { session, debug } = testSession('threshold');
+  it('a survival objective spends less of the party than a boss kill does', () => {
+    // Both break off at the boss — an outmatched party does — so how *far* they got stopped
+    // being the discriminator once the AI learned to withdraw. What the objective changes
+    // is how much of themselves they spend on the way, which is the substance of it.
+    //
+    // Compared across seeds rather than on one. A single run turns a claim about a tendency
+    // into a claim about a particular fight, and this test previously sat on an outlier
+    // seed where the relationship inverted — passing until an unrelated change disturbed it.
+    function condition(seed: string, objective: 'survive' | 'slay'): number {
+      const { session, debug } = testSession(seed);
       for (const archetype of ['vanguard', 'adept', 'ranger', 'ranger'] as const) {
         debug.spawnHunter({ archetype, level: 6, fullyEquipped: true });
       }
       const region = session.content.worldRegionsById.get('ashfall_barrows')!;
       const party = session.partyPlanner.propose(session.roster.all(), objective);
-      return session.expedition.run(createRng('threshold'), region, party);
+      const result = session.expedition.run(createRng(seed), region, party);
+      return result.aftermath.reduce((sum, a) => sum + a.healthFraction, 0) / result.aftermath.length;
     }
 
-    const cautious = weak('survive');
-    const committed = weak('slay');
+    const seeds = Array.from({ length: 8 }, (_, i) => `objective-${i}`);
+    const better = seeds.filter((s) => condition(s, 'survive') > condition(s, 'slay'));
 
-    expect(cautious.retreated).toBe(true);
-    expect(committed.reachedNode).toBeGreaterThan(cautious.reachedNode);
+    // A tendency, asserted as one: the cautious objective should come home in better shape
+    // on the large majority of runs, not necessarily on every single one.
+    expect(better.length, `survive came home better on ${better.length}/${seeds.length}`)
+      .toBeGreaterThanOrEqual(6);
   });
 
   it('a hunter can die in a BLACK zone and leaves the roster when they do', () => {
-    // Deliberately outmatched, across several seeds, so a death is reached rather than hoped
-    // for. The assertion is about what the guild does when it happens, not about frequency.
-    let sawDeath = false;
-    for (const seed of ['death-1', 'death-2', 'death-3', 'death-4', 'death-5', 'death-6']) {
-      const { session, commands, debug } = testSession(seed);
-      for (const archetype of ['vanguard', 'adept', 'ranger', 'ranger'] as const) {
-        debug.spawnHunter({ archetype, level: 4, fullyEquipped: true });
-      }
-      const before = session.roster.size;
-      const outcome = commands.sendExpedition('ashfall_barrows', 'slay');
-      if (!outcome.ok) throw new Error(outcome.error);
+    // Reached deliberately rather than hoped for. An outmatched party almost always breaks
+    // off and survives — 11 of 12 do, which is the AI working — so a test that waited for
+    // an unlucky seed would be testing the RNG. The reliable route to a death is the one
+    // the design provides: the player forbids retreat (§29) and the party holds until it
+    // cannot. That the guild's own standing order is what kills them is the point.
+    const { session, commands, debug } = testSession('ordered-to-hold');
+    session.policy.add(SCENARIO_CONSTRAINTS.neverRetreat);
 
-      const dead = outcome.value.result.aftermath.filter((a) => a.died);
-      if (dead.length === 0) continue;
-
-      sawDeath = true;
-      expect(session.roster.size).toBe(before - dead.length);
-      for (const d of dead) expect(session.roster.get(d.hunterId)).toBeUndefined();
-      // v1.0 §19: the guild remembers them even though it cannot deploy them.
-      expect(session.chronicle.all().length).toBeGreaterThan(0);
-      break;
+    for (const archetype of ['vanguard', 'adept', 'ranger', 'ranger'] as const) {
+      debug.spawnHunter({ archetype, level: 3, fullyEquipped: true });
     }
-    expect(sawDeath).toBe(true);
+    const before = session.roster.size;
+
+    const outcome = commands.sendExpedition('ashfall_barrows', 'slay');
+    if (!outcome.ok) throw new Error(outcome.error);
+    const result = outcome.value.result;
+
+    expect(result.retreated, 'a forbidden retreat must not happen').toBe(false);
+
+    const dead = result.aftermath.filter((a) => a.died);
+    expect(dead.length).toBeGreaterThan(0);
+    expect(session.roster.size).toBe(before - dead.length);
+    for (const d of dead) expect(session.roster.get(d.hunterId)).toBeUndefined();
+    // v1.0 §19: the guild remembers them even though it cannot deploy them.
+    expect(session.chronicle.all().length).toBeGreaterThan(0);
+  });
+
+  it('nobody dies in a BLUE zone even under the same standing order', () => {
+    // The same order, the same weak party, a safe region: REQ-ZON-001 is what decides
+    // lethality, not the fight and not the policy.
+    const { session, commands, debug } = testSession('ordered-to-hold');
+    session.policy.add(SCENARIO_CONSTRAINTS.neverRetreat);
+    for (const archetype of ['vanguard', 'adept', 'ranger', 'ranger'] as const) {
+      debug.spawnHunter({ archetype, level: 3, fullyEquipped: true });
+    }
+
+    const outcome = commands.sendExpedition('verdant_reach', 'slay');
+    if (!outcome.ok) throw new Error(outcome.error);
+
+    expect(outcome.value.result.aftermath.every((a) => !a.died)).toBe(true);
+    expect(session.roster.size).toBe(4);
   });
 
   it('leaves the party tired, which is what makes the next decision cost something', () => {
@@ -463,5 +496,188 @@ describe('sending an expedition', () => {
     expect(session.roster.all().map((h) => `${h.id}:${h.level}:${h.availability.state}`)).toEqual(
       before,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 4: the guild remembers, and the player's standing orders reach the fight.
+// ---------------------------------------------------------------------------
+
+describe('the combat chronicle', () => {
+  function veterans(seed = 'chronicle') {
+    const harness = testSession(seed);
+    for (const archetype of ['vanguard', 'adept', 'ranger', 'ranger'] as const) {
+      harness.debug.spawnHunter({ archetype, level: 20, fullyEquipped: true });
+    }
+    return harness;
+  }
+
+  it('records that the expedition happened at all', () => {
+    const { session, commands } = veterans();
+    const outcome = commands.sendExpedition('verdant_reach', 'clear');
+    if (!outcome.ok) throw new Error(outcome.error);
+
+    const chronicles = session.chronicle.all();
+    expect(chronicles.length).toBe(4);
+    for (const chronicle of chronicles) {
+      expect(chronicle.counters['expeditions']).toBe(1);
+    }
+  });
+
+  it('records a boss kill for everyone who was standing for it', () => {
+    const { session, commands } = veterans();
+    // Ordered to hold, so the party sees the boss through rather than breaking off.
+    session.policy.add(SCENARIO_CONSTRAINTS.neverRetreat);
+
+    const outcome = commands.sendExpedition('ashfall_barrows', 'slay');
+    if (!outcome.ok) throw new Error(outcome.error);
+    expect(outcome.value.result.bossDefeated).toBe(true);
+
+    for (const chronicle of session.chronicle.all()) {
+      expect(chronicle.counters['bossesDefeated']).toBe(1);
+      expect(chronicle.notable.some((e) => e.kind === 'bossDefeated')).toBe(true);
+    }
+  });
+
+  it('records the survivors losing a companion', () => {
+    const { session, commands, debug } = testSession('ordered-to-hold');
+    session.policy.add(SCENARIO_CONSTRAINTS.neverRetreat);
+    for (const archetype of ['vanguard', 'adept', 'ranger', 'ranger'] as const) {
+      debug.spawnHunter({ archetype, level: 3, fullyEquipped: true });
+    }
+
+    const outcome = commands.sendExpedition('ashfall_barrows', 'slay');
+    if (!outcome.ok) throw new Error(outcome.error);
+    expect(outcome.value.result.aftermath.some((a) => a.died)).toBe(true);
+
+    // The dead leave the roster but their Chronicles remain, and the ones who fell earliest
+    // are remembered by those who outlived them (§19).
+    const lost = session.chronicle
+      .all()
+      .reduce((sum, c) => sum + (c.counters['companionsLost'] ?? 0), 0);
+    expect(lost).toBeGreaterThan(0);
+    expect(session.chronicle.all().length).toBe(4);
+  });
+
+  it('records going down as a near death, whether or not it ended in one', () => {
+    // An outmatched party ordered to hold: hunters go down before they die, so the near
+    // death is recorded for the ones pulled back up as well as the ones who were not.
+    // Veterans win the same fight without anyone falling — correct behaviour, but it would
+    // let this test pass against an empty Chronicle.
+    const { session, commands, debug } = testSession('ordered-to-hold');
+    session.policy.add(SCENARIO_CONSTRAINTS.neverRetreat);
+    for (const archetype of ['vanguard', 'adept', 'ranger', 'ranger'] as const) {
+      debug.spawnHunter({ archetype, level: 3, fullyEquipped: true });
+    }
+
+    const outcome = commands.sendExpedition('ashfall_barrows', 'slay');
+    if (!outcome.ok) throw new Error(outcome.error);
+
+    const nearDeaths = session.chronicle
+      .all()
+      .reduce((sum, c) => sum + (c.counters['nearDeaths'] ?? 0), 0);
+    expect(nearDeaths).toBeGreaterThan(0);
+  });
+});
+
+describe("the player's standing orders", () => {
+  function guild(seed = 'policy') {
+    const harness = testSession(seed);
+    for (const archetype of ['vanguard', 'adept', 'ranger', 'ranger'] as const) {
+      harness.debug.spawnHunter({ archetype, level: 6, fullyEquipped: true });
+    }
+    return harness;
+  }
+
+  it('are empty until the player authors one', () => {
+    const { session } = guild();
+    expect(session.policy.size).toBe(0);
+    expect(session.policy.describe()).toEqual([]);
+  });
+
+  it('change the outcome of an expedition', () => {
+    const free = guild();
+    const held = guild();
+    held.session.policy.add(SCENARIO_CONSTRAINTS.neverRetreat);
+
+    const a = free.commands.sendExpedition('ashfall_barrows', 'slay');
+    const b = held.commands.sendExpedition('ashfall_barrows', 'slay');
+    if (!a.ok || !b.ok) throw new Error('expedition failed');
+
+    // Same seed, same roster, same region, same objective — only the order differs.
+    expect(a.value.result.retreated).toBe(true);
+    expect(b.value.result.retreated).toBe(false);
+  });
+
+  it('are stated in the player\u2019s own words, for the log', () => {
+    const { session } = guild();
+    session.policy.add(SCENARIO_CONSTRAINTS.neverRetreat);
+    expect(session.policy.describe()[0]).toMatch(/forbids/);
+    expect(session.policy.has('never_retreat')).toBe(true);
+
+    session.policy.remove('never_retreat');
+    expect(session.policy.size).toBe(0);
+  });
+});
+
+describe('a standing order outranks the route decision too', () => {
+  function weakGuild(seed: string) {
+    const harness = testSession(seed);
+    for (const archetype of ['vanguard', 'adept', 'ranger', 'ranger'] as const) {
+      harness.debug.spawnHunter({ archetype, level: 4, fullyEquipped: true });
+    }
+    return harness;
+  }
+
+  it('"hold the line" stops the party turning back at a node', () => {
+    // Without the order this party turns back partway. An order that governed only combat
+    // and not the route would leave the player watching their explicit instruction be
+    // overruled by a health threshold at the next node.
+    const free = weakGuild('route-order');
+    const held = weakGuild('route-order');
+    held.session.policy.add(NEVER_RETREAT.constraint);
+
+    const a = free.commands.sendExpedition('ashfall_barrows', 'clear');
+    const b = held.commands.sendExpedition('ashfall_barrows', 'clear');
+    if (!a.ok || !b.ok) throw new Error('expedition failed');
+
+    expect(a.value.result.retreated).toBe(true);
+    expect(b.value.result.retreated).toBe(false);
+    expect(b.value.result.reachedNode).toBeGreaterThan(a.value.result.reachedNode);
+
+    // And it says so, in the player's own terms, for every node after the first.
+    const reasons = b.value.result.decisions.slice(1);
+    expect(reasons.length).toBeGreaterThan(0);
+    for (const decision of reasons) {
+      expect(decision.reasonCodes).toContain('order:never_retreat');
+      expect(decision.explanation).toMatch(/Standing orders forbid turning back/);
+    }
+  });
+
+  it('"withdraw immediately" turns the party round at the first node', () => {
+    const { session, commands } = weakGuild('route-order-out');
+    session.policy.add(WITHDRAW_NOW.constraint);
+
+    const outcome = commands.sendExpedition('ashfall_barrows', 'slay');
+    if (!outcome.ok) throw new Error(outcome.error);
+
+    expect(outcome.value.result.retreated).toBe(true);
+    expect(outcome.value.result.reachedNode).toBe(0);
+    expect(outcome.value.result.decisions[0]?.reasonCodes).toContain('order:must_retreat');
+  });
+
+  it('an order with no route meaning leaves the route decision alone', () => {
+    const free = weakGuild('route-order');
+    const restricted = weakGuild('route-order');
+    restricted.session.policy.add(NO_RESCUES.constraint);
+
+    const a = free.commands.sendExpedition('ashfall_barrows', 'clear');
+    const b = restricted.commands.sendExpedition('ashfall_barrows', 'clear');
+    if (!a.ok || !b.ok) throw new Error('expedition failed');
+
+    for (const decision of b.value.result.decisions) {
+      expect(decision.reasonCodes).not.toContain('order:never_retreat');
+      expect(decision.reasonCodes).not.toContain('order:must_retreat');
+    }
   });
 });

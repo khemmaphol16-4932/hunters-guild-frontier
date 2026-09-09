@@ -85,6 +85,14 @@ export interface Combatant {
   /** Phase index for bosses. */
   phase: number;
 
+  /**
+   * Set while this combatant's current decision is to break off. A fight in which the whole
+   * living party is disengaging is over — without this, retreat is a move with no
+   * consequence, and a losing party kites until the encounter cap, which reads as a
+   * stalemate rather than as a withdrawal.
+   */
+  disengaging: boolean;
+
   /** Time since this combatant last took damage — feeds the `wasAttackedWithin` condition. */
   secondsSinceAttacked: number;
 }

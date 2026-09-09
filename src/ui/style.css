@@ -162,3 +162,12 @@ ul.notes.weak li { color: var(--warn); }
 
 /* The shell is the page: nav on top, one view filling the rest. */
 #root { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+
+/* Standing orders (Phase 4) */
+.order-row {
+  display: grid; grid-template-columns: auto 1fr; gap: 8px;
+  align-items: start; margin-bottom: 8px; cursor: pointer;
+}
+.order-row input { margin-top: 3px; }
+.order-row .order-label { display: block; font-weight: 600; }
+.order-row .subhead { display: block; margin: 1px 0 0; }

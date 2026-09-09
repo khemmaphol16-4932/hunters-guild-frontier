@@ -21,6 +21,7 @@ import type { Session } from '../app/Session.js';
 import type { ExpeditionOutcome, GuildCommands } from '../app/GuildCommands.js';
 import { OBJECTIVES, type ObjectiveId, type PartyProposal } from '../systems/party/Party.js';
 import { describeAvailability } from '../core/hunter/availability.js';
+import { STANDING_ORDERS, contradictionsIn } from '../ai/policy/orders.js';
 
 const el = (tag: string, className?: string, text?: string): HTMLElement => {
   const node = document.createElement(tag);
@@ -61,7 +62,7 @@ export class ExpeditionView {
   render(): void {
     this.host.replaceChildren();
     const grid = el('div', 'grid');
-    grid.append(this.renderPlanner(), this.renderProposal());
+    grid.append(this.renderPlanner(), this.renderOrders(), this.renderProposal());
     this.host.append(grid);
 
     if (this.state.message) {
@@ -135,6 +136,71 @@ export class ExpeditionView {
 
     const objective = OBJECTIVES.find((o) => o.id === this.state.objective);
     if (objective) card.append(el('p', 'subhead', objective.description));
+
+    return card;
+  }
+
+  // --- 2b: standing orders --------------------------------------------------
+
+  /**
+   * The player's standing orders (§29).
+   *
+   * This is the *policy* half of "a strategy or policy decision" in v1.0 §16, and the only
+   * place the player can overrule their hunters' own judgement. Each order states plainly
+   * what it costs, because an order whose consequence is a surprise is not a decision the
+   * player made — it is one the game made for them.
+   */
+  private renderOrders(): HTMLElement {
+    const card = el('div', 'card');
+    card.append(el('h3', undefined, 'Standing orders'));
+    card.append(
+      el(
+        'p',
+        'subhead',
+        'Absolute. Hunters obey these before their own judgement, and will die honouring one.',
+      ),
+    );
+
+    for (const order of STANDING_ORDERS) {
+      const row = el('label', 'order-row');
+      const box = el('input') as HTMLInputElement;
+      box.type = 'checkbox';
+      box.checked = this.session.policy.has(order.constraint.id);
+      box.onchange = () => {
+        if (box.checked) this.session.policy.add(order.constraint);
+        else this.session.policy.remove(order.constraint.id);
+        this.render();
+      };
+
+      const text = el('span');
+      text.append(el('span', 'order-label', order.label));
+      text.append(el('span', 'subhead', order.detail));
+      row.append(box, text);
+      card.append(row);
+    }
+
+    // Contradictory orders permit nothing at all, and a hunter with no legal action does
+    // nothing rather than improvising (REQ-POL-004). Saying so is better than quietly
+    // picking which of the player's two orders they really meant.
+    const clashes = contradictionsIn(
+      this.session.policy.all().map((c) => c.id),
+    );
+    for (const [a, b] of clashes) {
+      const first = STANDING_ORDERS.find((o) => o.constraint.id === a)?.label ?? a;
+      const second = STANDING_ORDERS.find((o) => o.constraint.id === b)?.label ?? b;
+      card.append(
+        el(
+          'p',
+          'err',
+          `"${first}" and "${second}" contradict each other. Together they permit nothing, ` +
+            'and hunters under both will stand still.',
+        ),
+      );
+    }
+
+    if (this.session.policy.size === 0) {
+      card.append(el('p', 'empty', 'No orders. Hunters use their own judgement.'));
+    }
 
     return card;
   }

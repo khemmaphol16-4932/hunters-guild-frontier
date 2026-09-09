@@ -21,7 +21,7 @@ Severity: **S1** = threatens the project · **S2** = threatens a phase · **S3**
 
 ---
 
-## R2 — "Builds change AI behavior" may not actually happen (S1)
+## R2 — "Builds change AI behavior" may not actually happen (S1) — **settled in Phase 4**
 
 **Requirement.** REQ-BLD-003. This is the game's central promise (§131: *"This Hunter is terrible on paper, but somehow he became incredible"*).
 
@@ -32,7 +32,21 @@ Severity: **S1** = threatens the project · **S2** = threatens a phase · **S3**
 - Phase 1 ships the differentiation test as an acceptance gate: same class, different attributes/mastery → measurably different profiles.
 - Phase 4 adds §140 K/L behavioral scenarios: identical builds differing only in personality, and only in mastery, must produce different decisions.
 
-**Residual risk.** Profile → behavior mapping quality is a tuning problem that only playtesting settles.
+**Outcome (Phase 4).** Settled, and the danger was real. The §140 A–M harness caught the exact
+failure this entry predicted, already live in the code and hidden behind a green test suite:
+`skillAffinity` summed a skill's tags instead of averaging them, so preference reached ~4.9
+against an urgency term of ~2.5 and *silently outvoted every situational consideration*. The AI
+always reached for its favourite skill; telegraphs, zone danger and the guild's objective could
+not change a decision. Build identity had collapsed into a preference table.
+
+It survived because the Phase 3 test that claimed to settle R2 compared a *tank* with a *healer* —
+two hunters who differ in every respect. It proved they differed, not that the mechanism worked.
+A differentiation test has to hold the situation fixed and vary only the thing under test, which
+is what §140-K and §140-L now do.
+
+**Residual risk.** Profile → behavior mapping quality is a tuning problem that only playtesting
+settles, and the weights are still hand-calibrated against the scenarios rather than against a
+simulation (TECH_DEBT).
 
 ---
 

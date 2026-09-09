@@ -100,6 +100,12 @@ describe('REQ-BLD-003 — builds must be measurably different', () => {
       fullyEquipped: true,
     });
 
+    // Respec first: `fullyEquipped` now spends the whole attribute budget along the
+    // archetype's affinity, so without this both hunters arrive already allocated and
+    // `maxOut` has nothing left to spend — leaving two identical builds and a test that
+    // passes or fails for reasons unrelated to what it is checking.
+    debug.respec(bruiser.id);
+    debug.respec(bulwark.id);
     debug.maxOut(bruiser.id, 'str');
     debug.maxOut(bulwark.id, 'vit');
 

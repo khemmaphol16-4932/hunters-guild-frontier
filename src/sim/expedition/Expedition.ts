@@ -25,6 +25,7 @@ import { healthFraction } from '../../core/combat/Combatant.js';
 import { REASON } from '../../core/audit.js';
 import {
   CombatEncounter,
+  type CombatEventSink,
   type CombatLogEntry,
   type EncounterResult,
 } from '../combat/CombatEncounter.js';
@@ -32,6 +33,7 @@ import type { HunterAI } from '../../ai/hunter/hunterAI.js';
 import type { CombatAction, CombatView } from '../../ai/hunter/hunterAI.js';
 import type { HardConstraint } from '../../ai/policy/pipeline.js';
 import type { EmergencyPolicy } from '../../ai/policy/emergency.js';
+import type { RouteOrders } from '../../ai/policy/orders.js';
 import type { ObjectiveDef, PartyProposal } from '../../systems/party/Party.js';
 
 export type NodeKind = 'combat' | 'rest' | 'discovery' | 'boss';
@@ -46,7 +48,7 @@ export interface RouteNode {
 
 export interface NodeReport {
   readonly node: RouteNode;
-  readonly outcome: 'cleared' | 'wiped' | 'timeout' | 'rested' | 'found' | 'skipped';
+  readonly outcome: 'cleared' | 'wiped' | 'withdrew' | 'timeout' | 'rested' | 'found' | 'skipped';
   readonly xp: number;
   readonly highlights: readonly CombatLogEntry[];
   readonly encounterSeconds: number;
@@ -102,7 +104,25 @@ export interface ExpeditionDeps {
   /** Builds the per-encounter combatant for one party member, at its current health. */
   readonly combatantFor: (hunterId: HunterId) => Combatant;
   readonly monsterCombatant: (def: MonsterDef, index: number, position: number) => Combatant;
+  /** The guild's memory (§19). Optional so balance runs can stay silent. */
+  readonly events?: CombatEventSink;
+  /** Route-level force of the player's standing orders (§29). */
+  readonly routeOrders?: () => RouteOrders;
 }
+
+/**
+ * How an encounter outcome reads as a route node.
+ *
+ * A withdrawal and a timeout are both "the party stopped fighting and is still alive" —
+ * they are not defeats, and the aftermath must not treat them as such.
+ */
+const NODE_OUTCOME: Readonly<Record<EncounterResult['outcome'], NodeReport['outcome']>> = {
+  victory: 'cleared',
+  defeat: 'wiped',
+  withdrawal: 'withdrew',
+  timeout: 'timeout',
+  ongoing: 'timeout',
+};
 
 /** Fatigue added per node walked, before any objective or zone modifier. */
 const FATIGUE_PER_NODE = 0.06;
@@ -247,7 +267,7 @@ export class Expedition {
         continue;
       }
 
-      const result = this.fight(rng, node, combatants);
+      const result = this.fight(rng, node, combatants, region, party.objective);
 
       for (const c of combatants.values()) {
         if (c.downed) downedCounts.set(c.hunterId as HunterId, (downedCounts.get(c.hunterId as HunterId) ?? 0) + 1);
@@ -263,7 +283,7 @@ export class Expedition {
 
       reports.push({
         node,
-        outcome: result.outcome === 'victory' ? 'cleared' : result.outcome === 'defeat' ? 'wiped' : 'timeout',
+        outcome: NODE_OUTCOME[result.outcome],
         xp: result.xp,
         highlights: result.log.filter((e) => e.highlight),
         encounterSeconds: Math.round(result.elapsedSeconds * 10) / 10,
@@ -280,8 +300,14 @@ export class Expedition {
             c.health = Math.max(1, Math.round(c.maxHealth * this.deps.balance.downed.reviveHealthFraction));
           }
         }
-      } else {
+      } else if (result.outcome === 'defeat') {
         wiped = true;
+        break;
+      } else {
+        // Withdrawal or stalemate. The party is alive and the route is over — treating
+        // either as a wipe would kill hunters who broke off precisely to avoid dying,
+        // which inverts the meaning of the decision they just made.
+        retreated = true;
         break;
       }
     }
@@ -345,6 +371,8 @@ export class Expedition {
     rng: Rng,
     node: RouteNode,
     combatants: Map<HunterId, Combatant>,
+    region: RegionDef,
+    objective: ObjectiveDef,
   ): EncounterResult {
     const guild = [...combatants.values()].filter((c) => !c.dead);
     for (const c of guild) {
@@ -382,6 +410,13 @@ export class Expedition {
         monsterOf: this.deps.monsterOf,
         constraints: this.deps.constraints,
         emergency: this.deps.emergency,
+        environment: {
+          zoneTier: region.zoneTier,
+          lethal: this.deps.world.zoneTiers[region.zoneTier].canKill,
+          canInjure: this.deps.world.zoneTiers[region.zoneTier].canInjure,
+        },
+        objective: { id: objective.id, riskPreference: objective.riskPreference },
+        ...(this.deps.events ? { events: this.deps.events } : {}),
       },
       guild,
       monsters,
@@ -406,6 +441,29 @@ export class Expedition {
     const living = party.filter((c) => !c.dead);
     const health = partyHealthFraction(party);
     const codes: string[] = [`node:${node.kind}`];
+
+    // The player's standing orders outrank the Guild AI's judgement (§29, REQ-POL-004) —
+    // including here, at the route level. Checked before anything else so that a threshold,
+    // a condition or an objective cannot talk its way past an explicit instruction.
+    const orders = this.deps.routeOrders?.() ?? { mustPressOn: false, mustTurnBack: false };
+    if (orders.mustTurnBack) {
+      return {
+        atNode: node.index,
+        choice: 'retreat',
+        explanation: 'Standing orders require an immediate withdrawal.',
+        reasonCodes: [...codes, REASON.hardConstraintVeto, 'order:must_retreat'],
+      };
+    }
+    if (orders.mustPressOn && node.index > 0) {
+      return {
+        atNode: node.index,
+        choice: node.kind === 'boss' ? 'commit' : 'continue',
+        explanation:
+          `Standing orders forbid turning back. The party presses on at ` +
+          `${percent(health)} strength.`,
+        reasonCodes: [...codes, REASON.hardConstraintVeto, 'order:never_retreat'],
+      };
+    }
 
     if (node.index === 0) {
       return {

@@ -1,29 +1,63 @@
 {
   "$comment": "REQ-SKL-001..008, §139. Twelve representative skills covering damage, heal, buff, debuff, CC, rescue, party and ultimate. NOTE: there is deliberately no 'reaction' category (REQ-SKL-004) — reactive behavior is expressed by conditions and triggers, as in 'riposte' below.",
-  "categories": ["active", "passive", "buff", "debuff", "ultimate", "party", "weapon", "movement", "trigger"],
-  "elements": ["fire", "frost", "storm", "earth"],
+  "categories": [
+    "active",
+    "passive",
+    "buff",
+    "debuff",
+    "ultimate",
+    "party",
+    "weapon",
+    "movement",
+    "trigger"
+  ],
+  "elements": [
+    "fire",
+    "frost",
+    "storm",
+    "earth"
+  ],
   "skills": [
     {
       "id": "shield_bash",
       "name": "Shield Bash",
       "category": "active",
-      "tags": ["martial", "physical", "threat"],
+      "tags": [
+        "martial",
+        "physical",
+        "threat"
+      ],
       "element": null,
       "targeting": "enemy",
       "rangeBand": "melee",
       "resourceCost": 8,
       "cooldownSeconds": 4,
       "basePriority": 50,
-      "conditions": [{ "type": "resourceAtLeast", "value": 8 }],
-      "masteryEffects": ["power", "cooldown"],
-      "roleContribution": { "tank": 0.5, "damage": 0.4, "control": 0.1 },
+      "conditions": [
+        {
+          "type": "resourceAtLeast",
+          "value": 8
+        }
+      ],
+      "masteryEffects": [
+        "power",
+        "cooldown"
+      ],
+      "roleContribution": {
+        "tank": 0.5,
+        "damage": 0.4,
+        "control": 0.1
+      },
       "description": "A heavy shield strike that staggers the target and draws its attention."
     },
     {
       "id": "taunt",
       "name": "Taunt",
       "category": "debuff",
-      "tags": ["threat", "defensive"],
+      "tags": [
+        "threat",
+        "defensive"
+      ],
       "element": null,
       "targeting": "enemy",
       "rangeBand": "mid",
@@ -31,18 +65,32 @@
       "cooldownSeconds": 8,
       "basePriority": 70,
       "conditions": [
-        { "type": "resourceAtLeast", "value": 6 },
-        { "type": "allyThreatenedWithin", "value": 6 }
+        {
+          "type": "resourceAtLeast",
+          "value": 6
+        },
+        {
+          "type": "allyThreatenedWithin",
+          "value": 6
+        }
       ],
-      "masteryEffects": ["duration", "reliability"],
-      "roleContribution": { "tank": 0.8, "control": 0.2 },
+      "masteryEffects": [
+        "duration",
+        "reliability"
+      ],
+      "roleContribution": {
+        "tank": 0.8,
+        "control": 0.2
+      },
       "description": "Forces a significant threat spike, pulling the enemy off a vulnerable ally."
     },
     {
       "id": "guard_stance",
       "name": "Guard Stance",
       "category": "buff",
-      "tags": ["defensive"],
+      "tags": [
+        "defensive"
+      ],
       "element": null,
       "targeting": "self",
       "rangeBand": "melee",
@@ -50,18 +98,34 @@
       "cooldownSeconds": 20,
       "basePriority": 40,
       "conditions": [
-        { "type": "resourceAtLeast", "value": 10 },
-        { "type": "selfHpBelow", "value": 0.7 }
+        {
+          "type": "resourceAtLeast",
+          "value": 10
+        },
+        {
+          "type": "selfHpBelow",
+          "value": 0.7
+        }
       ],
-      "masteryEffects": ["duration", "efficiency"],
-      "roleContribution": { "tank": 0.9, "support": 0.1 },
+      "masteryEffects": [
+        "duration",
+        "efficiency"
+      ],
+      "roleContribution": {
+        "tank": 0.9,
+        "support": 0.1
+      },
       "description": "Braces, sharply reducing incoming physical damage for a short time."
     },
     {
       "id": "mend",
       "name": "Mend",
       "category": "active",
-      "tags": ["restorative", "arcane", "magical"],
+      "tags": [
+        "restorative",
+        "arcane",
+        "magical"
+      ],
       "element": null,
       "targeting": "ally",
       "rangeBand": "mid",
@@ -69,18 +133,34 @@
       "cooldownSeconds": 3,
       "basePriority": 65,
       "conditions": [
-        { "type": "resourceAtLeast", "value": 12 },
-        { "type": "allyHpBelow", "value": 0.75 }
+        {
+          "type": "resourceAtLeast",
+          "value": 12
+        },
+        {
+          "type": "allyHpBelow",
+          "value": 0.75
+        }
       ],
-      "masteryEffects": ["power", "efficiency"],
-      "roleContribution": { "healer": 0.9, "support": 0.1 },
+      "masteryEffects": [
+        "power",
+        "efficiency"
+      ],
+      "roleContribution": {
+        "healer": 0.9,
+        "support": 0.1
+      },
       "description": "A direct restorative burst. The workhorse heal."
     },
     {
       "id": "renewal",
       "name": "Renewal",
       "category": "buff",
-      "tags": ["restorative", "arcane", "magical"],
+      "tags": [
+        "restorative",
+        "arcane",
+        "magical"
+      ],
       "element": null,
       "targeting": "ally",
       "rangeBand": "mid",
@@ -88,18 +168,33 @@
       "cooldownSeconds": 10,
       "basePriority": 45,
       "conditions": [
-        { "type": "resourceAtLeast", "value": 16 },
-        { "type": "allyHpBelow", "value": 0.85 }
+        {
+          "type": "resourceAtLeast",
+          "value": 16
+        },
+        {
+          "type": "allyHpBelow",
+          "value": 0.85
+        }
       ],
-      "masteryEffects": ["duration", "power"],
-      "roleContribution": { "healer": 0.7, "support": 0.3 },
+      "masteryEffects": [
+        "duration",
+        "power"
+      ],
+      "roleContribution": {
+        "healer": 0.7,
+        "support": 0.3
+      },
       "description": "Healing over time. Efficient, but slow to matter in an emergency."
     },
     {
       "id": "drag_to_safety",
       "name": "Drag to Safety",
       "category": "active",
-      "tags": ["rescue", "mobility"],
+      "tags": [
+        "rescue",
+        "mobility"
+      ],
       "element": null,
       "targeting": "downed_ally",
       "rangeBand": "melee",
@@ -107,34 +202,64 @@
       "cooldownSeconds": 15,
       "basePriority": 90,
       "conditions": [
-        { "type": "resourceAtLeast", "value": 14 },
-        { "type": "allyDowned", "value": 1 }
+        {
+          "type": "resourceAtLeast",
+          "value": 14
+        },
+        {
+          "type": "allyDowned",
+          "value": 1
+        }
       ],
-      "masteryEffects": ["efficiency", "reliability"],
-      "roleContribution": { "support": 0.6, "healer": 0.4 },
+      "masteryEffects": [
+        "efficiency",
+        "reliability"
+      ],
+      "roleContribution": {
+        "support": 0.6,
+        "healer": 0.4
+      },
       "description": "Pulls a downed hunter out of the line of fire. The AI weighs the risk before committing (REQ-CBT-013)."
     },
     {
       "id": "ember_lance",
       "name": "Ember Lance",
       "category": "active",
-      "tags": ["elemental", "arcane", "magical"],
+      "tags": [
+        "elemental",
+        "arcane",
+        "magical"
+      ],
       "element": "fire",
       "targeting": "enemy",
       "rangeBand": "ranged",
       "resourceCost": 14,
       "cooldownSeconds": 2,
       "basePriority": 55,
-      "conditions": [{ "type": "resourceAtLeast", "value": 14 }],
-      "masteryEffects": ["power", "cooldown"],
-      "roleContribution": { "damage": 1.0 },
+      "conditions": [
+        {
+          "type": "resourceAtLeast",
+          "value": 14
+        }
+      ],
+      "masteryEffects": [
+        "power",
+        "cooldown"
+      ],
+      "roleContribution": {
+        "damage": 1
+      },
       "description": "A lance of fire at long range. High damage, high cost."
     },
     {
       "id": "frost_chain",
       "name": "Frost Chain",
       "category": "debuff",
-      "tags": ["elemental", "arcane", "magical"],
+      "tags": [
+        "elemental",
+        "arcane",
+        "magical"
+      ],
       "element": "frost",
       "targeting": "enemies",
       "rangeBand": "ranged",
@@ -142,18 +267,34 @@
       "cooldownSeconds": 12,
       "basePriority": 60,
       "conditions": [
-        { "type": "resourceAtLeast", "value": 18 },
-        { "type": "enemiesWithinRadiusAtLeast", "value": 2 }
+        {
+          "type": "resourceAtLeast",
+          "value": 18
+        },
+        {
+          "type": "enemiesWithinRadiusAtLeast",
+          "value": 2
+        }
       ],
-      "masteryEffects": ["duration", "range"],
-      "roleContribution": { "control": 0.8, "damage": 0.2 },
+      "masteryEffects": [
+        "duration",
+        "range"
+      ],
+      "roleContribution": {
+        "control": 0.8,
+        "damage": 0.2
+      },
       "description": "Soft crowd control — slows a cluster of enemies and marks them for follow-up."
     },
     {
       "id": "riposte",
       "name": "Riposte",
       "category": "trigger",
-      "tags": ["martial", "physical", "precision"],
+      "tags": [
+        "martial",
+        "physical",
+        "precision"
+      ],
       "element": null,
       "targeting": "enemy",
       "rangeBand": "melee",
@@ -161,34 +302,63 @@
       "cooldownSeconds": 6,
       "basePriority": 75,
       "conditions": [
-        { "type": "resourceAtLeast", "value": 5 },
-        { "type": "wasAttackedWithin", "value": 0.6 }
+        {
+          "type": "resourceAtLeast",
+          "value": 5
+        },
+        {
+          "type": "wasAttackedWithin",
+          "value": 0.6
+        }
       ],
-      "masteryEffects": ["power", "reliability"],
-      "roleContribution": { "damage": 0.6, "tank": 0.4 },
+      "masteryEffects": [
+        "power",
+        "reliability"
+      ],
+      "roleContribution": {
+        "damage": 0.6,
+        "tank": 0.4
+      },
       "description": "A counter-attack. Demonstrates reactive behavior via conditions rather than a separate reaction-skill system (REQ-SKL-004)."
     },
     {
       "id": "piercing_shot",
       "name": "Piercing Shot",
       "category": "active",
-      "tags": ["precision", "physical", "martial"],
+      "tags": [
+        "precision",
+        "physical",
+        "martial"
+      ],
       "element": null,
       "targeting": "enemy",
       "rangeBand": "ranged",
       "resourceCost": 9,
       "cooldownSeconds": 3,
       "basePriority": 55,
-      "conditions": [{ "type": "resourceAtLeast", "value": 9 }],
-      "masteryEffects": ["power", "range"],
-      "roleContribution": { "damage": 1.0 },
+      "conditions": [
+        {
+          "type": "resourceAtLeast",
+          "value": 9
+        }
+      ],
+      "masteryEffects": [
+        "power",
+        "range"
+      ],
+      "roleContribution": {
+        "damage": 1
+      },
       "description": "A precise long-range shot that ignores part of the target's armour."
     },
     {
       "id": "rally",
       "name": "Rally",
       "category": "party",
-      "tags": ["rallying", "defensive"],
+      "tags": [
+        "rallying",
+        "defensive"
+      ],
       "element": null,
       "targeting": "allies",
       "rangeBand": "mid",
@@ -196,18 +366,33 @@
       "cooldownSeconds": 45,
       "basePriority": 50,
       "conditions": [
-        { "type": "resourceAtLeast", "value": 20 },
-        { "type": "partySizeAtLeast", "value": 3 }
+        {
+          "type": "resourceAtLeast",
+          "value": 20
+        },
+        {
+          "type": "partySizeAtLeast",
+          "value": 3
+        }
       ],
-      "masteryEffects": ["duration", "power"],
-      "roleContribution": { "support": 1.0 },
+      "masteryEffects": [
+        "duration",
+        "power"
+      ],
+      "roleContribution": {
+        "support": 1
+      },
       "description": "A coordinated party buff. Requires allies nearby to be worth using at all (REQ-AI-013)."
     },
     {
       "id": "last_stand",
       "name": "Last Stand",
       "category": "ultimate",
-      "tags": ["defensive", "rallying", "martial"],
+      "tags": [
+        "defensive",
+        "rallying",
+        "martial"
+      ],
       "element": null,
       "targeting": "self",
       "rangeBand": "melee",
@@ -215,12 +400,61 @@
       "cooldownSeconds": 120,
       "basePriority": 85,
       "conditions": [
-        { "type": "resourceAtLeast", "value": 35 },
-        { "type": "selfHpBelow", "value": 0.35 }
+        {
+          "type": "resourceAtLeast",
+          "value": 35
+        },
+        {
+          "type": "selfHpBelow",
+          "value": 0.35
+        }
       ],
-      "masteryEffects": ["duration", "efficiency"],
-      "roleContribution": { "tank": 0.6, "damage": 0.3, "support": 0.1 },
+      "masteryEffects": [
+        "duration",
+        "efficiency"
+      ],
+      "roleContribution": {
+        "tank": 0.6,
+        "damage": 0.3,
+        "support": 0.1
+      },
       "description": "An ultimate that requires a genuine emergency, the resource to pay for it, and a tactical decision to spend it (REQ-AI-013)."
+    },
+    {
+      "id": "culling_volley",
+      "name": "Culling Volley",
+      "category": "ultimate",
+      "tags": [
+        "precision",
+        "physical",
+        "martial",
+        "area"
+      ],
+      "element": null,
+      "targeting": "enemies",
+      "rangeBand": "ranged",
+      "resourceCost": 30,
+      "cooldownSeconds": 90,
+      "basePriority": 88,
+      "conditions": [
+        {
+          "type": "resourceAtLeast",
+          "value": 30
+        },
+        {
+          "type": "enemiesWithinRadiusAtLeast",
+          "value": 1
+        }
+      ],
+      "masteryEffects": [
+        "power",
+        "efficiency"
+      ],
+      "roleContribution": {
+        "damage": 0.9,
+        "control": 0.1
+      },
+      "description": "The marksman ultimate. Cheap enough to fire and expensive enough to regret firing early — §140-D is about *when*, which is why its conditions are permissive and its cooldown is not."
     }
   ]
 }

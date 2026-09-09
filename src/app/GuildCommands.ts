@@ -424,6 +424,18 @@ export class GuildCommands {
     const levelledUp: HunterId[] = [];
     const balance = this.session.content.balance.attributes;
 
+    // The guild remembers that it went (§19). Emitted before the aftermath is applied,
+    // because a hunter who died out there still went on the expedition — recording it
+    // afterwards would quietly drop the last run of everyone it killed.
+    const durationSeconds = result.nodes.reduce((sum, n) => sum + n.encounterSeconds, 0);
+    for (const after of result.aftermath) {
+      this.session.events.emit('expedition.completed', {
+        hunterId: after.hunterId,
+        expeditionId: `${regionId}#${this.session.clock.tick}`,
+        durationSeconds,
+      });
+    }
+
     for (const after of result.aftermath) {
       let hunter = this.session.roster.require(after.hunterId);
 
@@ -448,6 +460,17 @@ export class GuildCommands {
           hunterId: hunter.id,
           zoneTier: region.zoneTier,
         });
+        // Everyone else on the expedition carries it (§19). Emitted here rather than from
+        // combat because permanence is the zone's ruling, and because a wipe ends the fight
+        // before any downed timer expires — the encounter never sees these deaths happen.
+        for (const other of result.aftermath) {
+          if (other.hunterId !== after.hunterId) {
+            this.session.events.emit('combat.companionLost', {
+              hunterId: other.hunterId,
+              lostHunterId: after.hunterId,
+            });
+          }
+        }
         this.session.audit.record({
           actor: { kind: 'system', name: 'guild-ai' },
           system: 'expedition',

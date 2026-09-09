@@ -164,3 +164,52 @@ A fresh guild of four. Party proposed with a rationale per member, sent into The
 ## Open
 
 Trash encounters are trivially easy against a party at the region's recommended level; the boss is the only fight that costs anything. That is a tuning question for Phase 4's balance pass, not a model failure — but it means the continue/retreat decision only bites on an underlevelled party today. Tracked in TECH_DEBT.
+
+---
+
+# Phase 4 — Combat depth and the AI validation scenarios
+
+The phase that was meant to prove or disprove risk R2. It disproved my Phase 3 evidence for it first.
+
+## What was built
+
+`debug/scenarios.ts` — a harness that builds exact boards (precise health, resource, position, cooldowns, downed timers, boss telegraphs) and hands them to the real `HunterAI` through the real pipeline with nothing stubbed · `tests/scenarios.test.ts` — 24 assertions covering §140 A–M · `ai/policy/orders.ts` — the standing orders a player can actually give · `ai/policy/PolicyBook.ts` · four new AI weight stages, `retreat` and `dodge` actions, rescue-viability estimation, combat chronicle events, party coordination · a standing-orders panel in the UI.
+
+333 tests green, typecheck and production build clean.
+
+## The bug that mattered
+
+**`skillAffinity` was summed over a skill's tags, not averaged.** A three-tag skill scored roughly triple a one-tag skill for reasons having nothing to do with the hunter or the fight. In practice the stage reached ~4.9 against an urgency term of ~2.5, so *preference silently outvoted every situational consideration*. The AI always reached for its favourite skill; telegraphs, zone danger and the guild's objective could not change a decision.
+
+That is exactly the R2 failure this whole design exists to prevent — "build identity collapses into a stat package" — and it survived a green suite, because the Phase 3 test that "settled R2" compared a tank with a healer, whose favourite skills differ anyway. The test was true and proved nothing. A scenario harness that builds one board and asks two builds what they would do found it in a single run.
+
+**Lesson recorded:** a differentiation test must hold the *situation* fixed and vary only the thing under test. Comparing two hunters who differ in every respect proves they differ, not that the mechanism works.
+
+## Other bugs found by building it
+
+- **`monsterOf` was never wired into the Session's `HunterAI`.** Every enemy looked like trash, so `ultimateTiming` ran inverted: an ultimate was *withheld* against a boss and *spent* on a wounded party fighting a rat. An optional dependency nobody supplied.
+- **The rescue threshold had its sign inverted.** Boldness was subtracted from viability, making braver hunters *less* likely to attempt a rescue — the opposite of REQ-CBT-013 and of what the word means.
+- **A level-50 debug hunter had every attribute still at 5** and 147 points unspent, which silently blocked every attribute-gated constellation node and left a level-50 Ranger knowing exactly one skill. The harness had been describing a hunter the game would never produce, and every scenario built on it was testing that fiction.
+- **Retreat was a free, unfailable escape.** Once hunters could withdraw, 25 out of 25 hopelessly outmatched parties in a BLACK zone came home intact and not one hunter died. Permanent death had become a rule the AI could always opt out of (DL-029).
+- **A hunter with skills on cooldown walked away at 55% health**, because risk posture rewarded leaving unconditionally rather than in proportion to danger. The same class of bug as the objective term, which at first made a cautious party withdraw at full health without throwing a punch.
+- **Retreat urgency was a step function**, which pinned the crossing point and made zone, objective and posture decorative (DL-030).
+- **"Hold the line" was obeyed in combat and ignored on the route.** Found in the browser, not in a test: the panel said the order was in force while the report said the party turned back (DL-031).
+
+## What I got wrong about testing
+
+Four of the A–M scenarios failed for a while because *my premise* was wrong, not the AI:
+
+- **§140-C** assumed a tank would brace against a telegraph. `guard_stance` requires being below 70% health, so a tank at full health has nothing to brace with and dodging is the right answer for them too. The brace-versus-evade distinction only exists once bracing is available.
+- **§140-E** asserted the `rescue` action, but `drag_to_safety` *is* the rescue skill — the AI was right and the assertion was too narrow.
+- **§140-K/M** were written as single hand-picked boards. Two hunters are not required to differ on every board, only to be capable of differing, and pinning that to one board tests a threshold rather than a behaviour. They are sweeps now.
+- **§140-M** I spent several iterations trying to force a healer with a heal ready to *stop healing* in a lethal zone. It should heal in both. The zone's real effect is on the party's preservation ranking and on marginal decisions, so that is what the test asserts — plus one swept case where the zone genuinely decides.
+
+The expedition's objective test had the same flaw: it sat on a single outlier seed where the relationship inverted, passing until an unrelated change disturbed it. Across eight seeds the cautious objective comes home in better shape every time.
+
+## Verified in the browser
+
+Ordered "Hold the line", sent a starting-level party into the Ashfall Barrows. The route report reads *"Standing orders forbid turning back. The party presses on at 52% strength"*, then the next node wiped at 0%, then four lines of "did not come back" and an empty roster. The same party, without the order, turned back and survived. The player made one policy decision and can read exactly what it cost.
+
+## Open
+
+Two orders (`no_rescues`, `save_ultimates`) are offered in the UI but have no dedicated scenario coverage yet. `zone.firstEntered` still never fires, so `zonesFirstEntered` is always zero — it needs per-hunter discovery state, which is Phase 5's exploration memory and belongs there.

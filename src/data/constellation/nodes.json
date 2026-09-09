@@ -12,7 +12,11 @@
       "region": "sentinel",
       "requiredLevel": 1,
       "prerequisiteGroups": [],
-      "archetypeAffinity": { "vanguard": 1.0, "ranger": 0.7, "adept": 0.2 },
+      "archetypeAffinity": {
+        "vanguard": 1,
+        "ranger": 0.7,
+        "adept": 0.2
+      },
       "requiresSkillBook": false,
       "$note": "Vanguard starting position."
     },
@@ -22,7 +26,11 @@
       "region": "mender",
       "requiredLevel": 1,
       "prerequisiteGroups": [],
-      "archetypeAffinity": { "adept": 1.0, "vanguard": 0.3, "ranger": 0.3 },
+      "archetypeAffinity": {
+        "adept": 1,
+        "vanguard": 0.3,
+        "ranger": 0.3
+      },
       "requiresSkillBook": false,
       "$note": "Adept starting position. Every Adept learns to channel before learning to weaponise it, which is why the elemental nodes descend from here — and it usefully means an Invoker is never wholly without a heal."
     },
@@ -32,18 +40,25 @@
       "region": "marksman",
       "requiredLevel": 1,
       "prerequisiteGroups": [],
-      "archetypeAffinity": { "ranger": 1.0, "adept": 0.4, "vanguard": 0.3 },
+      "archetypeAffinity": {
+        "ranger": 1,
+        "adept": 0.4,
+        "vanguard": 0.3
+      },
       "requiresSkillBook": false,
       "$note": "Ranger starting position."
     },
-
     {
       "id": "drag_to_safety",
       "skill": "drag_to_safety",
       "region": "warden",
       "requiredLevel": 8,
       "prerequisiteGroups": [],
-      "archetypeAffinity": { "vanguard": 1.0, "adept": 1.0, "ranger": 1.0 },
+      "archetypeAffinity": {
+        "vanguard": 1,
+        "adept": 1,
+        "ranger": 1
+      },
       "requiresSkillBook": false,
       "$note": "Deliberately reachable from every starting position with no prerequisite. REQ-CBT-013 wants rescue viability to be a tactical question, not a class lottery."
     },
@@ -52,8 +67,16 @@
       "skill": "guard_stance",
       "region": "bulwark",
       "requiredLevel": 10,
-      "prerequisiteGroups": [["shield_bash"]],
-      "archetypeAffinity": { "vanguard": 1.0, "ranger": 0.8, "adept": 0.4 },
+      "prerequisiteGroups": [
+        [
+          "shield_bash"
+        ]
+      ],
+      "archetypeAffinity": {
+        "vanguard": 1,
+        "ranger": 0.8,
+        "adept": 0.4
+      },
       "requiresSkillBook": false
     },
     {
@@ -61,8 +84,16 @@
       "skill": "taunt",
       "region": "sentinel",
       "requiredLevel": 10,
-      "prerequisiteGroups": [["shield_bash"]],
-      "archetypeAffinity": { "vanguard": 1.0, "ranger": 0.3, "adept": 0.0 },
+      "prerequisiteGroups": [
+        [
+          "shield_bash"
+        ]
+      ],
+      "archetypeAffinity": {
+        "vanguard": 1,
+        "ranger": 0.3,
+        "adept": 0
+      },
       "requiresSkillBook": false,
       "$note": "Unreachable for an Adept — holding a monster's attention is not something channelling teaches."
     },
@@ -71,8 +102,16 @@
       "skill": "renewal",
       "region": "lifebinder",
       "requiredLevel": 15,
-      "prerequisiteGroups": [["mend"]],
-      "archetypeAffinity": { "adept": 1.0, "vanguard": 0.2, "ranger": 0.2 },
+      "prerequisiteGroups": [
+        [
+          "mend"
+        ]
+      ],
+      "archetypeAffinity": {
+        "adept": 1,
+        "vanguard": 0.2,
+        "ranger": 0.2
+      },
       "requiresSkillBook": false
     },
     {
@@ -80,9 +119,24 @@
       "skill": "riposte",
       "region": "duelist",
       "requiredLevel": 20,
-      "prerequisiteGroups": [["guard_stance"], ["piercing_shot"]],
-      "archetypeAffinity": { "vanguard": 1.0, "ranger": 0.9, "adept": 0.2 },
-      "requiresWeaponTypes": ["blade", "maul", "gauntlets"],
+      "prerequisiteGroups": [
+        [
+          "guard_stance"
+        ],
+        [
+          "piercing_shot"
+        ]
+      ],
+      "archetypeAffinity": {
+        "vanguard": 1,
+        "ranger": 0.9,
+        "adept": 0.2
+      },
+      "requiresWeaponTypes": [
+        "blade",
+        "maul",
+        "gauntlets"
+      ],
       "requiresSkillBook": false,
       "$note": "Two routes in — from defensive footwork, or from precision. A counter-fighter can come from either tradition, which is the constellation working as intended."
     },
@@ -91,9 +145,22 @@
       "skill": "ember_lance",
       "region": "pyromancer",
       "requiredLevel": 20,
-      "prerequisiteGroups": [["mend"]],
-      "archetypeAffinity": { "adept": 1.0, "ranger": 0.3, "vanguard": 0.0 },
-      "attributeRequirements": [{ "attribute": "int", "min": 12 }],
+      "prerequisiteGroups": [
+        [
+          "mend"
+        ]
+      ],
+      "archetypeAffinity": {
+        "adept": 1,
+        "ranger": 0.3,
+        "vanguard": 0
+      },
+      "attributeRequirements": [
+        {
+          "attribute": "int",
+          "min": 12
+        }
+      ],
       "requiresSkillBook": true
     },
     {
@@ -101,9 +168,25 @@
       "skill": "frost_chain",
       "region": "frostweaver",
       "requiredLevel": 20,
-      "prerequisiteGroups": [["mend"], ["piercing_shot"]],
-      "archetypeAffinity": { "adept": 1.0, "ranger": 0.5, "vanguard": 0.0 },
-      "attributeRequirements": [{ "attribute": "int", "min": 10 }],
+      "prerequisiteGroups": [
+        [
+          "mend"
+        ],
+        [
+          "piercing_shot"
+        ]
+      ],
+      "archetypeAffinity": {
+        "adept": 1,
+        "ranger": 0.5,
+        "vanguard": 0
+      },
+      "attributeRequirements": [
+        {
+          "attribute": "int",
+          "min": 10
+        }
+      ],
       "requiresSkillBook": true,
       "$note": "The Trapper route: a Marksman who reaches frost control arrives here from precision rather than from channelling."
     },
@@ -112,8 +195,16 @@
       "skill": "rally",
       "region": "standard_bearer",
       "requiredLevel": 30,
-      "prerequisiteGroups": [["drag_to_safety"]],
-      "archetypeAffinity": { "vanguard": 1.0, "adept": 0.8, "ranger": 0.5 },
+      "prerequisiteGroups": [
+        [
+          "drag_to_safety"
+        ]
+      ],
+      "archetypeAffinity": {
+        "vanguard": 1,
+        "adept": 0.8,
+        "ranger": 0.5
+      },
       "requiresSkillBook": true,
       "$note": "Descends from rescue — you learn to coordinate a party by first learning to save one."
     },
@@ -122,11 +213,52 @@
       "skill": "last_stand",
       "region": "bulwark",
       "requiredLevel": 45,
-      "prerequisiteGroups": [["guard_stance", "taunt"], ["riposte"]],
-      "archetypeAffinity": { "vanguard": 1.0, "ranger": 0.6, "adept": 0.3 },
-      "attributeRequirements": [{ "attribute": "vit", "min": 15 }],
+      "prerequisiteGroups": [
+        [
+          "guard_stance",
+          "taunt"
+        ],
+        [
+          "riposte"
+        ]
+      ],
+      "archetypeAffinity": {
+        "vanguard": 1,
+        "ranger": 0.6,
+        "adept": 0.3
+      },
+      "attributeRequirements": [
+        {
+          "attribute": "vit",
+          "min": 15
+        }
+      ],
       "requiresSkillBook": true,
       "$note": "An ultimate, and the deepest node. Reached by mastering both defensive skills, or by the counter-fighter's route through riposte."
+    },
+    {
+      "id": "culling_volley",
+      "skill": "culling_volley",
+      "region": "sharpshooter",
+      "requiredLevel": 40,
+      "prerequisiteGroups": [
+        [
+          "piercing_shot"
+        ]
+      ],
+      "archetypeAffinity": {
+        "ranger": 1,
+        "vanguard": 0.4,
+        "adept": 0.4
+      },
+      "attributeRequirements": [
+        {
+          "attribute": "dex",
+          "min": 15
+        }
+      ],
+      "requiresSkillBook": false,
+      "$note": "The Ranger ultimate. No skill book, unlike last_stand — a marksman reaches their own ceiling by shooting, which also gives the thin Ranger line one more node (TECH_DEBT)."
     }
   ]
 }

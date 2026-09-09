@@ -16,6 +16,8 @@ import { SimulationClock } from '../core/clock.js';
 import { createStreams, type RngStreams } from '../core/rng.js';
 import { AuditLog } from '../core/audit.js';
 import { EmergencyPolicy } from '../ai/policy/emergency.js';
+import { PolicyBook } from '../ai/policy/PolicyBook.js';
+import { routeOrders } from '../ai/policy/orders.js';
 import { mintHunterId } from '../core/ids.js';
 import type { ArchetypeId, HunterId, PersonalityId } from '../core/ids.js';
 import { asArchetypeId, asPersonalityId, asSkillId } from '../core/ids.js';
@@ -138,6 +140,8 @@ export class Session {
 
   readonly audit: AuditLog;
   readonly emergency: EmergencyPolicy;
+  /** The player's standing orders, in force for every expedition (§29). */
+  readonly policy: PolicyBook;
 
   readonly armoury: Armoury;
   readonly cards: Cards;
@@ -162,6 +166,8 @@ export class Session {
   readonly policyVersion: string;
 
   constructor(options: SessionOptions) {
+    // Needed by the object literals below, which read policy lazily through a getter.
+    const session = this;
     this.worldSeed = options.worldSeed;
     this.content = options.content ?? loadContent();
     this.events = new EventBus();
@@ -177,6 +183,7 @@ export class Session {
     });
     // Empty by default, so hard constraints stay absolute until the player says otherwise.
     this.emergency = new EmergencyPolicy();
+    this.policy = new PolicyBook();
 
     this.registry = new SkillRegistry(this.content);
 
@@ -265,6 +272,10 @@ export class Session {
         return hunter ? this.mastery.points(hunter, asSkillId(skillId)) : 0;
       },
       rangeDistance: (band) => this.content.balance.combat.movement.rangeBands[band],
+      // Needed by the ultimate-timing and rescue-viability stages: without it every enemy
+      // looks like trash, and `ultimateTiming` runs inverted — an ultimate is withheld
+      // against a boss and spent on a wounded party fighting a rat.
+      monsterOf: (id) => this.content.monstersById.get(id),
     });
 
     this.expedition = new Expedition({
@@ -274,9 +285,11 @@ export class Session {
       skillOf: (id) => this.content.skillsById.get(asSkillId(id)),
       statusOf: (id) => this.content.statusesById.get(id),
       monsterOf: (id) => this.content.monstersById.get(id),
-      // Empty until the player authors policy. Hard constraints are absolute when present,
-      // so shipping a default set would be the game deciding strategy on the player's behalf.
-      constraints: [],
+      // Read through a getter rather than captured, so an order the player gives between
+      // expeditions is in force for the next one. Empty until they author something: hard
+      // constraints are absolute when present, so shipping a default set would be the game
+      // deciding strategy on the player's behalf.
+      get constraints() { return session.policy.all(); },
       emergency: this.emergency,
       combatantFor: (hunterId) =>
         hunterCombatant(this.roster.require(hunterId), {
@@ -287,6 +300,8 @@ export class Session {
           equipmentStats: (hunter) => this.equipment.aggregateStats(hunter),
         }),
       monsterCombatant,
+      events: this.events,
+      routeOrders: () => routeOrders(session.policy.all().map((c) => c.id)),
     });
 
     this.save = new SaveGame({

@@ -63,12 +63,14 @@ export interface CombatBalance {
     readonly unitsPerSecond: number;
     readonly rangeBands: Readonly<Record<RangeBand, number>>;
     readonly startingSeparation: number;
+    readonly disengageSeconds: number;
   };
   readonly ai: {
     readonly reevaluateEverySeconds: number;
     readonly weights: Readonly<Record<string, number>>;
     readonly lowHealthFraction: number;
     readonly criticalHealthFraction: number;
+    readonly retreatUrgencyScale: number;
   };
 }
 
@@ -146,11 +148,13 @@ export function parseCombatBalance(raw: unknown, path = 'combat.json'): CombatBa
       unitsPerSecond: num(movement, 'unitsPerSecond', `${path}.movement`),
       rangeBands,
       startingSeparation: num(movement, 'startingSeparation', `${path}.movement`),
+      disengageSeconds: num(movement, 'disengageSeconds', `${path}.movement`),
     },
     ai: {
       reevaluateEverySeconds: num(ai, 'reevaluateEverySeconds', `${path}.ai`),
       weights: expectNumberRecord(field(ai, 'weights', `${path}.ai`), `${path}.ai.weights`),
       lowHealthFraction: num(ai, 'lowHealthFraction', `${path}.ai`),
+      retreatUrgencyScale: num(ai, 'retreatUrgencyScale', `${path}.ai`),
       criticalHealthFraction: num(ai, 'criticalHealthFraction', `${path}.ai`),
     },
   };
