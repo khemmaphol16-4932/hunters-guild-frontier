@@ -1,0 +1,15 @@
+# Normalise line endings in the repository to LF.
+#
+# This project is developed across machines, and without this git rewrites text files to
+# CRLF on Windows checkout — which shows up as whole-file diffs when the same file is
+# touched on two platforms. Committing LF and checking out LF keeps diffs meaningful.
+* text=auto eol=lf
+
+# Binary and generated files git should not try to diff or normalise.
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+package-lock.json -diff linguist-generated
