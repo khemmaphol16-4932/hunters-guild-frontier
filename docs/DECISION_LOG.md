@@ -261,3 +261,33 @@ Assumptions made under §127 (ambiguity resolved conservatively, documented, wor
 **Decision.** Prototype values (all in `data/balance/attributes.json`): 3 attribute points per level, 5 in each attribute at level 1, XP curve `base * level^exponent`. These are placeholders explicitly flagged for simulation-based calibration.
 
 **Why conservative.** The spec deliberately left balance open; putting it in data means calibration never requires code changes.
+
+---
+
+## DL-025 — Combat positioning is one distance axis, not a plane
+
+**Ambiguity.** §7 requires positioning, range bands and telegraphed AoE. It never says the combat space is two-dimensional.
+
+**Decision.** Combatants hold a single `position` scalar. The guild starts at 0, monsters at the region's starting separation, and both close along that one axis. Range bands are distances on it. AoE is "everyone on the guild side", not a shape.
+
+**Why conservative.** Every §7 requirement the prototype must demonstrate — closing to reach, ranged hunters holding distance, a boss telegraphing a sweep — is expressible on one axis. A plane would add pathing, facing and formation geometry, none of which the player controls and none of which any locked requirement asks for. The axis is a field on `Combatant`; widening it later is additive.
+
+---
+
+## DL-026 — The combat encounter lives in `sim/`, not `systems/`
+
+**Ambiguity.** None in the spec; a layering question the architecture test forced.
+
+**Decision.** `CombatEncounter` sits beside `Expedition` in `sim/`. `systems/combat/` keeps the damage pipeline and the hunter-to-combatant bridge, which are pure and AI-free.
+
+**Why.** The encounter *drives* the AI — it asks `HunterAI` what each hunter wants and applies the answer. In `systems/` that is an upward import, and the architecture test rejected it. Moving it was the honest fix: an encounter is a simulation driver, exactly like an expedition, and this keeps `systems/` free of any dependency on how decisions get made. The same reasoning moved `BuildProfile` into `core/hunter/buildProfile.ts` — it is a contract *between* layers, so it cannot be owned by one of its own consumers.
+
+---
+
+## DL-027 — A wipe kills the hunters left down, without waiting for their timers
+
+**Ambiguity.** §7 gives downed hunters a rescue timer; REQ-ZON-001 says BLACK zones can kill. Neither says what a total party wipe does.
+
+**Decision.** An encounter ends the moment every hunter is down or dead. Hunters still downed at that point are *lost*, and the zone decides what that means — death in BLACK, injury in YELLOW/RED, nothing in BLUE.
+
+**Why.** Relying on the downed timer alone produced a silent bug: because the encounter stops stepping when the last hunter falls, no timer could ever expire in a wipe, so no hunter could ever die anywhere. The rule above makes the zone tier the only thing that decides lethality, which is what REQ-ZON-001 actually asks for.

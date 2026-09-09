@@ -24,7 +24,8 @@ import type {
   Role,
   SkillDef,
 } from '../../data/schema.js';
-import type { HunterId, SkillId } from '../../core/ids.js';
+import type { SkillId } from '../../core/ids.js';
+import type { BuildProfile, IdentityShape } from '../../core/hunter/buildProfile.js';
 import type { Hunter } from '../../core/hunter/Hunter.js';
 import { unequippedKnownSkills } from '../../core/hunter/Hunter.js';
 import type { Constellation } from '../constellation/Constellation.js';
@@ -40,34 +41,7 @@ import {
   type IdentityContribution,
 } from './contributions.js';
 
-export type IdentityShape = 'specialist' | 'hybrid' | 'generalist';
-
-export interface BuildProfile {
-  readonly hunterId: HunterId;
-
-  /** Normalised across all five roles; sums to 1 when the hunter has any identity at all. */
-  readonly roleLean: Readonly<Record<Role, number>>;
-  readonly primaryRole: Role;
-  readonly secondaryRole: Role | undefined;
-
-  readonly rangeBand: Readonly<Record<RangeBand, number>>;
-  readonly primaryRange: RangeBand;
-
-  /** 0 = maximally cautious, 1 = maximally aggressive. */
-  readonly riskPosture: number;
-  /** 0 = burst (few decisive actions), 1 = sustain (many cheap actions). */
-  readonly resourceProfile: number;
-
-  /** Skill tag -> weight. What kind of play this hunter gravitates to. */
-  readonly skillAffinity: Readonly<Record<string, number>>;
-
-  /** 0..1 breadth from known-but-unequipped skills — the Skill Books axis of §16. */
-  readonly versatility: number;
-
-  /** How dominant the primary role is. Drives how strictly the AI holds to identity. */
-  readonly focus: number;
-  readonly shape: IdentityShape;
-}
+export type { BuildProfile, IdentityShape } from '../../core/hunter/buildProfile.js';
 
 export interface BuildIdentityDeps {
   readonly balance: BuildIdentityBalance;

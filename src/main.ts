@@ -10,7 +10,7 @@ import './ui/style.css';
 import { Session } from './app/Session.js';
 import { GuildCommands } from './app/GuildCommands.js';
 import { DebugConsole } from './debug/commands.js';
-import { BuildDashboard } from './ui/buildDashboard.js';
+import { AppShell } from './ui/appShell.js';
 import { BrowserStorage } from './save/SaveGame.js';
 
 const root = document.getElementById('root');
@@ -43,11 +43,11 @@ if (restored.ok && restored.value.hunters.length > 0) {
   commands.recruit({ archetype: 'ranger', personality: 'opportunist' });
 }
 
-const dashboard = new BuildDashboard(root, session, commands);
-dashboard.mount();
+const shell = new AppShell(root, session, commands);
+shell.mount();
 
 // Debug console is dev-only (REQ-TEC-006 — never exposed to normal players).
 if (import.meta.env.DEV) {
-  (globalThis as Record<string, unknown>)['hgf'] = { session, commands, debug, dashboard };
+  (globalThis as Record<string, unknown>)['hgf'] = { session, commands, debug, shell };
   console.info('[hgf] debug console available as window.hgf');
 }

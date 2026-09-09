@@ -1,0 +1,90 @@
+{
+  "$comment": "§139 content budget: a small representative set, not a bestiary. Between them these cover the situations the vertical slice needs to exercise — a harmless trash mob, a pack that punishes ignoring adds, a hard-hitting bruiser that makes a tank matter, a ranged attacker the party must close on, a healer that must be focused, and a boss with phases and telegraphs (REQ-BOS-001).\n\nMonster targeting is threat-based for everything including bosses (REQ-AI-004); sophistication comes from skills, phases and positioning, never from arbitrary target switching.",
+  "monsters": [
+    {
+      "id": "moss_crawler",
+      "name": "Moss Crawler",
+      "tier": "trash",
+      "level": 3,
+      "stats": { "maxHp": 90, "physicalAttack": 14, "physicalDefense": 4, "magicDefense": 2, "accuracy": 80, "evasion": 8, "critChance": 2, "critDamage": 140 },
+      "rangeBand": "melee",
+      "element": null,
+      "attackCooldown": 2.2,
+      "skills": [],
+      "xp": 12,
+      "phases": []
+    },
+    {
+      "id": "thicket_wasp",
+      "name": "Thicket Wasp",
+      "tier": "trash",
+      "level": 5,
+      "stats": { "maxHp": 55, "physicalAttack": 11, "physicalDefense": 2, "magicDefense": 4, "accuracy": 92, "evasion": 26, "critChance": 8, "critDamage": 150 },
+      "rangeBand": "melee",
+      "element": null,
+      "attackCooldown": 1.2,
+      "skills": [],
+      "xp": 14,
+      "$note": "Fast and evasive. Punishes a party with no accuracy."
+    },
+    {
+      "id": "bracken_stalker",
+      "name": "Bracken Stalker",
+      "tier": "elite",
+      "level": 12,
+      "stats": { "maxHp": 320, "physicalAttack": 34, "physicalDefense": 12, "magicDefense": 8, "accuracy": 88, "evasion": 14, "critChance": 10, "critDamage": 165 },
+      "rangeBand": "melee",
+      "element": null,
+      "attackCooldown": 2.0,
+      "skills": [{ "id": "rend", "name": "Rend", "power": 1.9, "cooldown": 9, "status": "bleed", "statusChance": 0.6 }],
+      "xp": 60
+    },
+    {
+      "id": "cairn_archer",
+      "name": "Cairn Archer",
+      "tier": "elite",
+      "level": 14,
+      "stats": { "maxHp": 210, "physicalAttack": 40, "physicalDefense": 8, "magicDefense": 10, "accuracy": 96, "evasion": 12, "critChance": 14, "critDamage": 170 },
+      "rangeBand": "ranged",
+      "element": null,
+      "attackCooldown": 2.6,
+      "skills": [],
+      "xp": 65,
+      "$note": "Stays at range. A melee party has to spend time closing, which is what makes the movement model matter."
+    },
+    {
+      "id": "hollow_chanter",
+      "name": "Hollow Chanter",
+      "tier": "elite",
+      "level": 16,
+      "stats": { "maxHp": 240, "physicalAttack": 18, "magicAttack": 44, "physicalDefense": 9, "magicDefense": 18, "accuracy": 90, "evasion": 10, "critChance": 6, "critDamage": 150 },
+      "rangeBand": "mid",
+      "element": "frost",
+      "attackCooldown": 2.4,
+      "skills": [{ "id": "mend_kin", "name": "Mend Kin", "power": 0, "healPower": 1.6, "cooldown": 8 }],
+      "xp": 70,
+      "$note": "Heals its allies. A party that ignores it in favour of the biggest target will lose a long fight."
+    },
+    {
+      "id": "warden_of_ash",
+      "name": "The Warden of Ash",
+      "tier": "boss",
+      "level": 22,
+      "stats": { "maxHp": 1600, "physicalAttack": 62, "physicalDefense": 22, "magicDefense": 18, "accuracy": 94, "evasion": 8, "critChance": 12, "critDamage": 180, "critResistance": 30, "statusResistance": 0.5 },
+      "rangeBand": "melee",
+      "element": "fire",
+      "attackCooldown": 2.4,
+      "skills": [
+        { "id": "cinder_sweep", "name": "Cinder Sweep", "power": 2.4, "cooldown": 11, "aoe": true, "telegraphSeconds": 1.5, "status": "burn", "statusChance": 0.5 },
+        { "id": "ashen_grasp", "name": "Ashen Grasp", "power": 3.2, "cooldown": 16, "telegraphSeconds": 2.0 }
+      ],
+      "phases": [
+        { "belowHealthFraction": 0.5, "name": "Kindling", "attackMultiplier": 1.25, "cooldownMultiplier": 0.85 },
+        { "belowHealthFraction": 0.2, "name": "Conflagration", "attackMultiplier": 1.5, "cooldownMultiplier": 0.7 }
+      ],
+      "xp": 600,
+      "cardPool": ["warden_of_ash_card"],
+      "$note": "REQ-BOS-001: stat + skill + phase. Every important skill carries a telegraph, so the AI can react to a wind-up rather than to the damage after the fact. Boss-only critResistance and statusResistance (REQ-CBT-010)."
+    }
+  ]
+}

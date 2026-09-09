@@ -93,7 +93,7 @@ v1.0 §5, approved as SPEC_RECONCILIATION option B. The three-stage class chain 
 
 ---
 
-## Phase 3 — Vertical slice ⬜ ← **next**
+## Phase 3 — Vertical slice ✅
 
 v1.0 §17 step 2: *hunter state → party planner → deterministic combat → expedition outcome → recovery/loot/Chronicle*, end to end and replayable.
 
@@ -101,7 +101,7 @@ Party of five with objective-first creation (AI proposal → player adjustment, 
 
 Key DoD (v1.0 §16): the player can make a strategy/policy decision, watch the guild execute it, understand *why* the result occurred from the audit trail, and see the outcome affect the living guild. Same seed must reproduce the same run.
 
-## Phase 4 — Combat depth + AI ⬜
+## Phase 4 — Combat depth + AI ⬜ ← **next**
 
 Real-time combat · entities · targeting · threat · skills in combat · status · healing · downed · rescue · death · positioning · environment · **hunter AI** · party synergy · combat chronicle.
 

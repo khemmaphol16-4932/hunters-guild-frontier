@@ -128,3 +128,37 @@ ul.notes.weak li { color: var(--warn); }
 .tag-resource { border-color: var(--control); }
 .tag-utility { border-color: var(--support); }
 .tag-range { border-color: var(--healer); }
+
+/* --- View switch (Phase 3) ------------------------------------------------ */
+#view-switch {
+  display: flex; gap: 6px; padding: 6px 10px;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+}
+#view-switch button { background: transparent; border-color: transparent; }
+#view-switch button.active { border-color: var(--accent); color: var(--accent); }
+
+/* --- Expedition view ------------------------------------------------------ */
+/* The shell owns the viewport height; the nested dashboard must not claim it again,
+   or the view switch is pushed off the top of the page. */
+#view-body { display: grid; align-content: start; min-height: 0; overflow: hidden; }
+#view-body > #app { min-height: 0; height: 100%; }
+#view-body > .grid { padding: 14px 18px; }
+
+.field { display: grid; grid-template-columns: 90px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+.field select { width: 100%; }
+
+.node-row {
+  display: grid; grid-template-columns: 80px 1fr auto; gap: 8px;
+  padding: 4px 6px; border: 1px solid var(--line); border-radius: 3px;
+  margin-bottom: 3px; cursor: pointer;
+}
+.node-row:hover { background: var(--panel-2); }
+.node-row .slot-name { text-transform: uppercase; font-size: 11px; color: var(--muted); }
+
+.log-line {
+  margin: 2px 0 2px 14px; color: var(--muted);
+  font-family: ui-monospace, monospace; font-size: 11px;
+}
+
+/* The shell is the page: nav on top, one view filling the rest. */
+#root { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }

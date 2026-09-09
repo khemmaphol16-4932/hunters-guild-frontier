@@ -19,6 +19,11 @@ import namesJson from './names.json';
 import regionsJson from './constellation/regions.json';
 import constellationJson from './constellation/nodes.json';
 
+import monstersJson from './combat/monsters.json';
+import statusesJson from './combat/statuses.json';
+import worldJson from './world/regions.json';
+import combatBalanceJson from './balance/combat.json';
+
 import raritiesJson from './items/rarities.json';
 import itemTypesJson from './items/item-types.json';
 import substatsJson from './items/substats.json';
@@ -71,6 +76,17 @@ import {
   type RegionDef,
 } from './constellationSchema.js';
 
+import {
+  parseCombatBalance,
+  parseMonsters,
+  parseStatuses,
+  parseWorld,
+  type CombatBalance,
+  type MonsterDef,
+  type StatusDef,
+  type WorldData,
+  type RegionDef as WorldRegionDef,
+} from './combatSchema.js';
 import {
   parseCards,
   parseItemTypes,
@@ -125,6 +141,14 @@ export interface GameContent {
   readonly uniqueEffects: readonly UniqueEffectDef[];
   readonly uniqueEffectsById: ReadonlyMap<string, UniqueEffectDef>;
 
+  readonly monsters: readonly MonsterDef[];
+  readonly monstersById: ReadonlyMap<string, MonsterDef>;
+  readonly statuses: readonly StatusDef[];
+  readonly statusesById: ReadonlyMap<string, StatusDef>;
+  /** World regions — distinct from constellation regions, which are skill territory. */
+  readonly world: WorldData;
+  readonly worldRegionsById: ReadonlyMap<string, WorldRegionDef>;
+
   /** v1.0 §2.1 canonical precedence, as data rather than as source order. */
   readonly policyPrecedence: PolicyPrecedence;
 
@@ -137,7 +161,70 @@ export interface GameContent {
     readonly chronicle: ChronicleBalance;
     readonly refinement: RefinementBalance;
     readonly loot: LootBalance;
+    readonly combat: CombatBalance;
   };
+}
+
+/**
+ * World referential integrity.
+ *
+ * A region pointing at a monster that does not exist would produce an empty encounter — a
+ * route the party walks through untouched, which reads as a bug in the AI rather than in the
+ * content. Same for a status a monster skill applies.
+ */
+function crossValidateWorld(content: {
+  world: WorldData;
+  monsters: readonly MonsterDef[];
+  statuses: readonly StatusDef[];
+}): void {
+  const monsterIds = new Set(content.monsters.map((m) => m.id));
+  const statusIds = new Set(content.statuses.map((s) => s.id));
+
+  for (const monster of content.monsters) {
+    for (const skill of monster.skills) {
+      if (skill.status !== undefined && !statusIds.has(skill.status)) {
+        throw new ContentValidationError(
+          `monsters.json:${monster.id}.${skill.id}`,
+          `applies status "${skill.status}", which does not exist`,
+        );
+      }
+      if (skill.status !== undefined && skill.statusChance === undefined) {
+        throw new ContentValidationError(
+          `monsters.json:${monster.id}.${skill.id}`,
+          'a skill that applies a status needs a statusChance',
+        );
+      }
+    }
+  }
+
+  for (const region of content.world.regions) {
+    for (const encounter of region.encounters) {
+      for (const id of encounter.monsters) {
+        if (!monsterIds.has(id)) {
+          throw new ContentValidationError(
+            `regions.json:${region.id}`,
+            `spawns monster "${id}", which does not exist`,
+          );
+        }
+      }
+    }
+    if (region.boss !== undefined) {
+      if (!monsterIds.has(region.boss)) {
+        throw new ContentValidationError(
+          `regions.json:${region.id}`,
+          `boss "${region.boss}" does not exist`,
+        );
+      }
+      // A region whose boss is not authored as a boss would silently skip phases and
+      // telegraphs, which is exactly the sophistication REQ-BOS-001 requires.
+      if (content.monsters.find((m) => m.id === region.boss)?.tier !== 'boss') {
+        throw new ContentValidationError(
+          `regions.json:${region.id}`,
+          `boss "${region.boss}" is not authored as tier "boss"`,
+        );
+      }
+    }
+  }
 }
 
 /**
@@ -303,8 +390,13 @@ export function loadContent(): GameContent {
   const sets = parseSets(setsJson);
   const uniqueEffects = parseUniqueEffects(uniqueEffectsJson);
 
+  const monsters = parseMonsters(monstersJson);
+  const statuses = parseStatuses(statusesJson);
+  const world = parseWorld(worldJson);
+
   crossValidateConstellation({ archetypes, regions, constellation, skills, itemTypes });
   crossValidateItems({ rarities, itemTypes, substats, cards, uniqueEffects, skills });
+  crossValidateWorld({ world, monsters, statuses });
 
   cached = Object.freeze({
     archetypes,
@@ -335,6 +427,13 @@ export function loadContent(): GameContent {
     uniqueEffects,
     uniqueEffectsById: new Map(uniqueEffects.map((e) => [e.id, e])),
 
+    monsters,
+    monstersById: new Map(monsters.map((m) => [m.id, m])),
+    statuses,
+    statusesById: new Map(statuses.map((s) => [s.id, s])),
+    world,
+    worldRegionsById: new Map(world.regions.map((r) => [r.id, r])),
+
     policyPrecedence: parsePolicyPrecedence(policyPrecedenceJson),
 
     balance: {
@@ -346,6 +445,7 @@ export function loadContent(): GameContent {
       chronicle: parseChronicleBalance(chronicleBalanceJson),
       refinement: parseRefinementBalance(refinementBalanceJson),
       loot: parseLootBalance(lootBalanceJson),
+      combat: parseCombatBalance(combatBalanceJson),
     },
   });
 

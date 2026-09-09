@@ -1,0 +1,56 @@
+{
+  "$comment": "REQ-CBT-008: each status owns its stacking rules. REQ-CBT-009: soft and hard CC tiers, with bosses resisting and diminishing. Only the statuses the prototype's cards and monsters actually reference are defined — a status nothing can apply is dead content.\n\nREQ-CBT-010: generic status resistance is a BOSS system. Normal hunters and normal enemies have no blanket resistance stat; they rely on immunities and specific conditions instead.",
+  "statuses": [
+    {
+      "id": "burn",
+      "name": "Burn",
+      "kind": "damageOverTime",
+      "tier": "none",
+      "durationSeconds": 6,
+      "tickSeconds": 1,
+      "magnitude": 0.12,
+      "$magnitudeNote": "Fraction of the applier's attack per tick.",
+      "stacking": "refresh",
+      "maxStacks": 1
+    },
+    {
+      "id": "bleed",
+      "name": "Bleed",
+      "kind": "damageOverTime",
+      "tier": "none",
+      "durationSeconds": 8,
+      "tickSeconds": 2,
+      "magnitude": 0.18,
+      "stacking": "stack",
+      "maxStacks": 3,
+      "$stackingNote": "Bleed stacks so that a pack applying it repeatedly becomes a real problem, unlike burn which only refreshes."
+    },
+    {
+      "id": "slow",
+      "name": "Slow",
+      "kind": "movement",
+      "tier": "soft",
+      "durationSeconds": 5,
+      "magnitude": 0.4,
+      "$magnitudeNote": "Movement speed multiplier reduction.",
+      "stacking": "refresh",
+      "maxStacks": 1
+    },
+    {
+      "id": "stun",
+      "name": "Stun",
+      "kind": "control",
+      "tier": "hard",
+      "durationSeconds": 2,
+      "magnitude": 1,
+      "stacking": "refresh",
+      "maxStacks": 1,
+      "diminishing": {
+        "$comment": "REQ-CBT-009. Each application within the window is shorter than the last; a boss cannot be chain-stunned.",
+        "windowSeconds": 20,
+        "reductionPerApplication": 0.5,
+        "immuneAfterApplications": 3
+      }
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "$comment": "REQ-CBT-002: 'hybrid — externally understandable, internally multi-layered'. A player can read 'attack minus defence, x1.5 on a crit, give or take 10%' off this and be right. The layering is in what feeds attack and defence, not in the formula itself.\n\nNOTE ON ELEMENTS: v1.0 §7 forbids substituting a fixed elemental rock-paper-scissors system, and §20 lists the element list and reaction matrix as needing approval. So elements are carried on skills and monsters but apply NO damage multiplier yet. `elementMultipliers` is deliberately absent rather than set to 1.0, so that adding it later is a visible decision rather than an edit to a number nobody notices.",
+  "tickSeconds": 0.05,
+  "maxEncounterSeconds": 180,
+
+  "damage": {
+    "$comment": "damage = (attack * skillPower - defence * defenceScale) * critMultiplier * variance, floored at minimumDamage.",
+    "defenceScale": 0.55,
+    "minimumDamage": 1,
+    "varianceSpread": 0.1,
+    "$varianceNote": "REQ-CBT-007 fixes this at +/-10%."
+  },
+
+  "accuracy": {
+    "$comment": "REQ-CBT-005. hitChance = base + (accuracy - evasion) * scale, clamped. A situational modifier is passed in by the caller.",
+    "base": 0.85,
+    "scale": 0.004,
+    "min": 0.35,
+    "max": 0.98
+  },
+
+  "critical": {
+    "$comment": "REQ-CBT-006. critChance is a percentage on the derived stat; critResistance is a boss-side reduction (REQ-CBT-010 keeps generic resistance a boss system).",
+    "chanceScale": 0.01,
+    "damageScale": 0.01,
+    "maxChance": 0.9
+  },
+
+  "resource": {
+    "regenPerSecond": 2.5,
+    "$note": "Regeneration is deliberately slow relative to skill costs, so the burst/sustain axis in build identity has something to bite on."
+  },
+
+  "threat": {
+    "$comment": "REQ-AI-003: threat from damage, healing and taunt; taunt adds significant threat; threat decays.",
+    "perDamage": 1.0,
+    "perHealing": 0.8,
+    "tauntFlat": 400,
+    "decayPerSecond": 0.02,
+    "$decayNote": "2% per second — enough that a tank must keep working, not so much that early threat is meaningless."
+  },
+
+  "downed": {
+    "$comment": "REQ-CBT-012: at 0 HP a hunter is Downed, can be rescued, and dies if the timer expires.",
+    "timerSeconds": 20,
+    "reviveHealthFraction": 0.3,
+    "rescueSeconds": 2.5
+  },
+
+  "movement": {
+    "$comment": "Combat is spatial along a single distance axis (see DL-025). Enough for range bands, closing, and formation; far short of a 2D navigation system the vertical slice does not need.",
+    "unitsPerSecond": 3.0,
+    "rangeBands": { "melee": 2, "mid": 8, "ranged": 16 },
+    "startingSeparation": 14
+  },
+
+  "ai": {
+    "$comment": "How strongly build identity steers the utility layer. These are the numbers that make REQ-BLD-003 true or false, so they are the first thing to retune if builds start behaving alike.",
+    "reevaluateEverySeconds": 0.5,
+    "$reevaluateNote": "AI decides far less often than physics ticks — required for 3-day offline catch-up to be affordable (risk R1).",
+    "weights": {
+      "roleAffinity": 1.6,
+      "skillAffinity": 1.2,
+      "masteryPreference": 0.9,
+      "riskPosture": 1.1,
+      "resourceProfile": 0.8,
+      "urgency": 2.2,
+      "basePriority": 0.01
+    },
+    "lowHealthFraction": 0.35,
+    "criticalHealthFraction": 0.15
+  }
+}

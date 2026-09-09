@@ -1,0 +1,50 @@
+{
+  "$comment": "v1.0 §16 MVP: one safe region and one high-risk region. REQ-ZON-001 fixes the four danger tiers: BLUE cannot kill, YELLOW injures, RED injures severely, BLACK can kill. Both regions here are procedurally routed within a fixed world (REQ-EXP-001) — the nodes below are the *pool* a route is drawn from, not a fixed path.\n\nv1.0 §8 makes the map a knowledge interface. `knowledgeTier` is the guild's starting knowledge; discovery advances it and is permanent (REQ-WLD-001).",
+  "zoneTiers": {
+    "blue": { "name": "Blue", "canInjure": false, "canKill": false, "lootBonus": 0, "colour": "#5b8dd6" },
+    "yellow": { "name": "Yellow", "canInjure": true, "canKill": false, "lootBonus": 0.15, "colour": "#d9a441" },
+    "red": { "name": "Red", "canInjure": true, "canKill": false, "lootBonus": 0.4, "colour": "#d4685f" },
+    "black": { "name": "Black", "canInjure": true, "canKill": true, "lootBonus": 0.9, "colour": "#8c5fd6" }
+  },
+  "regions": [
+    {
+      "id": "verdant_reach",
+      "name": "The Verdant Reach",
+      "description": "Overgrown lowland within a day of the gate. The guild has walked it a hundred times.",
+      "zoneTier": "blue",
+      "knowledgeTier": "experienced",
+      "recommendedLevel": 5,
+      "itemLevel": 8,
+      "routeLength": { "min": 3, "max": 4 },
+      "encounters": [
+        { "monsters": ["moss_crawler"], "count": { "min": 1, "max": 2 }, "weight": 40 },
+        { "monsters": ["thicket_wasp"], "count": { "min": 2, "max": 3 }, "weight": 35 },
+        { "monsters": ["moss_crawler", "thicket_wasp"], "count": { "min": 2, "max": 3 }, "weight": 25 }
+      ],
+      "boss": null
+    },
+    {
+      "id": "ashfall_barrows",
+      "name": "The Ashfall Barrows",
+      "description": "Burial terraces under a permanent fall of warm ash. Hunters come back from here changed, or not at all.",
+      "zoneTier": "black",
+      "knowledgeTier": "rumor",
+      "recommendedLevel": 20,
+      "itemLevel": 30,
+      "routeLength": { "min": 4, "max": 6 },
+      "encounters": [
+        { "monsters": ["bracken_stalker"], "count": { "min": 1, "max": 2 }, "weight": 30 },
+        { "monsters": ["cairn_archer"], "count": { "min": 2, "max": 2 }, "weight": 25 },
+        { "monsters": ["hollow_chanter", "bracken_stalker"], "count": { "min": 2, "max": 3 }, "weight": 25 },
+        { "monsters": ["cairn_archer", "hollow_chanter"], "count": { "min": 2, "max": 3 }, "weight": 20 }
+      ],
+      "boss": "warden_of_ash"
+    }
+  ],
+  "nodeKinds": {
+    "$comment": "REQ-EXP-002: expeditions have branching routes, events, combat, exploration and decisions. The prototype implements combat, rest and discovery nodes plus a boss; the event catalogue is Phase 5 content.",
+    "combat": { "weight": 65 },
+    "rest": { "weight": 15, "fatigueRelief": 0.15 },
+    "discovery": { "weight": 20, "lootRolls": 1 }
+  }
+}

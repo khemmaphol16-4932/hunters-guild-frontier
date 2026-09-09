@@ -18,7 +18,7 @@ import { AuditLog } from '../core/audit.js';
 import { EmergencyPolicy } from '../ai/policy/emergency.js';
 import { mintHunterId } from '../core/ids.js';
 import type { ArchetypeId, HunterId, PersonalityId } from '../core/ids.js';
-import { asArchetypeId, asPersonalityId } from '../core/ids.js';
+import { asArchetypeId, asPersonalityId, asSkillId } from '../core/ids.js';
 import {
   createHunter,
   DEPARTMENTS,
@@ -42,6 +42,10 @@ import { Equipment } from '../systems/items/Equipment.js';
 import { Refinement } from '../systems/items/Refinement.js';
 import { ItemGenerator } from '../systems/items/ItemGenerator.js';
 import { CardIdentity, EquipmentIdentity } from '../systems/items/identityContributions.js';
+import { PartyPlanner } from '../systems/party/Party.js';
+import { hunterCombatant, monsterCombatant } from '../systems/combat/combatants.js';
+import { HunterAI } from '../ai/hunter/hunterAI.js';
+import { Expedition } from '../sim/expedition/Expedition.js';
 import { SaveGame, type SaveStorage } from '../save/SaveGame.js';
 import type { CurrentSavePayload } from '../save/envelope.js';
 
@@ -78,6 +82,18 @@ export class Roster {
   require(id: HunterId): Hunter {
     const hunter = this.get(id);
     if (!hunter) throw new Error(`Roster: unknown hunter ${id}`);
+    return hunter;
+  }
+
+  /**
+   * Remove a hunter permanently.
+   *
+   * Only death does this. Their Chronicle is deliberately left behind — a hunter who died in
+   * a BLACK zone stops being deployable, but the guild remembers them (v1.0 §19).
+   */
+  remove(id: HunterId): Hunter | undefined {
+    const hunter = this.hunters.get(id);
+    this.hunters.delete(id);
     return hunter;
   }
 
@@ -129,6 +145,10 @@ export class Session {
   readonly equipment: Equipment;
   readonly refinement: Refinement;
   readonly itemGenerator: ItemGenerator;
+
+  readonly partyPlanner: PartyPlanner;
+  readonly hunterAI: HunterAI;
+  readonly expedition: Expedition;
 
   readonly save: SaveGame;
 
@@ -230,6 +250,45 @@ export class Session {
       events: this.events,
       currentTick: () => this.clock.tick,
     });
+    // Party planning is pre-combat strategy — the last point the player has direct
+    // influence (v1.0 §7). Four is the MVP party size.
+    this.partyPlanner = new PartyPlanner({
+      profileOf: (hunter) => this.buildIdentity.profileOf(hunter),
+      maxSize: 4,
+    });
+
+    this.hunterAI = new HunterAI({
+      balance: this.content.balance.combat,
+      skillOf: (id) => this.content.skillsById.get(asSkillId(id)),
+      masteryOf: (hunterId, skillId) => {
+        const hunter = this.roster.get(hunterId as HunterId);
+        return hunter ? this.mastery.points(hunter, asSkillId(skillId)) : 0;
+      },
+      rangeDistance: (band) => this.content.balance.combat.movement.rangeBands[band],
+    });
+
+    this.expedition = new Expedition({
+      world: this.content.world,
+      balance: this.content.balance.combat,
+      ai: this.hunterAI,
+      skillOf: (id) => this.content.skillsById.get(asSkillId(id)),
+      statusOf: (id) => this.content.statusesById.get(id),
+      monsterOf: (id) => this.content.monstersById.get(id),
+      // Empty until the player authors policy. Hard constraints are absolute when present,
+      // so shipping a default set would be the game deciding strategy on the player's behalf.
+      constraints: [],
+      emergency: this.emergency,
+      combatantFor: (hunterId) =>
+        hunterCombatant(this.roster.require(hunterId), {
+          attributeBalance: this.content.balance.attributes,
+          combatBalance: this.content.balance.combat,
+          profileOf: (hunter) => this.buildIdentity.profileOf(hunter),
+          conditionMultiplier: (hunter) => this.condition.statMultiplier(hunter),
+          equipmentStats: (hunter) => this.equipment.aggregateStats(hunter),
+        }),
+      monsterCombatant,
+    });
+
     this.save = new SaveGame({
       storage: options.storage,
       now: options.now,

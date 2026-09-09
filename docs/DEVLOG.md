@@ -122,3 +122,45 @@ Fresh guild: Vanguard · Sentinel (tank), Adept · Mender (healer), Ranger · Ma
 ### Open
 
 The Ranger line is content-thin: only two nodes sit in Ranger regions, so a Ranger tops out at one or two skills. That is the 12-skill prototype budget, not a model failure, and it is tracked in TECH_DEBT — but it means the Ranger is the weakest demonstration of the constellation right now.
+
+---
+
+# Phase 3 — The vertical slice
+
+The first build where the game is playable as a game: pick a region and an objective, read the party the AI proposes and *why*, send it, and read back what happened node by node.
+
+## What was built
+
+`data/balance/combat.json` · `data/combat/monsters.json` (6 monsters, one two-phase boss with telegraphed skills) · `data/combat/statuses.json` · `data/world/regions.json` (one BLUE region, one BLACK) · `data/combatSchema.ts` · `core/combat/Combatant.ts` · `core/hunter/buildProfile.ts` · `systems/combat/damage.ts` · `systems/combat/combatants.ts` · `systems/party/Party.ts` · `ai/hunter/hunterAI.ts` · `sim/combat/CombatEncounter.ts` · `sim/expedition/Expedition.ts` · `app/GuildCommands.sendExpedition` · `ui/expeditionView.ts` · `ui/appShell.ts`.
+
+298 tests green, typecheck clean.
+
+## Risk R2 — settled
+
+*"Do different builds produce different AI decisions, or only different numbers?"*
+
+The mechanism is that all seven weight stages in `HunterAI` read `BuildProfile` and none read raw stats. Given the identical board — one ally at a quarter health, one enemy in reach — a Vanguard and an Adept choose different *actions*, not the same action with different damage. That is now an assertion in `tests/expedition.test.ts`, not a claim.
+
+## What the schema refuses to load
+
+`varianceSpread` other than 0.1 (REQ-CBT-007) · hard CC without diminishing returns (REQ-CBT-009) · `statusResistance` on a non-boss (REQ-CBT-010) · a BLUE zone that can injure, or any non-BLACK zone that can kill (REQ-ZON-001) · a region whose boss is not authored as a boss · a monster skill applying a status that does not exist. There is still no `elementMultipliers` key anywhere, deliberately (v1.0 §20).
+
+## Bugs found by building it
+
+**1. No hunter could ever die — anywhere.** Death was reached only by a downed timer expiring, but an encounter ends the moment the last hunter falls, so in a wipe no timer ever ran out. The BLACK zone was decorative. Hunters left down at a wipe are now lost, and the zone tier decides what that means (DL-027). The test that caught it deliberately sends an outmatched party and asserts a death is *reached*, rather than asserting deaths are rare.
+
+**2. The party summary contradicted itself.** A turtle formation wanting two tanks and getting one reported "No tank" directly above a composition line reading "1 tank". "No tank" and "one short of two" lead the player to different actions — recruit, or wait for someone to recover — so the summary now distinguishes them.
+
+**3. Telegraphed boss skills never reported landing.** The log showed "The Warden of Ash begins Cinder Sweep" and then nothing, because only criticals and deaths were recorded. A wind-up with no payoff reads as the boss having done nothing.
+
+**4. The route log was one step out of order.** Each node's continue/retreat reasoning rendered *after* its report, so "The party sets out" appeared beneath a fight that had already happened.
+
+**5. Two layering violations, caught by the architecture test rather than by review.** `core/combat/Combatant` imported `BuildProfile` from `systems/`, and `systems/combat/CombatEncounter` imported `ai/`. Both were fixed structurally — the profile shape moved to `core/`, the encounter moved to `sim/` beside the expedition — not by relaxing the test. See DL-026.
+
+## Verified in the browser
+
+A fresh guild of four. Party proposed with a rationale per member, sent into The Verdant Reach, 4/4 nodes cleared, three items in the armoury, everyone returned Recovering with 21 xp each, and every node expandable to its combat highlights. Same seed, same run.
+
+## Open
+
+Trash encounters are trivially easy against a party at the region's recommended level; the boss is the only fight that costs anything. That is a tuning question for Phase 4's balance pass, not a model failure — but it means the continue/retreat decision only bites on an underlevelled party today. Tracked in TECH_DEBT.

@@ -10,7 +10,7 @@ Every entry names what is owed, why it was deferred, and what triggers repayment
 | ~~`CardContribution` null object~~ | — | — | **done in Phase 2** |
 | Gold and resource accounting for refinement, selling and dismantling | `app/GuildCommands` | Phase 7 | Resources system lands. Costs and yields are already computed and returned, so wiring them to a ledger is a small change. The *risk* half of refinement is fully live. |
 | Rebirth | `core/hunter/leveling` | Phase 8 | a hunter reaches level 100 in play |
-| Policy pipeline weight stages | `ai/policy/pipeline` | Phase 4 | hunter AI implementation |
+| ~~Policy pipeline weight stages~~ | — | — | **done in Phase 3** — seven build-reading stages in `ai/hunter/hunterAI` |
 | Behavior memory | `systems/hunter/` | Phase 4+ | first behavior-memory-driven decision |
 | Friendship | `systems/hunter/` | Phase 3 | recruitment lands |
 
@@ -25,7 +25,9 @@ All are data values; none require code changes to retune.
 | Personality modifier clamp range | `balance/personality.json` | Phase 4 §140-K scenario |
 | Potential tier thresholds | `balance/potential.json` | Phase 3 recruitment feel |
 | Notable-chronicle ring size | `balance/chronicle.json` | Phase 5 expedition volume |
-| Threat decay rate, taunt magnitude | Phase 4 | Phase 4 |
+| Threat decay rate, taunt magnitude | `balance/combat.json` | Phase 4 |
+| Monster stat lines — trash is trivial at the region's recommended level, so continue/retreat only bites on an underlevelled party | `combat/monsters.json` | Phase 4 balance pass |
+| Injury and recovery durations — flat placeholders until housing/food/services exist | `app/GuildCommands` | Phase 6 |
 | Rescue risk/benefit threshold | Phase 4 | Phase 4 §140-F scenario |
 | Build-identity axis weights beyond the §16 ratios | `balance/build-identity.json` | Phase 4 behavioral differentiation |
 

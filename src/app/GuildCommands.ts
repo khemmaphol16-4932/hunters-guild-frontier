@@ -16,11 +16,18 @@
 import type { Session, GenerateHunterOptions } from './Session.js';
 import type { AttributeKey } from '../data/schema.js';
 import { ATTRIBUTE_KEYS } from '../data/schema.js';
-import { allocate, attributePointBudget, respecToBase } from '../core/hunter/leveling.js';
+import {
+  allocate,
+  applyExperience,
+  attributePointBudget,
+  respecToBase,
+} from '../core/hunter/leveling.js';
 import {
   equippedItemIds,
   withAttributes,
+  withAvailability,
   withEquipment,
+  withLevel,
   type Hunter,
 } from '../core/hunter/Hunter.js';
 import { asItemId, asSkillId, type HunterId, type ItemId } from '../core/ids.js';
@@ -31,6 +38,26 @@ import { socketedCards, type Item } from '../core/items/Item.js';
 import { Equipment } from '../systems/items/Equipment.js';
 import type { DismantleOutcome } from '../systems/items/Armoury.js';
 import type { RefineResult } from '../systems/items/Refinement.js';
+import { REASON } from '../core/audit.js';
+import type { ObjectiveId, PartyProposal } from '../systems/party/Party.js';
+import type { ExpeditionResult } from '../sim/expedition/Expedition.js';
+
+export interface ExpeditionOutcome {
+  readonly result: ExpeditionResult;
+  readonly party: PartyProposal;
+  readonly loot: readonly Item[];
+  readonly levelledUp: readonly HunterId[];
+}
+
+/**
+ * How long an injury and an ordinary return keep a hunter off the roster.
+ *
+ * Coarse steps, not ticks of combat — this is guild time. Phase 6 replaces both with the
+ * housing/food/services model v1.0 §4 describes; until then they are honest placeholders
+ * rather than a hidden zero.
+ */
+const INJURY_TICKS = 2000;
+const RECOVERY_TICKS = 400;
 
 export class GuildCommands {
   constructor(private readonly session: Session) {}
@@ -352,6 +379,118 @@ export class GuildCommands {
       }
       this.session.roster.update(withEquipment(hunter, equipment));
     }
+  }
+
+  // --- Expeditions ----------------------------------------------------------
+
+  /**
+   * Send a party on an expedition and apply what happened to the guild.
+   *
+   * This is the whole vertical slice in one call, and the order is the point: the player
+   * chooses a *region and an objective*, the AI proposes a party, the simulation runs, and
+   * only then does the guild change. The player never picks a target, an ability or a
+   * moment — they pick the strategy and read the consequences (v1.0 §1).
+   *
+   * `party` is optional so the UI can let the player edit the proposal before committing;
+   * omitting it accepts the AI's own.
+   */
+  sendExpedition(
+    regionId: string,
+    objective: ObjectiveId,
+    party?: PartyProposal,
+  ): Result<ExpeditionOutcome, string> {
+    const region = this.session.content.worldRegionsById.get(regionId);
+    if (!region) return err(`unknown region "${regionId}"`);
+
+    const proposal = party ?? this.session.partyPlanner.propose(this.session.roster.all(), objective);
+    if (proposal.members.length === 0) return err('no hunter is available to deploy');
+
+    // A fresh fork per expedition, labelled by region and tick, so two expeditions in the
+    // same session never share a draw sequence and each one replays on its own.
+    const rng = this.session.streams.expedition.fork(`${regionId}:${this.session.clock.tick}`);
+    const result = this.session.expedition.run(rng, region, proposal);
+
+    for (const decision of result.decisions) {
+      this.session.audit.record({
+        actor: { kind: 'system', name: 'guild-ai' },
+        system: 'expedition',
+        sourceEvent: `${regionId}#${decision.atNode}`,
+        outcome: `${decision.choice}: ${decision.explanation}`,
+        reasonCodes: decision.reasonCodes,
+        inputs: { regionId, objective: proposal.objective.id },
+      });
+    }
+
+    const levelledUp: HunterId[] = [];
+    const balance = this.session.content.balance.attributes;
+
+    for (const after of result.aftermath) {
+      let hunter = this.session.roster.require(after.hunterId);
+
+      const progress = applyExperience(hunter.level, hunter.xp, after.xp, balance);
+      hunter = withLevel(hunter, progress.level, progress.xp);
+      if (progress.levelsGained > 0) {
+        levelledUp.push(hunter.id);
+        this.session.events.emit('hunter.leveled', { hunterId: hunter.id, level: progress.level });
+      }
+
+      hunter = this.session.condition.set(hunter, {
+        fatigue: hunter.condition.fatigue + after.fatigueAdded,
+        // Coming home is worth something; being broken on the way costs more than it gains.
+        morale: hunter.condition.morale + (result.wiped ? -0.2 : result.retreated ? -0.05 : 0.08),
+      });
+
+      // REQ-ZON-001 decided *whether* a hunter could die out there; this decides what the
+      // guild does about it. A death removes them from the roster entirely — permanent
+      // death is the whole weight behind a BLACK zone.
+      if (after.died) {
+        this.session.events.emit('hunter.died', {
+          hunterId: hunter.id,
+          zoneTier: region.zoneTier,
+        });
+        this.session.audit.record({
+          actor: { kind: 'system', name: 'guild-ai' },
+          system: 'expedition',
+          outcome: `${hunter.name} died in ${region.name}`,
+          reasonCodes: ['hunter_died', `zone:${region.zoneTier}`],
+        });
+        this.session.roster.remove(hunter.id);
+        continue;
+      }
+
+      const availability = after.injured
+        ? { state: 'injured' as const, readyAtTick: this.session.clock.tick + INJURY_TICKS }
+        : { state: 'recovering' as const, readyAtTick: this.session.clock.tick + RECOVERY_TICKS };
+
+      hunter = withAvailability(hunter, {
+        ...availability,
+        assignment: undefined,
+        recallCompletesAtTick: undefined,
+      });
+
+      this.session.audit.record({
+        actor: { kind: 'hunter', id: hunter.id },
+        system: 'availability',
+        outcome: `${hunter.name} returned ${after.injured ? 'injured' : 'to recover'}`,
+        reasonCodes: [REASON.availabilityChanged, after.injured ? 'injured' : 'expedition_ended'],
+      });
+
+      this.session.roster.update(hunter);
+    }
+
+    // Loot is rolled once, for the guild, at the region's item level — a shared haul rather
+    // than per-hunter drops, because the guild owns the armoury (§16).
+    const loot =
+      result.lootRolls > 0
+        ? this.session.itemGenerator.generateMany(
+            this.session.streams.loot,
+            result.lootRolls,
+            { itemLevel: region.itemLevel },
+          )
+        : [];
+    this.session.armoury.addMany(loot);
+
+    return ok({ result, party: proposal, loot, levelledUp });
   }
 
   saveGuild(slot = 'autosave'): Result<unknown, string> {
