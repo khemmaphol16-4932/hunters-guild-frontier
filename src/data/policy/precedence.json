@@ -1,0 +1,61 @@
+{
+  "$comment": "v1.0 §2.1 canonical precedence, verbatim: Hard constraints -> Guild objective -> Guild policy -> AI optimization -> Department policy -> Party objective -> Hunter identity/preferences. Kept as data rather than as the order of an array literal in code, because v1.0 §18 makes 'conflict order resolves exactly as canonical hierarchy' an acceptance criterion — a criterion that is far easier to verify against a declared table than against the reading order of a source file.",
+  "version": "1.0.0",
+  "tiers": [
+    {
+      "id": "hardConstraints",
+      "rank": 0,
+      "kind": "filter",
+      "description": "Absolute vetoes. Removes candidates outright and cannot be outscored.",
+      "overridable": true,
+      "$note": "overridable: true is the v1.0 §2.1 change — a hard constraint is absolute UNLESS an explicitly configured emergency policy permits its override. Authorisation must name the specific constraint; there is no wildcard."
+    },
+    {
+      "id": "guildObjective",
+      "rank": 1,
+      "kind": "filter",
+      "description": "What the guild is currently trying to achieve. Removes actions that work against the standing objective.",
+      "overridable": false
+    },
+    {
+      "id": "guildPolicy",
+      "rank": 2,
+      "kind": "filter",
+      "description": "Guild-level standing rules. Outranks every lower scope.",
+      "overridable": false
+    },
+    {
+      "id": "aiOptimization",
+      "rank": 3,
+      "kind": "weight",
+      "description": "The AI's own optimisation of permitted actions.",
+      "overridable": false,
+      "$note": "v1.0 places AI optimization ABOVE department policy — the AI may outrank a department's stated preference while remaining subordinate to guild-level policy. This is the least intuitive part of the canonical order and is called out in SPEC_RECONCILIATION C2."
+    },
+    {
+      "id": "departmentPolicy",
+      "rank": 4,
+      "kind": "weight",
+      "description": "Department-scoped preferences and priorities.",
+      "overridable": false
+    },
+    {
+      "id": "partyObjective",
+      "rank": 5,
+      "kind": "weight",
+      "description": "What this specific party was sent to do. Context, never capability.",
+      "overridable": false
+    },
+    {
+      "id": "hunterPreferences",
+      "rank": 6,
+      "kind": "weight",
+      "description": "Individual identity, preferred role and personality. Changes HOW an instruction is executed, never whether it stands.",
+      "overridable": false
+    }
+  ],
+  "scopes": {
+    "$comment": "v1.0 §2.1: policy inheritance is Guild -> Department -> Party -> Hunter, with explicit overrides. A narrower scope inherits the wider scope's value unless it declares an override.",
+    "order": ["guild", "department", "party", "hunter"]
+  }
+}

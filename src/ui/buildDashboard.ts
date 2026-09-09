@@ -26,6 +26,8 @@ import { EQUIPMENT_SLOTS } from '../data/itemSchema.js';
 import { isPerfect, itemQuality, type Item } from '../core/items/Item.js';
 import { Equipment } from '../systems/items/Equipment.js';
 import type { RefineResult } from '../systems/items/Refinement.js';
+import { composeTagPhrase, generateBuildTags } from '../systems/hunter/buildTags.js';
+import { describeAvailability } from '../core/hunter/availability.js';
 import { asSkillId } from '../core/ids.js';
 
 interface DashboardState {
@@ -226,6 +228,24 @@ export class BuildDashboard {
       ),
     );
     card.append(el('p', undefined, description.summary));
+
+    // v1.0 §5 — generated build tags. Derived on every render from the current build, never
+    // stored, so they cannot drift from what the hunter actually is.
+    const tags = generateBuildTags(profile);
+    if (tags.length > 0) {
+      const tagRow = el('div');
+      tagRow.append(el('span', 'tag-phrase', composeTagPhrase(tags)));
+      for (const tag of tags) {
+        const chip = el('span', `tag tag-${tag.kind}`, tag.label);
+        chip.title = `${tag.because} (${Math.round(tag.confidence * 100)}% confidence)`;
+        tagRow.append(chip);
+      }
+      card.append(tagRow);
+    }
+
+    card.append(
+      el('p', 'subhead', `Status: ${describeAvailability(hunter.availability)}`),
+    );
 
     const advancement = el('div');
     for (const option of this.session.classSystem.availableAdvancements(hunter)) {

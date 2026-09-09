@@ -83,7 +83,61 @@ const v2ToV3: Migration = {
   },
 };
 
-export const MIGRATIONS: readonly Migration[] = [v1ToV2, v2ToV3];
+/**
+ * v3 → v4: add the audit log, emergency authorisations, and hunter availability.
+ *
+ * A v3 save has no audit history and no authorisations, so both start empty — and an empty
+ * authorisation set is the *correct* default rather than a lossy one: it means hard
+ * constraints are absolute, which is exactly how a v3 save behaved.
+ *
+ * Availability defaults to `available`. That is a genuine assumption: a v3 hunter who was
+ * mid-expedition when the save was written has no recorded state to restore, and marking
+ * everyone available is the conservative reading (a hunter wrongly available can be
+ * reassigned; one wrongly stuck as `assigned` to a expedition that no longer exists could
+ * never be freed).
+ */
+/**
+ * The optional fields are omitted rather than set to null, because that is exactly what a
+ * serialised `FRESH_AVAILABILITY` looks like — `JSON.stringify` drops `undefined` keys, so
+ * a migrated hunter and a freshly saved one must have the same shape or round-trip equality
+ * tests would fail for a difference that does not exist at runtime.
+ */
+const V4_FRESH_AVAILABILITY = { state: 'available' };
+
+const v3ToV4: Migration = {
+  from: 3,
+  to: 4,
+  describe: 'add audit log, emergency authorisations and hunter availability',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) {
+      throw new SaveMigrationError('v3 payload is not an object');
+    }
+    const v3 = payload as Record<string, unknown>;
+
+    const hunters = Array.isArray(v3['hunters']) ? v3['hunters'] : [];
+    const upgraded = hunters.map((hunter) => {
+      if (typeof hunter !== 'object' || hunter === null) return hunter;
+      const record = hunter as Record<string, unknown>;
+      return {
+        ...record,
+        availability: record['availability'] ?? { ...V4_FRESH_AVAILABILITY },
+      };
+    });
+
+    return {
+      hunters: upgraded,
+      chronicles: Array.isArray(v3['chronicles']) ? v3['chronicles'] : [],
+      clock: v3['clock'] ?? { tick: 0, accumulatorMs: 0 },
+      rngStreams: v3['rngStreams'] ?? {},
+      armoury: v3['armoury'] ?? { items: [], cardCounts: {}, cardsSeen: [] },
+      lootPity: v3['lootPity'] ?? { sinceTier: 0 },
+      audit: [],
+      emergencyAuthorisations: [],
+    };
+  },
+};
+
+export const MIGRATIONS: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */
 export function migratePayload(

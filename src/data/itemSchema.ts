@@ -691,3 +691,100 @@ export function parseLootBalance(raw: unknown, path = 'loot.json'): LootBalance 
 
 /** Re-exported so item modules do not need to reach into schema.ts for the attribute list. */
 export { ATTRIBUTE_KEYS };
+
+// ---------------------------------------------------------------------------
+// Policy precedence (v1.0 §2.1)
+// ---------------------------------------------------------------------------
+
+export const POLICY_SCOPES = ['guild', 'department', 'party', 'hunter'] as const;
+export type PolicyScope = (typeof POLICY_SCOPES)[number];
+
+export interface PrecedenceTier {
+  readonly id: string;
+  readonly rank: number;
+  /** A filter removes candidates; a weight only reorders survivors. */
+  readonly kind: 'filter' | 'weight';
+  readonly description: string;
+  readonly overridable: boolean;
+}
+
+export interface PolicyPrecedence {
+  readonly version: string;
+  readonly tiers: readonly PrecedenceTier[];
+  readonly scopes: { readonly order: readonly PolicyScope[] };
+}
+
+export function parsePolicyPrecedence(
+  raw: unknown,
+  path = 'precedence.json',
+): PolicyPrecedence {
+  const o = expectObject(raw, path);
+
+  const tiers = expectArray(field(o, 'tiers', path), `${path}.tiers`).map((entry, i) => {
+    const p = `${path}.tiers[${i}]`;
+    const e = expectObject(entry, p);
+    return {
+      id: expectString(field(e, 'id', p), `${p}.id`),
+      rank: expectNumber(field(e, 'rank', p), `${p}.rank`),
+      kind: expectEnum(field(e, 'kind', p), `${p}.kind`, ['filter', 'weight'] as const),
+      description: expectString(field(e, 'description', p), `${p}.description`),
+      overridable: expectBoolean(field(e, 'overridable', p), `${p}.overridable`),
+    };
+  });
+
+  assertUniqueIds(tiers.map((t) => t.id), `${path}.tiers`);
+
+  // Ranks must be a gapless 0..n-1 sequence in declared order. v1.0 §18 makes "conflict
+  // order resolves exactly as canonical hierarchy" an acceptance criterion, and a duplicated
+  // or skipped rank would make the resolved order ambiguous rather than merely odd.
+  for (let i = 0; i < tiers.length; i++) {
+    if (tiers[i]?.rank !== i) {
+      throw new ContentValidationError(
+        `${path}.tiers[${i}].rank`,
+        `expected ${i} — ranks must be gapless and in declared order`,
+      );
+    }
+  }
+
+  const first = tiers[0];
+  if (!first || first.id !== 'hardConstraints' || first.kind !== 'filter') {
+    throw new ContentValidationError(
+      `${path}.tiers[0]`,
+      'hard constraints must be the first tier and must be a filter (v1.0 §2.1, §7)',
+    );
+  }
+
+  // Every filter must outrank every weight. If a weight could run before a filter, a
+  // forbidden action would receive a score, and "hard constraints eliminate illegal actions
+  // before scoring" would stop being structurally true.
+  const lastFilter = tiers.reduce((max, t) => (t.kind === 'filter' ? Math.max(max, t.rank) : max), -1);
+  const firstWeight = tiers.reduce(
+    (min, t) => (t.kind === 'weight' ? Math.min(min, t.rank) : min),
+    Number.POSITIVE_INFINITY,
+  );
+  if (lastFilter > firstWeight) {
+    throw new ContentValidationError(
+      `${path}.tiers`,
+      'every filter tier must outrank every weight tier, or a forbidden action could be scored',
+    );
+  }
+
+  const scopesRaw = expectObject(field(o, 'scopes', path), `${path}.scopes`);
+  const order = expectArray(
+    field(scopesRaw, 'order', `${path}.scopes`),
+    `${path}.scopes.order`,
+  ).map((s, i) => expectEnum(s, `${path}.scopes.order[${i}]`, POLICY_SCOPES));
+
+  if (order.length !== POLICY_SCOPES.length) {
+    throw new ContentValidationError(
+      `${path}.scopes.order`,
+      `must list all ${POLICY_SCOPES.length} scopes exactly once`,
+    );
+  }
+
+  return {
+    version: expectString(field(o, 'version', path), `${path}.version`),
+    tiers,
+    scopes: { order },
+  };
+}

@@ -24,6 +24,7 @@ import type {
   TraitId,
 } from '../ids.js';
 import { baseAttributes, type Attributes } from './attributes.js';
+import { FRESH_AVAILABILITY, type Availability } from './availability.js';
 import { unspentPoints } from './leveling.js';
 import type { Potential } from './potential.js';
 
@@ -75,6 +76,12 @@ export interface Hunter {
 
   readonly condition: HunterCondition;
 
+  /**
+   * Canonical deployment state (v1.0 §4). Separate from condition: condition is continuous
+   * and always present, availability answers whether this hunter can be sent out at all.
+   */
+  readonly availability: Availability;
+
   /** Inputs to assignment scoring, never vetoes (REQ-TWN-010, DL-008). */
   readonly preferredRole: Role;
   readonly preferredDepartment: DepartmentId;
@@ -124,6 +131,7 @@ export function createHunter(
     personalityId: options.personalityId,
     traitIds: options.potential.traitIds,
     condition: FRESH_CONDITION,
+    availability: FRESH_AVAILABILITY,
     preferredRole: options.preferredRole,
     preferredDepartment: options.preferredDepartment,
   };
@@ -162,6 +170,10 @@ export function withMastery(
 
 export function withCondition(hunter: Hunter, condition: HunterCondition): Hunter {
   return { ...hunter, condition };
+}
+
+export function withAvailability(hunter: Hunter, availability: Availability): Hunter {
+  return { ...hunter, availability };
 }
 
 export function withEquipment(

@@ -14,6 +14,8 @@ import type { Role } from '../data/schema.js';
 import { EventBus } from '../core/events.js';
 import { SimulationClock } from '../core/clock.js';
 import { createStreams, type RngStreams } from '../core/rng.js';
+import { AuditLog } from '../core/audit.js';
+import { EmergencyPolicy } from '../ai/policy/emergency.js';
 import { mintHunterId } from '../core/ids.js';
 import type { ArchetypeId, HunterId, PersonalityId } from '../core/ids.js';
 import { asArchetypeId, asPersonalityId } from '../core/ids.js';
@@ -118,6 +120,9 @@ export class Session {
   readonly buildIdentity: BuildIdentity;
   readonly chronicle: Chronicle;
 
+  readonly audit: AuditLog;
+  readonly emergency: EmergencyPolicy;
+
   readonly armoury: Armoury;
   readonly cards: Cards;
   readonly sets: Sets;
@@ -129,6 +134,13 @@ export class Session {
 
   readonly worldSeed: string;
 
+  /**
+   * Version of the policy rule set in force, stamped onto every audit record (v1.0 §14).
+   * Sourced from `data/policy/precedence.json` so an old decision can be read against the
+   * rules of its time rather than against today's.
+   */
+  readonly policyVersion: string;
+
   constructor(options: SessionOptions) {
     this.worldSeed = options.worldSeed;
     this.content = options.content ?? loadContent();
@@ -136,6 +148,7 @@ export class Session {
     this.clock = new SimulationClock();
     this.streams = createStreams(options.worldSeed);
     this.roster = new Roster();
+    this.policyVersion = this.content.policyPrecedence.version;
 
     this.classSystem = new ClassSystem({ content: this.content });
     this.registry = new SkillRegistry(this.content);
@@ -155,6 +168,14 @@ export class Session {
       balance: this.content.balance.personality,
       events: this.events,
     });
+    // v1.0 §14/§18: consequential changes must be explainable from an audit record.
+    this.audit = new AuditLog({
+      currentTick: () => this.clock.tick,
+      policyVersion: () => this.policyVersion,
+    });
+    // Empty by default, so hard constraints stay absolute until the player says otherwise.
+    this.emergency = new EmergencyPolicy();
+
     this.armoury = new Armoury(this.content);
     this.cards = new Cards(this.content);
     this.sets = new Sets(this.content);
@@ -268,6 +289,8 @@ export class Session {
       rngStreams,
       armoury: this.armoury.snapshot(),
       lootPity: this.itemGenerator.pity,
+      audit: this.audit.snapshot(),
+      emergencyAuthorisations: this.emergency.snapshot(),
     };
   }
 
@@ -279,6 +302,8 @@ export class Session {
     this.clock.restore(payload.clock);
     this.armoury.restore(payload.armoury);
     this.itemGenerator.restorePity(payload.lootPity);
+    this.audit.restore(payload.audit ?? []);
+    this.emergency.restore(payload.emergencyAuthorisations ?? []);
   }
 
   dispose(): void {

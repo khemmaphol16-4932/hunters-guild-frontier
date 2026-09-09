@@ -1,6 +1,8 @@
-# Hunter's Guild: Frontier — Design Bible
+# Hunter’s Guild: Frontier — Design Bible
 
-**Status:** LOCKED. Derived from the 350-decision master specification.
+> **Amended by Master Build Specification v1.0.** Several requirements below were superseded by the later v1.0 handoff document. Amended requirements are marked **[v1.0]** and carry the new rule; the superseded text is kept alongside so the change is visible rather than silent. `SPEC_RECONCILIATION.md` is the full item-by-item audit, and is the place to look first when this document and v1.0 appear to disagree.
+
+**Status:** LOCKED. Derived from the 350-decision master specification, amended by Master Build Specification v1.0.
 
 **Rule:** This document restates the spec as *testable requirements*. Code cites requirement IDs (e.g. `REQ-AI-006`). Where the spec was ambiguous, the conservative reading is recorded here and logged in `DECISION_LOG.md`. No requirement in this file may be silently changed.
 
@@ -133,9 +135,9 @@ Target tone: **casual tycoon + RPG flavor**. Death matters; the game stays appro
 | ID | Requirement |
 |---|---|
 | REQ-POL-001 | Policy hierarchy: Player → Guild Policy → Guild AI → Department/Activity → Party Strategy → Build Identity → Hunter AI → personality/mastery/behavior/equipment/fatigue/morale/history/potential → Action. (§28) |
-| REQ-POL-002 | Effective **action-validation** order: (1) Hard Constraints, (2) Guild Policy, (3) Build/Capability validity, (4) Department/Activity objectives, (5) Party Strategy, (6) Personal Priority, (7) Personality preferences, (8) Utility evaluation. (§28) |
+| REQ-POL-002 **[v1.0]** | Canonical precedence: Hard constraints → Guild objective → Guild policy → AI optimization → Department policy → Party objective → Hunter identity/preferences. Policy inherits Guild → Department → Party → Hunter with explicit overrides. Declared in `data/policy/precedence.json` rather than in source order, because v1.0 §18 makes "conflict order resolves exactly as canonical hierarchy" an acceptance criterion. *(v1.0 §2.1; supersedes §28's ordering, which put AI utility last and Department above Party.)* |
 | REQ-POL-003 | Policy hierarchy determines organizational strategy; capability determines whether an action is *valid*; personality determines execution *style*. These three are distinct mechanisms. (§28) |
-| REQ-POL-004 | **Hard Constraints always win.** The AI must never violate one because another system rates an action optimal. (§29) |
+| REQ-POL-004 **[v1.0]** | Hard Constraints win **unless an explicitly configured emergency policy permits the override**. An authorisation must name the specific constraint (no wildcards), be player-authored, be conditional on an active trigger, and be audited. With no authorisation configured, behaviour is unchanged — the AI never violates a constraint because another system rates an action optimal. *(v1.0 §2.1/§18; supersedes §29's absolute rule.)* |
 | REQ-POL-005 | Hard Constraints include: prohibited action, prohibited zone, prohibited risk, required retreat threshold, death policy, equipment restriction, skill restriction, role restriction, player safety setting. (§29) |
 | REQ-POL-006 | Guild Policy outranks Personal Priority. Hunters cannot refuse assigned work; they may only execute it differently. (§71) |
 | REQ-POL-007 | Policy levels: Guild, Department/Activity, Party, Individual. (§70) |
@@ -166,7 +168,7 @@ Target tone: **casual tycoon + RPG flavor**. Death matters; the game stays appro
 |---|---|
 | REQ-CBT-001 | Combat is real-time auto-combat, physically staged in the expedition environment. (§38) |
 | REQ-CBT-002 | Damage formula is hybrid — externally understandable, internally multi-layered. (§42) |
-| REQ-CBT-003 | Damage types: physical, magic, element, true. Four elements with advantage (increased damage) and disadvantage (reduced damage). (§42) |
+| REQ-CBT-003 **[v1.0]** | Damage types: physical, magic, element, true. Elements and reactions are **build and encounter interactions authored as data tables (a reaction matrix), never a fixed rock-paper-scissors cycle**. Reactions must be legible in combat, affect build tags and AI choices, and support theorycraft simulation. The element list and matrix values are unapproved (v1.0 §20) and must not be invented. *(v1.0 §7/§20; supersedes §42's advantage/disadvantage cycle — which is precisely the model v1.0 warns against.)* |
 | REQ-CBT-004 | Defense: physical DEF, magic DEF, elemental resistance. Penetration: flat and percentage. (§42) |
 | REQ-CBT-005 | Accuracy model: accuracy, evasion, situational modifier. (§42) |
 | REQ-CBT-006 | Critical: crit chance, crit damage, and critical resistance. (§42) |
@@ -317,6 +319,23 @@ Target tone: **casual tycoon + RPG flavor**. Death matters; the game stays appro
 | REQ-TEC-012 | Prefer simple architecture with deep interaction over large architecture with shallow interaction. (§144) |
 
 ---
+
+## 12b. Requirements added by Master Build Specification v1.0
+
+| ID | Requirement |
+|---|---|
+| REQ-V1-AUD-001 | Consequential state changes are recorded with game time, actor/system, source event, policy version, deterministic seed, inputs, outcome and reason codes. An entry without a reason code is rejected. (v1.0 §14) |
+| REQ-V1-AUD-002 | Every important AI action and consequential outcome can be explained from an audit record. (v1.0 §18) |
+| REQ-V1-CLK-001 | Coarse deterministic steps drive idle town/economy work and finer deterministic ticks drive active combat; both derive from the same elapsed game time, with the coarse cadence an integer multiple of the fine one so the two cannot drift. (v1.0 §4) |
+| REQ-V1-AVL-001 | Hunter availability is one of Available, Assigned, Recovering, Injured, Unavailable. Illegal transitions are rejected — in particular, injury heals into recovery and never straight to available. (v1.0 §4) |
+| REQ-V1-AVL-002 | Recalling a hunter takes transition time; a hunter mid-recall is not deployable. (v1.0 §4) |
+| REQ-V1-AVL-003 | Recovery varies measurably with time, food, housing quality, service quality and rest. Absent food it slows but never stops. (v1.0 §4, §18) |
+| REQ-V1-TAG-001 | Build tags are *generated* from actual attributes, skills, equipment, cards, sets and elemental interactions. They are never stored, never manually chosen, and never aggregate into a rating. (v1.0 §5, §6, §19) |
+| REQ-V1-CHR-001 | Chronicle events are Minor, Major or Historic. Only remarkable events enter. Historic events may affect legacy and monuments. (v1.0 §11) |
+| REQ-V1-PTY-001 | Party creation is objective → AI proposal → player adjustment. Formation uses templates plus AI positioning adjustment. *(Supersedes REQ-PTY-003/004 on composition; templates still govern formation.)* (v1.0 §6) |
+| REQ-V1-KNW-001 | The world map is a knowledge interface — unknown → rumor → discovered → experienced → mastered — and previews never show more than the guild plausibly knows. (v1.0 §8, §18) |
+| REQ-V1-THC-001 | Theorycraft simulations use production combat rules and award no progression rewards. (v1.0 §5, §18) |
+| REQ-V1-GAP-001 | On loss or unavailability: capability gap → AI analysis → replacement candidates → player/policy decision. The AI never auto-retires a hunter. (v1.0 §2.4, §18) |
 
 ## 13. Definition of Done (§134)
 

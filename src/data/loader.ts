@@ -29,6 +29,7 @@ import uniqueEffectsJson from './items/unique-effects.json';
 import attributeBalanceJson from './balance/attributes.json';
 import refinementBalanceJson from './balance/refinement.json';
 import lootBalanceJson from './balance/loot.json';
+import policyPrecedenceJson from './policy/precedence.json';
 import masteryBalanceJson from './balance/mastery.json';
 import buildIdentityBalanceJson from './balance/build-identity.json';
 import potentialBalanceJson from './balance/potential.json';
@@ -74,6 +75,7 @@ import {
   parseSets,
   parseSubstats,
   parseUniqueEffects,
+  parsePolicyPrecedence,
   type CardDef,
   type ItemTypeData,
   type ItemTypeDef,
@@ -84,6 +86,7 @@ import {
   type SetDef,
   type SubstatData,
   type UniqueEffectDef,
+  type PolicyPrecedence,
 } from './itemSchema.js';
 
 export interface GameContent {
@@ -112,6 +115,9 @@ export interface GameContent {
   readonly setsById: ReadonlyMap<string, SetDef>;
   readonly uniqueEffects: readonly UniqueEffectDef[];
   readonly uniqueEffectsById: ReadonlyMap<string, UniqueEffectDef>;
+
+  /** v1.0 §2.1 canonical precedence, as data rather than as source order. */
+  readonly policyPrecedence: PolicyPrecedence;
 
   readonly balance: {
     readonly attributes: AttributeBalance;
@@ -332,6 +338,8 @@ export function loadContent(): GameContent {
     setsById: new Map(sets.map((s) => [s.id, s])),
     uniqueEffects,
     uniqueEffectsById: new Map(uniqueEffects.map((e) => [e.id, e])),
+
+    policyPrecedence: parsePolicyPrecedence(policyPrecedenceJson),
 
     balance: {
       attributes: parseAttributeBalance(attributeBalanceJson),

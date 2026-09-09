@@ -116,3 +116,15 @@ ul.notes.weak li { color: var(--warn); }
 .slot-row .slot-item { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slot-row .slot-item.empty { color: var(--muted); }
 .slot-row .slot-quality { text-align: right; font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+
+/* Generated build tags (v1.0 §5) — derived on render, never stored. */
+.tag-phrase {
+  display: inline-block; margin: 0 8px 4px 0;
+  font-weight: 600; color: var(--accent); letter-spacing: 0.02em;
+}
+.tag-role { border-color: var(--tank); }
+.tag-behaviour { border-color: var(--damage); }
+.tag-element { border-color: var(--warn); }
+.tag-resource { border-color: var(--control); }
+.tag-utility { border-color: var(--support); }
+.tag-range { border-color: var(--healer); }

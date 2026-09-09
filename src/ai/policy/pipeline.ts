@@ -23,6 +23,12 @@
  * stages arrive with combat in Phase 4 (TECH_DEBT.md).
  */
 
+import type {
+  EmergencyContext,
+  EmergencyPolicy,
+  OverrideDecision,
+} from './emergency.js';
+
 /** Anything the pipeline can choose between: a skill use, a move, a retreat, an assignment. */
 export interface Candidate {
   readonly id: string;
@@ -86,17 +92,40 @@ export interface Decision<A extends Candidate> {
  * Wrap a set of hard constraints as the first filter stage.
  * Kept separate from ordinary filters so that "which stage rejected this?" always
  * distinguishes an absolute veto from a mere capability mismatch.
+ *
+ * Pass `emergency` to enable v1.0 §2.1's narrow override path. Omit it and hard constraints
+ * are absolute, which stays the default: a guild with no authorisations configured behaves
+ * exactly as it did before overrides existed.
  */
 export function hardConstraintStage<A extends Candidate, C>(
   constraints: readonly HardConstraint<A, C>[],
+  emergency?: {
+    readonly policy: EmergencyPolicy;
+    /** Derives the currently active triggers from the decision context. */
+    readonly contextFor: (context: C) => EmergencyContext;
+    /** Called for each override actually applied, so the caller can audit it. */
+    readonly onOverride?: (decision: OverrideDecision, candidate: A) => void;
+  },
 ): FilterStage<A, C> {
+  const violatedBy = (candidate: A, context: C): HardConstraint<A, C> | undefined =>
+    constraints.find((c) => !c.permits(candidate, context));
+
   return {
     name: 'hardConstraints',
     permits(candidate, context) {
-      return constraints.every((c) => c.permits(candidate, context));
+      const violated = violatedBy(candidate, context);
+      if (!violated) return true;
+      if (!emergency) return false;
+
+      // An override is granted only on an exact match of constraint id and active trigger.
+      const decision = emergency.policy.permits(violated.id, emergency.contextFor(context));
+      if (!decision) return false;
+
+      emergency.onOverride?.(decision, candidate);
+      return true;
     },
     reason(candidate, context) {
-      const violated = constraints.find((c) => !c.permits(candidate, context));
+      const violated = violatedBy(candidate, context);
       return violated ? violated.describe : 'violates a hard constraint';
     },
   };

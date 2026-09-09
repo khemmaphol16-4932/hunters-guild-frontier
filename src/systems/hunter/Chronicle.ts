@@ -18,9 +18,26 @@ import type { ChronicleBalance } from '../../data/schema.js';
 import type { EventBus, DomainEventName, EventHandler } from '../../core/events.js';
 import type { HunterId } from '../../core/ids.js';
 
+/**
+ * v1.0 §11 fixes three named levels. The numeric significance is retained *internally*
+ * because ring retention needs a total ordering to decide what a full ring displaces —
+ * but the level is what surfaces, and it is what "only remarkable events enter" means.
+ */
+export const CHRONICLE_LEVELS = ['minor', 'major', 'historic'] as const;
+export type ChronicleLevel = (typeof CHRONICLE_LEVELS)[number];
+
+/** Significance 1–5 → the three named levels. */
+export function chronicleLevel(significance: number): ChronicleLevel {
+  if (significance >= 5) return 'historic';
+  if (significance >= 3) return 'major';
+  return 'minor';
+}
+
 export interface ChronicleEntry {
   readonly kind: string;
   readonly significance: number;
+  /** v1.0 §11's named level, derived from significance. */
+  readonly level: ChronicleLevel;
   /** Simulation tick, so entries order correctly regardless of wall-clock time (DL-003). */
   readonly tick: number;
   readonly text: string;
@@ -78,6 +95,31 @@ export class Chronicle {
 
   counter(hunterId: HunterId, name: string): number {
     return this.records.get(hunterId)?.counters[name] ?? 0;
+  }
+
+  /**
+   * Entries at or above a named level.
+   *
+   * v1.0 §11 gives historic events consequences — they *"can affect hunter legacy and guild
+   * monuments"* — so those systems need to select by level rather than re-deriving a
+   * threshold each time and risking disagreement about what counts as historic.
+   */
+  entriesAtLevel(hunterId: HunterId, level: ChronicleLevel): readonly ChronicleEntry[] {
+    const minimum = CHRONICLE_LEVELS.indexOf(level);
+    return (this.records.get(hunterId)?.notable ?? []).filter(
+      (entry) => CHRONICLE_LEVELS.indexOf(entry.level) >= minimum,
+    );
+  }
+
+  /** Every historic entry across the guild — the raw material for monuments (§11). */
+  historicEntries(): readonly { hunterId: HunterId; entry: ChronicleEntry }[] {
+    const out: { hunterId: HunterId; entry: ChronicleEntry }[] = [];
+    for (const record of this.records.values()) {
+      for (const entry of record.notable) {
+        if (entry.level === 'historic') out.push({ hunterId: record.hunterId, entry });
+      }
+    }
+    return out;
   }
 
   /** Restore from a save. Replaces any in-memory record for those hunters. */
@@ -221,6 +263,7 @@ export class Chronicle {
     const entry: ChronicleEntry = {
       kind,
       significance,
+      level: chronicleLevel(significance),
       tick: this.currentTick(),
       text,
     };

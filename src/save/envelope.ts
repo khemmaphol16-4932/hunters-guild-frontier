@@ -16,8 +16,10 @@ import type { Hunter } from '../core/hunter/Hunter.js';
 import type { HunterChronicle } from '../systems/hunter/Chronicle.js';
 import type { RngState } from '../core/rng.js';
 import type { Item } from '../core/items/Item.js';
+import type { AuditRecord } from '../core/audit.js';
+import type { EmergencyAuthorisation } from '../ai/policy/emergency.js';
 
-export const CURRENT_SAVE_VERSION = 3;
+export const CURRENT_SAVE_VERSION = 4;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -71,7 +73,31 @@ export interface SavePayloadV3 {
   readonly lootPity: { readonly sinceTier: number };
 }
 
-export type CurrentSavePayload = SavePayloadV3;
+/**
+ * v4 — adds the audit log, emergency authorisations, and per-hunter availability.
+ *
+ * Driven by the Master Build Specification v1.0 reconciliation: §14 requires an auditable
+ * trail for consequential changes, §2.1 introduces player-configured emergency overrides,
+ * and §4 fixes the five canonical availability states. All three are state a save must carry
+ * — an audit trail that vanished on reload could not explain anything, and an emergency
+ * authorisation that vanished would silently restore absolute hard constraints.
+ */
+export interface SavePayloadV4 {
+  readonly hunters: readonly Hunter[];
+  readonly chronicles: readonly HunterChronicle[];
+  readonly clock: { readonly tick: number; readonly accumulatorMs: number };
+  readonly rngStreams: Readonly<Record<string, RngState>>;
+  readonly armoury: {
+    readonly items: readonly Item[];
+    readonly cardCounts: Readonly<Record<string, number>>;
+    readonly cardsSeen: readonly string[];
+  };
+  readonly lootPity: { readonly sinceTier: number };
+  readonly audit: readonly AuditRecord[];
+  readonly emergencyAuthorisations: readonly EmergencyAuthorisation[];
+}
+
+export type CurrentSavePayload = SavePayloadV4;
 
 export interface Migration {
   readonly from: number;

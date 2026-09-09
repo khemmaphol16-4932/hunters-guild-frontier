@@ -69,13 +69,27 @@ Slots · item definitions · rarity · main stats · substats · cards · set bo
 
 **Delivered.** Substat randomization is seeded and reproducible; the refinement risk zone can downgrade and destroy; `BuildIdentity` picked up real equipment and card contributions with **no interface change** — `git diff` over `src/systems/hunter/` was empty after the phase (validates the B7/DL-009 resolution). Storage is guild-wide (`Armoury`) rather than per-hunter, because REQ-EQP-004 leaves items unbound. Save at v3 with a v2→v3 migration.
 
-## Phase 3 — Hunter System ⬜
+## Phase 2.5 — v1.0 reconciliation ✅
 
-Recruitment pools · potential display · personality · traits · growth · preferred role/department · hunger · fatigue · morale · friendship · chronicle expansion.
+Master Build Specification v1.0 arrived after Phase 2 and supersedes several locked decisions. `SPEC_RECONCILIATION.md` is the item-by-item audit; this phase implemented the parts of v1.0 §17 step 1 that were missing.
 
-Key DoD: regional pools produce visibly different recruits (REQ-RCT-002); an exceptional recruit is legible at a glance.
+**Delivered.** Audit/replay model (`core/audit.ts`) with the §14 minimum field set and a rejection for entries lacking a reason code · dual-resolution simulation clock, coarse and fine cadences from one elapsed-time source · canonical policy precedence as data (`data/policy/precedence.json`) with validation that filters always outrank weights · emergency overrides for hard constraints (`ai/policy/emergency.ts`) — named constraint only, player-authored only, trigger-conditional, always audited · five canonical availability states with legal transitions and recall transition time · recovery varying with food, housing and services · generated build tags · Chronicle Minor/Major/Historic. Save at v4 with a v3→v4 migration.
 
-## Phase 4 — Combat + AI ⬜
+**Open:** the class-model divergence (SPEC_RECONCILIATION C5) is flagged for approval and is the one item blocking a clean run at the vertical slice.
+
+---
+
+> **Sequencing note (v1.0 §17).** v1.0 orders the work: schemas/clock/RNG/audit/migration/precedence → **vertical slice** → town → AI Operations → economy → world knowledge → equipment/cards/theorycraft → legacy. Equipment was already built as Phase 2 under the previous roadmap, which is not reversible work and earned its place (it validated the DL-009 interface and caught a live `BuildIdentity` bug). The remaining order below is resequenced to match v1.0, and §17's closing instruction stands: **no further content production until the vertical slice is measurable and replayable.**
+
+## Phase 3 — Vertical slice ⬜ ← **next**
+
+v1.0 §17 step 2: *hunter state → party planner → deterministic combat → expedition outcome → recovery/loot/Chronicle*, end to end and replayable.
+
+Party of five with objective-first creation (AI proposal → player adjustment, REQ-V1-PTY-001) · formation templates + AI positioning · pre-deployment fit analysis (strengths, weaknesses, risks, key-hunter dependency) · deterministic real-time auto-combat · one safe and one high-risk region · continue/retreat · injuries and death prototype · expedition report · recovery consuming the availability states built in Phase 2.5.
+
+Key DoD (v1.0 §16): the player can make a strategy/policy decision, watch the guild execute it, understand *why* the result occurred from the audit trail, and see the outcome affect the living guild. Same seed must reproduce the same run.
+
+## Phase 4 — Combat depth + AI ⬜
 
 Real-time combat · entities · targeting · threat · skills in combat · status · healing · downed · rescue · death · positioning · environment · **hunter AI** · party synergy · combat chronicle.
 

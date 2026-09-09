@@ -18,13 +18,24 @@
  */
 
 export interface ClockOptions {
-  /** Simulation step size. 50ms = 20 steps/second: fine enough for combat, cheap enough for 3-day catch-up. */
+  /** Fine simulation step. 50ms = 20 steps/second: the cadence active combat runs at. */
   readonly stepMs?: number;
   /**
-   * Maximum steps a single advance() may run. Prevents a long stall (a background tab,
+   * Maximum fine steps a single advance() may run. Prevents a long stall (a background tab,
    * a breakpoint) from freezing the game while it catches up in one frame.
    */
   readonly maxStepsPerAdvance?: number;
+  /**
+   * How many fine steps make one coarse step.
+   *
+   * v1.0 §4 asks for "coarse, deterministic steps for idle town/economy work and finer
+   * deterministic ticks for active combat; both derive from the same elapsed game time".
+   * Making the coarse cadence an integer multiple of the fine one is what keeps "both derive
+   * from the same elapsed time" literally true: after any span, coarseSteps ===
+   * floor(fineSteps / coarseStepRatio) exactly, with no drift to reconcile. A non-integer
+   * ratio would put online and offline results on divergent paths for the same elapsed time.
+   */
+  readonly coarseStepRatio?: number;
 }
 
 export interface StepContext {
@@ -38,10 +49,13 @@ export interface StepContext {
 
 export const DEFAULT_STEP_MS = 50;
 export const DEFAULT_MAX_STEPS_PER_ADVANCE = 240;
+/** 20 fine steps = 1 second of coarse cadence — town and economy work does not need 20Hz. */
+export const DEFAULT_COARSE_STEP_RATIO = 20;
 
 export class SimulationClock {
   readonly stepMs: number;
   readonly maxStepsPerAdvance: number;
+  readonly coarseStepRatio: number;
 
   private currentTick = 0;
   private accumulatorMs = 0;
@@ -51,10 +65,28 @@ export class SimulationClock {
   constructor(options: ClockOptions = {}) {
     this.stepMs = options.stepMs ?? DEFAULT_STEP_MS;
     this.maxStepsPerAdvance = options.maxStepsPerAdvance ?? DEFAULT_MAX_STEPS_PER_ADVANCE;
+    this.coarseStepRatio = options.coarseStepRatio ?? DEFAULT_COARSE_STEP_RATIO;
+
     if (this.stepMs <= 0) throw new Error('SimulationClock: stepMs must be positive');
     if (this.maxStepsPerAdvance <= 0) {
       throw new Error('SimulationClock: maxStepsPerAdvance must be positive');
     }
+    if (!Number.isInteger(this.coarseStepRatio) || this.coarseStepRatio < 1) {
+      throw new Error(
+        'SimulationClock: coarseStepRatio must be a positive integer so the coarse and fine ' +
+          'cadences derive from the same elapsed time without drift (v1.0 §4)',
+      );
+    }
+  }
+
+  /** Coarse step size in milliseconds. */
+  get coarseStepMs(): number {
+    return this.stepMs * this.coarseStepRatio;
+  }
+
+  /** Completed coarse steps since the clock was created. */
+  get coarseTick(): number {
+    return Math.floor(this.currentTick / this.coarseStepRatio);
   }
 
   get tick(): number {
@@ -90,7 +122,11 @@ export class SimulationClock {
    * Feed elapsed real (or simulated) time and run whole steps.
    * Returns the number of steps actually run.
    */
-  advance(deltaMs: number, onStep: (ctx: StepContext) => void): number {
+  advance(
+    deltaMs: number,
+    onStep: (ctx: StepContext) => void,
+    onCoarseStep?: (ctx: StepContext) => void,
+  ): number {
     if (!Number.isFinite(deltaMs) || deltaMs < 0) return 0;
     this.accumulatorMs += deltaMs;
 
@@ -100,6 +136,11 @@ export class SimulationClock {
       this.currentTick += 1;
       steps += 1;
       onStep({ tick: this.currentTick, dt: this.dt, elapsedMs: this.elapsedMs });
+      // The coarse cadence fires on completing a whole multiple of fine steps, so it is a
+      // strict function of the tick count rather than a second accumulator that could drift.
+      if (onCoarseStep && this.currentTick % this.coarseStepRatio === 0) {
+        onCoarseStep({ tick: this.coarseTick, dt: this.coarseDt, elapsedMs: this.elapsedMs });
+      }
     }
 
     if (this.accumulatorMs >= this.stepMs) {
@@ -118,13 +159,48 @@ export class SimulationClock {
    * Used by offline catch-up (REQ-OFF-001) and the balance harness (REQ-TEC-009),
    * where there is no frame to keep responsive.
    */
-  runSteps(n: number, onStep: (ctx: StepContext) => void): number {
+  runSteps(
+    n: number,
+    onStep: (ctx: StepContext) => void,
+    onCoarseStep?: (ctx: StepContext) => void,
+  ): number {
     const count = Math.max(0, Math.floor(n));
     for (let i = 0; i < count; i++) {
       this.currentTick += 1;
       onStep({ tick: this.currentTick, dt: this.dt, elapsedMs: this.elapsedMs });
+      if (onCoarseStep && this.currentTick % this.coarseStepRatio === 0) {
+        onCoarseStep({ tick: this.coarseTick, dt: this.coarseDt, elapsedMs: this.elapsedMs });
+      }
     }
     return count;
+  }
+
+  /**
+   * Run only the coarse cadence over a span, skipping the fine one entirely.
+   *
+   * This is the offline catch-up path (REQ-OFF-001, v1.0 §2.3): three days of town and
+   * economy work does not need 5.2 million combat-resolution ticks. Combat encountered
+   * during catch-up still resolves at the fine cadence via `runSteps` — the abstraction is
+   * in *what is stepped*, never in the rules, which is what keeps §2.3's "same systems
+   * accelerated, not replaced" honest.
+   */
+  runCoarseSteps(n: number, onCoarseStep: (ctx: StepContext) => void): number {
+    const count = Math.max(0, Math.floor(n));
+    for (let i = 0; i < count; i++) {
+      this.currentTick += this.coarseStepRatio;
+      onCoarseStep({ tick: this.coarseTick, dt: this.coarseDt, elapsedMs: this.elapsedMs });
+    }
+    return count;
+  }
+
+  /** Coarse step size in seconds — the dt idle town and economy work should use. */
+  get coarseDt(): number {
+    return this.coarseStepMs / 1000;
+  }
+
+  /** How many coarse steps a span of real time corresponds to. */
+  coarseStepsForMs(ms: number): number {
+    return Math.max(0, Math.floor(ms / this.coarseStepMs));
   }
 
   /** How many steps a span of real time corresponds to. */

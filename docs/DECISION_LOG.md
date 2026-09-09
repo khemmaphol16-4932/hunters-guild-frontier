@@ -120,6 +120,48 @@ Assumptions made under §127 (ambiguity resolved conservatively, documented, wor
 
 ---
 
+## DL-018 — Master Build Specification v1.0 overrides the 350-decision prompt on conflicts
+
+**Ambiguity.** v1.0 arrived after Phases 0–2 were built, labelled "source of truth", and conflicts with the original prompt on several locked points.
+
+**Decision.** v1.0 wins where the two disagree — except where v1.0 itself defers a decision (§20) or forbids silent substitution (§19), which are flagged for approval instead.
+
+**Why conservative.** The original prompt's own conflict rule §2.1 says *"Explicit later decision overrides earlier decision."* Applying v1.0 is therefore following the original instruction, not departing from it. The exceptions matter just as much: §20 lists things v1.0 deliberately did not decide, and inventing them would be exactly the redesign §19 forbids.
+
+**Recorded in** `SPEC_RECONCILIATION.md`, item by item.
+
+---
+
+## DL-019 — Emergency overrides are narrow, provenanced and audited
+
+**Ambiguity.** v1.0 §2.1 permits a hard constraint to be overridden by "an explicitly configured emergency policy" but does not say how narrow that permission should be.
+
+**Decision.** An authorisation must (a) name one specific constraint id — no wildcards, (b) be player-authored, (c) be conditional on an active trigger, and (d) emit an audit record whenever it applies. With none configured, hard constraints behave exactly as they did when they were absolute.
+
+**Why conservative.** An override path is how "hard constraint" degrades into "strong suggestion", and the player watching a hunter die against an explicit instruction is the most trust-destroying bug this design can have. Every one of the four properties above removes a way that could happen silently. The narrowest reading that still satisfies §2.1 is the right one.
+
+---
+
+## DL-020 — The coarse simulation cadence is an integer multiple of the fine one
+
+**Ambiguity.** v1.0 §4 asks for coarse steps for idle work and fine ticks for combat, "both derived from the same elapsed game time", without specifying the relationship.
+
+**Decision.** The coarse cadence is an integer multiple of the fine one, and the clock rejects a non-integer ratio at construction.
+
+**Why conservative.** It makes "derived from the same elapsed time" literally true: after any span, `coarseSteps === floor(fineSteps / ratio)` exactly. A fractional ratio would leave the two cadences on divergent paths for identical elapsed time, which is precisely the drift §18's online/offline equivalence criterion forbids.
+
+---
+
+## DL-021 — A v3 hunter migrating to v4 defaults to `available`
+
+**Ambiguity.** v1.0 §4 introduces availability states; a v3 save has no availability data, including for a hunter who was mid-expedition when it was written.
+
+**Decision.** All migrated hunters become `available`.
+
+**Why conservative.** It is the recoverable error. A hunter wrongly marked available can simply be reassigned; one wrongly stuck as `assigned` to an expedition that no longer exists could never be freed, because the thing that would release them does not exist any more.
+
+---
+
 ## DL-012 — Player intents live in `app/GuildCommands`, not in the debug console
 
 **Ambiguity.** None in the spec — this was a design error caught by the architecture test during Phase 1. Allocating attributes, advancing a class, equipping a skill and respeccing were implemented in `DebugConsole` because that is where they were needed first, and the dashboard then imported the debug console to reach them.
