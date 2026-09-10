@@ -1,0 +1,116 @@
+{
+  "$comment": "REQ-TWN-007 (town hunting) and REQ-TWN-008 (town defense), which are the same machinery pointed in two directions.\n\nHunting grounds are places just outside the walls that hunters walk out to and fight in, using the same combat system as an expedition — REQ-TWN-007 is explicit that it is *real* combat, not a resource tick with a fight-shaped name. What makes it town work rather than an expedition is that it is safe: `canKill` is false everywhere here, because the frontier's teeth are what the zone tiers are for.\n\nThreats are the other direction: something arrives at the walls. REQ-TWN-008 says defense events can damage buildings and the AI organises guards under a policy the player sets. A threat's `severity` is what the Guild AI weighs when the roster is away — the requirement asks it to *evaluate* severity rather than always sound the alarm.\n\nBoth draw on the monster catalogue rather than authoring their own, so a wolf at the gate is the same wolf as a wolf in the Reach. Content that duplicated stat lines would drift apart within one balance pass.",
+  "hunting": {
+    "$comment": "`everySteps` is how often a staffed hunting post produces an outing. Fatigue is real but small — town hunting is a day's work, not an expedition.",
+    "everySteps": 8,
+    "fatiguePerHunt": 0.06,
+    "grounds": [
+      {
+        "id": "gate_thickets",
+        "name": "The gate thickets",
+        "description": "Scrub within sight of the palisade. Somebody is always cutting it back.",
+        "monsters": [
+          "moss_crawler"
+        ],
+        "count": {
+          "min": 1,
+          "max": 2
+        },
+        "itemLevel": 4,
+        "lootChance": 0.35
+      },
+      {
+        "id": "old_orchard",
+        "name": "The old orchard",
+        "description": "Half-wild, half-tended, and full of things that eat the fruit.",
+        "monsters": [
+          "thicket_wasp"
+        ],
+        "count": {
+          "min": 1,
+          "max": 3
+        },
+        "itemLevel": 6,
+        "lootChance": 0.4
+      }
+    ]
+  },
+  "defense": {
+    "$comment": "How often the walls are tested, and what it costs when they fail. `graceSteps` keeps a brand-new guild from being attacked before it has a palisade — a first hour spent losing buildings teaches the player nothing except that the game is unfair.",
+    "everySteps": 90,
+    "graceSteps": 120,
+    "threats": [
+      {
+        "id": "wolf_pack",
+        "name": "A wolf pack at the treeline",
+        "description": "Thin winter. They have stopped being careful.",
+        "severity": 1,
+        "weight": 50,
+        "monsters": [
+          "moss_crawler"
+        ],
+        "count": {
+          "min": 2,
+          "max": 3
+        },
+        "buildingDamage": 1,
+        "populationLoss": 0
+      },
+      {
+        "id": "wasp_swarm",
+        "name": "A swarm out of the marsh",
+        "description": "The sound arrives a long time before they do.",
+        "severity": 2,
+        "weight": 32,
+        "monsters": [
+          "thicket_wasp"
+        ],
+        "count": {
+          "min": 3,
+          "max": 4
+        },
+        "buildingDamage": 1,
+        "populationLoss": 1
+      },
+      {
+        "id": "barrow_raid",
+        "name": "Something came up from the barrows",
+        "description": "It walked in a straight line, and it did not stop at the ditch.",
+        "severity": 4,
+        "weight": 14,
+        "reputationAtLeast": 15,
+        "monsters": [
+          "bracken_stalker"
+        ],
+        "count": {
+          "min": 1,
+          "max": 2
+        },
+        "buildingDamage": 2,
+        "populationLoss": 3
+      }
+    ],
+    "guardPolicies": [
+      {
+        "id": "guards_only",
+        "name": "Guards only",
+        "description": "Whoever is posted to the wall fights. Everyone else stays out of it.",
+        "$note": "The narrowest reading, and the cheapest — a town with a watchtower can hold small threats without disturbing the roster."
+      },
+      {
+        "id": "all_available",
+        "name": "All hands",
+        "description": "Every hunter who is fit and in town comes to the wall.",
+        "$note": "Costs fatigue across the roster, and holds far more."
+      },
+      {
+        "id": "severity_based",
+        "name": "The Guild AI decides",
+        "description": "Guards alone against something small; everyone against something serious.",
+        "$note": "REQ-TWN-008's 'the Guild AI evaluates severity' offered as a policy the player can choose, rather than as behaviour hidden inside the system."
+      }
+    ],
+    "defaultPolicy": "severity_based",
+    "$policyNote": "REQ-TWN-008: the player sets guard policy and the AI organises guards under it. Authored here rather than hardcoded so the set can grow without touching the system."
+  }
+}

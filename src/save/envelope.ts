@@ -19,8 +19,16 @@ import type { Item } from '../core/items/Item.js';
 import type { AuditRecord } from '../core/audit.js';
 import type { WorldKnowledgeSnapshot } from '../systems/world/WorldKnowledge.js';
 import type { EmergencyAuthorisation } from '../ai/policy/emergency.js';
+import type { TownSnapshot } from '../systems/town/Town.js';
+import type { PopulationSnapshot } from '../systems/town/Population.js';
+import type { DepartmentsSnapshot } from '../systems/town/Departments.js';
+import type { TownJobsSnapshot } from '../systems/town/TownJobs.js';
+import type { ReputationSnapshot } from '../systems/town/Reputation.js';
+import type { ResearchSnapshot } from '../systems/town/Research.js';
+import type { RecruitmentSnapshot } from '../systems/town/Recruitment.js';
+import type { DefenseSnapshot } from '../systems/town/Defense.js';
 
-export const CURRENT_SAVE_VERSION = 6;
+export const CURRENT_SAVE_VERSION = 10;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -121,7 +129,62 @@ export interface SavePayloadV6 extends SavePayloadV5 {
   readonly worldKnowledge: WorldKnowledgeSnapshot;
 }
 
-export type CurrentSavePayload = SavePayloadV6;
+/**
+ * v7 — the town exists (REQ-TWN-001/002/003, REQ-DEP-*).
+ *
+ * Five pieces of new state, and each is genuinely irrecoverable rather than derivable:
+ * where the buildings stand, how many people live there, who heads which department, who is
+ * on the work rota, and what the guild's reputation is. The town is also the first state
+ * with a *monotonic* field — `highestStageIndex` — which exists because REQ-TWN-002 forbids
+ * a reset on progression and a stage that could be recomputed downward from a damaged town
+ * would violate it on load rather than in play.
+ */
+export interface SavePayloadV7 extends SavePayloadV6 {
+  readonly town: TownSnapshot;
+  readonly population: PopulationSnapshot;
+  readonly departments: DepartmentsSnapshot;
+  readonly townJobs: TownJobsSnapshot;
+  readonly reputation: ReputationSnapshot;
+}
+
+/**
+ * v8 — the guild learns things (REQ-RES-001/002).
+ *
+ * Research is the first state that is *irreversible by design*: taking a node forecloses its
+ * conflicts permanently, and REQ-RES-001's reset is the only way back. A save that lost it
+ * would not merely lose progress, it would quietly hand the guild a second identity.
+ */
+export interface SavePayloadV8 extends SavePayloadV7 {
+  readonly research: ResearchSnapshot;
+}
+
+/**
+ * v9 — the Recruitment Hall (REQ-RCT-001/002).
+ *
+ * The pool has to be saved rather than redrawn, and the reason is worth stating: a candidate
+ * is a fully-formed hunter, so redrawing on load would replace the people standing in front
+ * of the player with different people. The timed refresh is saved with them, or reloading
+ * would be a free reroll.
+ */
+export interface SavePayloadV9 extends SavePayloadV8 {
+  readonly recruitment: RecruitmentSnapshot;
+}
+
+/**
+ * v10 — town defense (REQ-TWN-008).
+ *
+ * The guard policy is a player decision and has to survive a reload. So does the threat
+ * timer: without it, saving and loading would postpone the next attack indefinitely, which
+ * is the kind of exploit that is discovered immediately and then relied on.
+ *
+ * Building damage rides along inside the town snapshot rather than here, because a wrecked
+ * building is a property of the placement — it still stands, it still holds its cells.
+ */
+export interface SavePayloadV10 extends SavePayloadV9 {
+  readonly defense: DefenseSnapshot;
+}
+
+export type CurrentSavePayload = SavePayloadV10;
 
 export interface Migration {
   readonly from: number;

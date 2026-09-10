@@ -1,0 +1,71 @@
+{
+  "$comment": "REQ-RCT-002: *different regions produce clearly different hunter pools*, and exceptional recruits must be immediately legible as special.\n\nAn origin is where a candidate came from, and it is the thing that makes two recruitment pools feel unlike each other. It biases four things at once — names, archetypes, personalities and potential — because biasing only one produces pools that are nominally different and read identically. The Phase 1 TECH_DEBT entry called this out: one name pool made every region's recruits interchangeable.\n\n`weight` is how often an origin appears at all; `reputationAtLeast` gates the rarer ones, so a guild nobody has heard of gets locals and a famous one starts attracting people who travelled to be there. That is REQ-RCT-001's \"pool depends on town, reputation and region\" made concrete.\n\nBiases are *weights*, never filters. A Marsh-born Adept is unusual and entirely possible; making origins gate archetypes would turn recruitment into a lookup table and quietly destroy the variety the system exists to produce.",
+  "origins": [
+    {
+      "id": "frontier_born",
+      "name": "Frontier-born",
+      "description": "Grew up within sight of the gate. Knows exactly how bad it gets out there.",
+      "weight": 40,
+      "namePool": "frontier",
+      "archetypeBias": { "vanguard": 1.4, "ranger": 1.2, "adept": 0.6 },
+      "personalityBias": { "stoic": 1.4, "protective": 1.2 },
+      "potentialBias": 1
+    },
+    {
+      "id": "marsh_villages",
+      "name": "The marsh villages",
+      "description": "Quiet, patient people from the low country. They do not startle.",
+      "weight": 26,
+      "namePool": "marshfolk",
+      "archetypeBias": { "ranger": 1.6, "adept": 1.1, "vanguard": 0.7 },
+      "personalityBias": { "opportunist": 1.3, "stoic": 1.2 },
+      "potentialBias": 1.05
+    },
+    {
+      "id": "hill_clans",
+      "name": "The hill clans",
+      "description": "Came down for the work and stayed for the fighting.",
+      "weight": 22,
+      "namePool": "highland",
+      "archetypeBias": { "vanguard": 1.8, "adept": 0.5 },
+      "personalityBias": { "reckless": 1.5, "stoic": 1.1 },
+      "potentialBias": 1.1
+    },
+    {
+      "id": "collegium",
+      "name": "The collegium",
+      "description": "Educated somewhere with a roof and a library, and curious about what is out there.",
+      "weight": 14,
+      "reputationAtLeast": 10,
+      "namePool": "collegium",
+      "archetypeBias": { "adept": 2.2, "vanguard": 0.4, "ranger": 0.8 },
+      "personalityBias": { "protective": 1.4, "opportunist": 1.2 },
+      "potentialBias": 1.2
+    },
+    {
+      "id": "far_road",
+      "name": "Off the far road",
+      "description": "Travelled a long way to join this guild in particular. That says something.",
+      "weight": 9,
+      "reputationAtLeast": 25,
+      "namePool": "farroad",
+      "archetypeBias": { "adept": 1.2, "ranger": 1.2, "vanguard": 1.2 },
+      "personalityBias": { "opportunist": 1.3, "reckless": 1.2 },
+      "potentialBias": 1.45
+    }
+  ],
+  "pool": {
+    "$comment": "REQ-RCT-001: the pool refreshes both on a timer and for a price. Both exist because they answer different frustrations — a player who is waiting should be able to pay, and a player who is poor should not be stuck forever.",
+    "size": 4,
+    "refreshEverySteps": 60,
+    "paidRefreshGold": 250,
+    "sizePerReputation": 0.04,
+    "maxSize": 8
+  },
+  "exceptional": {
+    "$comment": "REQ-RCT-002's second half — an exceptional recruit must be *immediately* legible. The threshold is on the composite potential score, and the label is authored rather than derived so the writer picks the words. Nothing mechanical hangs off the label: it describes the candidate, it does not improve them.",
+    "potentialAtLeast": 0.72,
+    "label": "Exceptional",
+    "note": "Someone the guild would regret letting walk away."
+  }
+}

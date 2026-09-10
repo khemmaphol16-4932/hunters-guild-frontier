@@ -1,0 +1,214 @@
+{
+  "$comment": "REQ-RES-001/002 and v1.0 §10. Research is *technology the guild learns*, and it is deliberately not a second experience bar: REQ-RES-002 keeps research and Guild Mastery on separate ledgers, so nothing here is earned by a hunter doing something well. Research points come from the Research department's own output — staffed people in a building, working.\n\nThree branches, per v1.0 §10: Combat, Town and Economy. `conflictsWith` is what makes the tree an identity rather than a checklist — REQ-RES-001 says some choices lock others, so a guild that commits to standing armies cannot also have committed to travelling light. Conflicts are symmetric and validated as such at load; a one-way lock would let the order of research decide what a guild could become.\n\nEvery effect is a *named* effect consumed by a real system, never a script. A node whose effect nothing reads would be a node that appears to do something and does not — the failure this whole content pipeline exists to prevent.",
+  "branches": {
+    "combat": "What the guild knows about fighting",
+    "town": "What the guild knows about building and keeping a place",
+    "economy": "What the guild knows about supplying itself"
+  },
+  "resetResource": {
+    "$comment": "REQ-RES-001: research can be reset with a rare resource. The resource is authored now and charged when the Phase 7 ledger exists — same treatment as building costs.",
+    "id": "insight_crystal",
+    "name": "Insight Crystal",
+    "amount": 3
+  },
+  "nodes": [
+    {
+      "id": "field_medicine",
+      "name": "Field Medicine",
+      "branch": "town",
+      "description": "Boiled water, clean linen, and knowing which wounds wait.",
+      "cost": 12,
+      "requires": [],
+      "effects": [
+        {
+          "kind": "recovery",
+          "value": 1.2,
+          "describe": "Hunters recover a fifth faster."
+        }
+      ]
+    },
+    {
+      "id": "guild_charter",
+      "name": "Guild Charter",
+      "branch": "town",
+      "description": "Put the guild's business on paper and the frontier starts taking it seriously.",
+      "cost": 16,
+      "requires": [],
+      "effects": [
+        {
+          "kind": "reputation",
+          "value": 1.25,
+          "describe": "The guild's work earns a quarter more reputation."
+        }
+      ]
+    },
+    {
+      "id": "applied_metallurgy",
+      "name": "Applied Metallurgy",
+      "branch": "economy",
+      "description": "Someone finally wrote down what the smith had been guessing at.",
+      "cost": 20,
+      "requires": [],
+      "effects": [
+        {
+          "kind": "department",
+          "value": "crafting",
+          "describe": "Opens the Crafting Department."
+        },
+        {
+          "kind": "building",
+          "value": "smithy",
+          "describe": "The Smithy can be built."
+        }
+      ]
+    },
+    {
+      "id": "record_keeping",
+      "name": "Record Keeping",
+      "branch": "town",
+      "description": "Expedition notes stop being anecdotes and start being an archive worth staffing.",
+      "cost": 20,
+      "requires": [],
+      "effects": [
+        {
+          "kind": "building",
+          "value": "research_annex",
+          "describe": "The Research Annex can be built."
+        }
+      ]
+    },
+    {
+      "id": "standing_watch",
+      "name": "Standing Watch",
+      "branch": "combat",
+      "description": "A roster, a horn, and someone awake on every shift.",
+      "cost": 24,
+      "requires": [
+        "guild_charter"
+      ],
+      "conflictsWith": [
+        "travel_light"
+      ],
+      "effects": [
+        {
+          "kind": "capacity",
+          "axis": "defence",
+          "value": 6,
+          "describe": "The walls are held by six more."
+        },
+        {
+          "kind": "building",
+          "value": "palisade",
+          "describe": "The Palisade can be raised further."
+        }
+      ]
+    },
+    {
+      "id": "travel_light",
+      "name": "Travel Light",
+      "branch": "combat",
+      "description": "A guild that is always leaving does not fortify. It moves.",
+      "cost": 24,
+      "requires": [
+        "guild_charter"
+      ],
+      "conflictsWith": [
+        "standing_watch"
+      ],
+      "effects": [
+        {
+          "kind": "recovery",
+          "value": 1.3,
+          "describe": "Hunters turn around faster between expeditions."
+        },
+        {
+          "kind": "reputation",
+          "value": 1.15,
+          "describe": "The guild is seen in more places."
+        }
+      ]
+    },
+    {
+      "id": "provisioning",
+      "name": "Provisioning",
+      "branch": "economy",
+      "description": "Salt, smoke and a cellar that holds.",
+      "cost": 26,
+      "requires": [
+        "applied_metallurgy"
+      ],
+      "effects": [
+        {
+          "kind": "capacity",
+          "axis": "food",
+          "value": 18,
+          "describe": "The town can feed eighteen more."
+        }
+      ]
+    },
+    {
+      "id": "masonry",
+      "name": "Masonry",
+      "branch": "town",
+      "description": "Stone where there was timber, and roofs that outlast the people who raised them.",
+      "cost": 30,
+      "requires": [
+        "record_keeping"
+      ],
+      "effects": [
+        {
+          "kind": "quality",
+          "axis": "housing",
+          "value": 1.25,
+          "describe": "Housing is a quarter better than it was."
+        },
+        {
+          "kind": "building",
+          "value": "longhouse",
+          "describe": "The Longhouse can be built without waiting on the town's growth."
+        }
+      ]
+    },
+    {
+      "id": "public_works",
+      "name": "Public Works",
+      "branch": "town",
+      "description": "Drains, a second well, and a bathhouse nobody argues about.",
+      "cost": 34,
+      "requires": [
+        "masonry"
+      ],
+      "effects": [
+        {
+          "kind": "quality",
+          "axis": "service",
+          "value": 1.3,
+          "describe": "Services reach further."
+        },
+        {
+          "kind": "capacity",
+          "axis": "service",
+          "value": 6,
+          "describe": "And there is simply more of them."
+        }
+      ]
+    },
+    {
+      "id": "hunters_creed",
+      "name": "Hunter's Creed",
+      "branch": "combat",
+      "description": "Nobody is left out there. It is written down now, which changes what it costs.",
+      "cost": 36,
+      "requires": [
+        "guild_charter"
+      ],
+      "effects": [
+        {
+          "kind": "reputation",
+          "value": 1.4,
+          "describe": "The frontier notices a guild that brings its people home."
+        }
+      ]
+    }
+  ]
+}

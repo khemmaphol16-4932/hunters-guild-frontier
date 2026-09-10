@@ -17,8 +17,20 @@
  * prose so the UI can group them and §13's explanation layer can render them without parsing.
  */
 
-/** Who or what acted. A hunter id, or a system name for guild-level decisions. */
-export type AuditActor = { readonly kind: 'hunter'; readonly id: string } | { readonly kind: 'system'; readonly name: string };
+/**
+ * Who or what acted. A hunter, a named system, or the player themselves.
+ *
+ * `player` was added in Phase 6, when the town gave the player consequential actions of
+ * their own — placing a building, appointing a department head — and recording those as
+ * `{ kind: 'system' }` would have made the trail unable to answer §14's first question.
+ * The distinction that matters when reading an old decision is whether the *guild* chose it
+ * or the *Guild Master* did, and it mirrors `EmergencyAuthorisation.author: 'player'`, which
+ * already treats player provenance as a thing worth recording separately.
+ */
+export type AuditActor =
+  | { readonly kind: 'hunter'; readonly id: string }
+  | { readonly kind: 'system'; readonly name: string }
+  | { readonly kind: 'player' };
 
 export interface AuditRecord {
   /** Monotonic within a session — gives a stable order for entries sharing a tick. */
@@ -38,6 +50,23 @@ export interface AuditRecord {
   readonly outcome: string;
   /** Compact codes, e.g. ['retreat_threshold_reached', 'emergency_override_applied']. */
   readonly reasonCodes: readonly string[];
+}
+
+/**
+ * The id an actor is searchable by.
+ *
+ * The player has no id — there is one of them, and `'player'` is the whole identity, which
+ * is also what makes `actorId: 'player'` a useful query: it answers "what did I do?".
+ */
+export function actorIdOf(actor: AuditActor): string {
+  switch (actor.kind) {
+    case 'hunter':
+      return actor.id;
+    case 'system':
+      return actor.name;
+    case 'player':
+      return 'player';
+  }
 }
 
 export interface AuditEntryDraft {
@@ -136,8 +165,7 @@ export class AuditLog {
         return false;
       }
       if (query.actorId !== undefined) {
-        const id = entry.actor.kind === 'hunter' ? entry.actor.id : entry.actor.name;
-        if (id !== query.actorId) return false;
+        if (actorIdOf(entry.actor) !== query.actorId) return false;
       }
       return true;
     });

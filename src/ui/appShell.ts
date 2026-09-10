@@ -11,14 +11,16 @@ import type { Session } from '../app/Session.js';
 import type { GuildCommands } from '../app/GuildCommands.js';
 import { BuildDashboard } from './buildDashboard.js';
 import { ExpeditionView } from './expeditionView.js';
+import { TownView } from './townView.js';
 
-type ViewId = 'guild' | 'field';
+type ViewId = 'guild' | 'town' | 'field';
 
 export class AppShell {
   private view: ViewId = 'guild';
   private readonly body: HTMLElement;
   private readonly nav: HTMLElement;
   private readonly dashboard: BuildDashboard;
+  private readonly town: TownView;
   private readonly expedition: ExpeditionView;
 
   constructor(
@@ -33,6 +35,7 @@ export class AppShell {
     this.body.id = 'view-body';
 
     this.dashboard = new BuildDashboard(this.body, session, commands);
+    this.town = new TownView(this.body, session, commands);
     this.expedition = new ExpeditionView(this.body, session, commands);
   }
 
@@ -46,6 +49,7 @@ export class AppShell {
     this.nav.replaceChildren();
     for (const [id, label] of [
       ['guild', 'The Guild'],
+      ['town', 'The Town'],
       ['field', 'The Field'],
     ] as const) {
       const button = document.createElement('button');
@@ -63,6 +67,7 @@ export class AppShell {
   private renderBody(): void {
     this.body.replaceChildren();
     if (this.view === 'guild') this.dashboard.mount();
+    else if (this.view === 'town') this.town.render();
     else this.expedition.render();
   }
 }

@@ -260,3 +260,91 @@ A level-1 guild sees all four regions, three marked "— locked", with "needs a 
 ## Open
 
 The world boss is authored but not yet *placed* — REQ-BOS-003's respawn, world-event appearance and world-changing effects need a world-event system, which is really Phase 8's territory. Boss card pools still do not feed the loot roll. Reputation and capability unlock axes are carried but not evaluable until Phases 6–8 own them.
+
+---
+
+# Phase 6a — The town
+
+The phase that turns a roster into a place. REQ-TWN-001's wording did the design work again: *the town is a physical place on a clear grid*. That is a stronger claim than it looks, and it rules out the shape this system drifts into by default — a list of owned buildings with a count, where "placement" is decoration. If a building does not occupy space, nothing is ever traded against anything, and the town is a menu with a picture.
+
+## What was built
+
+`systems/town/TownGrid` — footprints, four-direction rotation, collision and free relocation · `Town` — capacity, housing and service *quality*, and the stage ladder · `Population` — demand, per-axis pressure, Town Stability, deterministic growth · `Departments` — heads, deputies, priorities, four policy presets and a four-metric dashboard · `TownJobs` + `ai/town/jobAssignment` — the idle-hunter work rota · `Reputation` · `Recovery` · `data/town/{buildings,jobs,departments}.json` and `balance/town.json` · save **v7** and its migration · the town view.
+
+409 tests green (356 before), typecheck and production build clean.
+
+## The bug the sweep found
+
+`attributeFit` multiplied two things: how well a hunter's build *pointed at* a job, and how much hunter there was. Both sit below 1, so the product could only reach about a third of its configured weight at realistic levels — 0.5 × 0.82 × 0.41 ≈ 0.17 — while `departmentPreference` delivered a flat 0.22.
+
+The consequence is exactly the failure REQ-TWN-010 exists to prevent. A hunter who was hopeless at forge work but had asked for the crafting department beat a specialist who had asked for something else. A preference that always wins is a veto wearing a different hat, and DL-008 had been violated in play for as long as the code had existed.
+
+What makes it worth recording is that **the guard designed to prevent it reported everything correct.** `parseDepartments` checks that the summed preference weights stay below `attributeFit` — 0.35 < 0.5, comfortably. The check was true and proved nothing, because the term could never deliver the 0.5 it was configured for.
+
+**Lesson recorded:** a guard that compares configured weights is only sound if each term can actually reach its weight. Two factors that answer different questions belong in separate terms (DL-039).
+
+This is the second time a green check has hidden a live requirement failure — Phase 4's R2 test compared a tank to a healer and proved they differ rather than that the mechanism works. Both were caught by a sweep that held the situation fixed and varied one thing.
+
+## Found in the browser
+
+- **A new guild opened on a crisis it had no means to fix.** The founding town housed eight against a starting population of twelve and serviced three of them, so stability sat low enough that departures outran arrivals and the town began shrinking on turn one, before the player had done anything. Two causes: one bunkhouse where two were needed, and a services demand of 1.0 per resident — which reads plausibly and is wrong, because services are *shared*. One service point now covers about four people, and the founding layout is comfortable and small. The player creates the pressure by growing, which is the trade REQ-TWN-003 is asking for.
+
+- **"Services comfortable for 3"** in a town of twelve that was perfectly fine. The summary was quoting *capacity units* in a sentence whose other numbers were people. Exactly the Phase 5 "well travelled — 0 expeditions" bug: two different quantities sharing one sentence. Summaries are stated in people now, and `describe` takes people on both sides so the mistake is hard to reintroduce.
+
+- **The layering test caught the rota importing the AI that fills it.** `systems/` sits below `ai/`, so `TownJobs` could not import `assignJobs`. Fixed the way the project already solved this for `BuildProfile`: the shapes moved down into `core/town/assignment.ts` and the rota receives the scorer as an injected dependency, like `Expedition` receives the hunter AI. Worth noting that review did not catch this and the test did, three files after the mistake was made.
+
+## Two placeholders repaid
+
+**Recovery.** `GuildCommands` carried `INJURY_TICKS = 2000` and `RECOVERY_TICKS = 400` since Phase 3, with a note naming Phase 6 as the trigger. The odd part is that `core/hunter/availability.recoveryRatePerStep` had modelled food, housing, services, hunger and traits *correctly* since Phase 2.5 — and nothing called it. A complete implementation with no caller is indistinguishable from a stub, and the two constants sat next to a working model for three phases without anyone noticing they disagreed. An injury now runs ~40 steps in a baseline town, ~17 for an ordinary return in a good one, and hits the 400-step ceiling in a collapsed one — and says which of food, housing or services is responsible.
+
+**Reputation.** Parsed and carried since Phase 5, reported to the player as "not yet tracked", which meant a region gated on reputation was permanently shut (DL-033). It is a real quantity now, weighted by danger so that a hundred walks through a Blue zone are worth nothing, with a bounded readable history of why it moved.
+
+## Verified in the browser
+
+A new guild opens as a Small Camp of twelve with six buildings, Thriving, growing at 0.04 residents per step. Twenty seasons later it is a Village of twenty, and all three indicators have turned: *"Short 4 beds for 20 residents"*, *"Feeding 14 of 20 — people are going hungry"*, *"Services stretched — enough for 12 of 20"*. Building a longhouse and a cookhouse turns them back — *"Beds for 36, 27 taken"*, Thriving, growth resumed — and the Bathhouse, locked at a population of 25 a moment earlier, is now available. The whole trade REQ-TWN-003 describes, in one sitting, with the player's action in the middle of it.
+
+Sending that guild into the Verdant Reach earns 0.5 reputation for *"an expedition into The Verdant Reach"*, brings four hunters home `recovering` with individually different durations, and writes *"Halvor Karsthold returned to recover — Recovering for about 17 steps — the town cannot feed everyone, the housing is good"* into the audit trail.
+
+## Open
+
+Town hunting and town defense (REQ-TWN-007/008), the Recruitment Hall's dynamic pool and Guild Fit analysis, and the research tree are Phase 6b — their buildings stand and staff jobs, but their systems are not written. Research also owns the real department-unlock predicate; the interim one keys off town stage, injected so Research replaces the closure without `Departments` changing. Building costs are computed and displayed but not charged, which waits on the Phase 7 ledger.
+
+---
+
+# Phase 6b — Research, recruitment, and the walls
+
+The rest of Phase 6: the research tree, the Recruitment Hall, town hunting and town defense. All four had buildings standing since 6a with nothing behind them, which turned out to be the useful thing about the split — the shape of each system was already fixed by what its building had been promising.
+
+## What was built
+
+`systems/town/Research` and `data/researchSchema` — three branches, symmetric conflicts, effects consumed by real systems · `systems/town/Recruitment` + `ai/town/guildFit` — a dynamic pool, paid and timed refresh, and a recruiter that argues its case · `sim/town/TownCombat` — hunting and defense fought with the actual `CombatEncounter` · `systems/town/Defense` — guard policy, threat scheduling, building damage · five regional name pools, five origins, ten research nodes, two hunting grounds, three threats · saves **v8, v9 and v10** with their migrations · research, recruitment and defense panels in the town view.
+
+493 tests green (409 after 6a), typecheck and production build clean.
+
+## Four bugs, and the third one is the interesting one
+
+**Unreachable posts.** A guild whose hunters were all best at drilling put its whole roster in the drill yard and never staffed the hunting camp standing next to it. The rota was a pure suitability match with no notion of what work was *worth*, so the camp's posts existed and could not be reached — nothing errored, the content was simply never seen. Fixed by giving the score an `outputValue` term, which is also the honest reading of v1.0 §2.1's rank-3 "AI optimization": an optimiser that cannot say "this work matters more" is a matcher (DL-043).
+
+**Permanently unemployable hunters.** Two hunters reached fatigue 1.0 in a browser session and stopped being able to work at all — above the rota's ceiling, not injured enough to be resting. Recovery only ever ran on the *injured* path, so an available hunter doing town work gained fatigue every outing and shed none, ever. Both systems were individually correct and nothing joined them up. Now everyone in town rests, which also gives the work rota a real economy (DL-041).
+
+**A deadlock that shipped.** The Research Department was unlocked by researching Record Keeping. Research points come only from the Research Department's output. So: no department, no points, no way to open the department, forever. A guild ran four hundred steps with a research target selected and zero progress before this was noticed.
+
+What makes it worth the write-up is that the existing content check *passed*. `crossValidateResearch` verified that some node opened each gated department — which was true, and useless, because it never asked whether that node could be completed. The check is now specific: the Research Department may not be gated behind research, and the build fails if anyone tries (DL-040). The general shape is "a resource that can only be produced by something the resource unlocks", and it will recur.
+
+**Two clocks.** `advanceTown` advanced town time without advancing the simulation clock, and everything measured in ticks — every `readyAtTick`, the recruitment refresh, the defense timer — was measured against it. Hundreds of steps could pass in which nobody recovered, the pool never refreshed itself and the walls were never once tested. A test had already been written *around* this, shoving the clock forward by hand to force a refresh; the workaround was the bug, and nobody read it as one. The town balance file was also carrying its own `ticksPerCoarseStep: 50` against the clock's 20, which is DL-020's drift reintroduced in a different file (DL-042).
+
+## What the DL-008 sweep is worth
+
+Phase 6a's sweep caught a live REQ-TWN-010 violation. Phase 6b added a term to the same score and the sweep caught nothing, because the term was weighted where it belonged. That is the point of keeping it: it is now a standing check that no amount of retuning makes a hunter's stated preference decisive, and it costs nothing to run.
+
+## Verified in the browser
+
+A Village of 35 with seven hunters, a hunting camp and a watchtower: five outings a season, all won, and the wall tested four times. The severity policy is visible in the log — *"A swarm out of the marsh. The wall held. — 7 defenders"* against *"A wolf pack at the treeline. The wall held. — 1 defenders"* — the Guild AI calling out the roster for one and letting the watch handle the other, from the same policy.
+
+Research was making no progress, and the department dashboard said why: *"Nobody is doing this work. Raise the department priority, or free up a hunter."* Raising it moved somebody within one step, with the reason attached — *"Halvor Northgate → Archive work: the department is a priority"* — and Field Medicine and Record Keeping both completed. Field Medicine then showed up where it should: *"Injured for about 68 steps — the town cannot feed everyone, the infirmary and baths help, the guild knows its medicine."* That is REQ-DEP-004's "the AI recommends and the player decides" doing exactly what it says.
+
+The Recruitment Hall reads as intended too. Candidates arrive from named places — *"Rurik Ironbrow — The hill clans"*, *"Sten Karsthold — Frontier-born"* — and the recruiter is willing to be discouraging: *"a competent tank who would not change the guild much either way"*, with concerns listed under it (*"the guild is already deep in tank"*).
+
+## Open
+
+Building costs, recruit fees and the research reset resource are all computed and displayed and charged nowhere — Phase 7 owns the ledger. The world boss is still unplaced. The Shrine still provides comfort and no revival, because v1.0 §20 leaves resurrection an open design question and inventing one here would be the wrong kind of initiative.

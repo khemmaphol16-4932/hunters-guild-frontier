@@ -43,6 +43,13 @@ import type { ObjectiveId, PartyProposal } from '../systems/party/Party.js';
 import type { ExpeditionResult } from '../sim/expedition/Expedition.js';
 import type { KnowledgeTier, RegionDef as WorldRegionDef } from '../data/combatSchema.js';
 import { KNOWLEDGE_TIERS } from '../data/combatSchema.js';
+import type { Rotation, TownDepartmentId } from '../data/townSchema.js';
+import type { Placement } from '../systems/town/TownGrid.js';
+import type { DepartmentState } from '../systems/town/Departments.js';
+import type { ResearchNodeDef } from '../data/researchSchema.js';
+import type { Candidate, RecruitmentAdvice } from '../core/town/recruitment.js';
+import { analysePool } from '../ai/town/guildFit.js';
+import type { DefenseResult, HuntResult } from '../sim/town/TownCombat.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -57,14 +64,11 @@ export interface ExpeditionOutcome {
 }
 
 /**
- * How long an injury and an ordinary return keep a hunter off the roster.
- *
- * Coarse steps, not ticks of combat — this is guild time. Phase 6 replaces both with the
- * housing/food/services model v1.0 §4 describes; until then they are honest placeholders
- * rather than a hidden zero.
+ * Injury and recovery durations used to be two flat constants here — `INJURY_TICKS = 2000`
+ * and `RECOVERY_TICKS = 400` — with a note promising Phase 6 would replace them with the
+ * housing/food/services model v1.0 §4 describes. Phase 6 has, and they are gone:
+ * `session.recovery.estimate()` computes both from the actual town.
  */
-const INJURY_TICKS = 2000;
-const RECOVERY_TICKS = 400;
 
 export class GuildCommands {
   constructor(private readonly session: Session) {}
@@ -74,10 +78,26 @@ export class GuildCommands {
    *
    * Takes every node currently reachable, repeatedly, because taking one node can unlock
    * another — a recruit should arrive having actually travelled their constellation rather
-   * than holding only their entry node. Phase 3 replaces this with recruitment pools.
+   * than holding only their entry node. The Recruitment Hall path is `hireRecruit`; this
+   * remains for the composition root's starting roster and for tests.
    */
   recruit(options: GenerateHunterOptions = {}): Hunter {
-    let hunter = this.session.generateHunter(options);
+    return this.developRecruit(this.session.generateHunter(options));
+  }
+
+  /**
+   * Walk a new hunter out from their starting position in the constellation.
+   *
+   * Takes every node currently reachable, repeatedly, because taking one node can unlock
+   * another — a recruit should arrive having actually travelled their constellation rather
+   * than holding only their entry node.
+   *
+   * Shared by the prototype `recruit` path and by `hireRecruit`, so somebody hired from the
+   * Recruitment Hall is developed exactly like anyone else. Two divergent versions of "what
+   * a new hunter knows" would be a very quiet bug.
+   */
+  private developRecruit(recruit: Hunter): Hunter {
+    let hunter = recruit;
 
     let progressed = true;
     while (progressed) {
@@ -444,11 +464,16 @@ export class GuildCommands {
             blockedBy.push(`needs ${name ?? needed.regionId} known to "${needed.tier}"`);
           }
         }
-        // Reputation and capability are parsed and carried but not yet evaluable — the
-        // systems that own them are Phase 6/8. Reported as such rather than silently
-        // treated as satisfied, which would let a region open early and quietly.
+        // Reputation became a real quantity in Phase 6, so this axis is evaluated rather
+        // than apologised for — it read "not yet tracked" through Phase 5, which meant a
+        // region gated on reputation was permanently shut (DL-033).
         if (unlock.reputation !== undefined) {
-          blockedBy.push(`needs ${unlock.reputation} reputation (not yet tracked)`);
+          const current = this.session.reputation.current;
+          if (current < unlock.reputation) {
+            blockedBy.push(
+              `needs ${unlock.reputation} reputation (the guild has ${current.toFixed(1)})`,
+            );
+          }
         }
         if (unlock.capability !== undefined) {
           blockedBy.push(`needs the "${unlock.capability}" capability (not yet tracked)`);
@@ -570,25 +595,52 @@ export class GuildCommands {
         continue;
       }
 
-      const availability = after.injured
-        ? { state: 'injured' as const, readyAtTick: this.session.clock.tick + INJURY_TICKS }
-        : { state: 'recovering' as const, readyAtTick: this.session.clock.tick + RECOVERY_TICKS };
+      // v1.0 §4/§18: how long they are out depends on the town they came home to. The
+      // condition update above happens first deliberately — the estimate reads their
+      // fatigue and hunger, so it has to see the state the expedition left them in.
+      const estimate = this.session.recovery.estimate(hunter, { injured: after.injured });
 
       hunter = withAvailability(hunter, {
-        ...availability,
+        state: after.injured ? 'injured' : 'recovering',
+        readyAtTick: this.session.clock.tick + estimate.ticks,
         assignment: undefined,
         recallCompletesAtTick: undefined,
       });
 
+      // Town work is for idle hunters; someone who just came home wounded is not idle.
+      this.session.townJobs.release(hunter.id);
+
       this.session.audit.record({
         actor: { kind: 'hunter', id: hunter.id },
         system: 'availability',
-        outcome: `${hunter.name} returned ${after.injured ? 'injured' : 'to recover'}`,
+        outcome: `${hunter.name} returned ${after.injured ? 'injured' : 'to recover'} — ${estimate.explanation}`,
         reasonCodes: [REASON.availabilityChanged, after.injured ? 'injured' : 'expedition_ended'],
+        inputs: {
+          steps: estimate.steps,
+          housingQuality: Number(estimate.inputs.housingQuality.toFixed(2)),
+          serviceQuality: Number(estimate.inputs.serviceQuality.toFixed(2)),
+          foodAvailable: estimate.inputs.foodAvailable,
+        },
       });
 
       this.session.roster.update(hunter);
     }
+
+    // The frontier notices what the guild did (REQ-WLD-002's reputation axis, now real).
+    this.session.reputation.recordExpedition({
+      zoneTier: region.zoneTier,
+      bossDefeated: result.bossDefeated,
+      // Always false for now, and deliberately not faked. Nothing in the content marks a
+      // monster as a *world* boss — `MonsterDef` has no such field and `CombatEncounter`
+      // emits `worldBoss: false` for the same reason. The Drowned Choir is authored but
+      // unplaced (TECH_DEBT, deferred to Phase 8's world-event system), so the larger
+      // reputation award is reachable only once that lands. Inferring it from tier or level
+      // here would put a number on the board that the rest of the game disagrees with.
+      worldBoss: false,
+      wiped: result.wiped,
+      deaths: result.aftermath.filter((a) => a.died).length,
+      regionName: region.name,
+    });
 
     // Loot is rolled once, for the guild, at the region's item level — a shared haul rather
     // than per-hunter drops, because the guild owns the armoury (§16).
@@ -603,6 +655,613 @@ export class GuildCommands {
     this.session.armoury.addMany(loot);
 
     return ok({ result, party: proposal, loot, levelledUp });
+  }
+
+  // --- The town -------------------------------------------------------------
+
+  /**
+   * Found the town a new guild starts with.
+   *
+   * Called from the composition root for a *new* guild only, never from a save migration:
+   * placing buildings during a migration would put them somewhere the player did not choose,
+   * on a grid whose dimensions come from balance data that may since have changed.
+   *
+   * The starting layout is the minimum that makes the town legible rather than a tutorial —
+   * a Command Post so the stage ladder has a Guild Hall tier to read, a bunkhouse and a
+   * granary so housing and food pressure both start answerable, and a drill yard so the work
+   * rota has something to fill on the first step.
+   */
+  foundTown(): readonly string[] {
+    if (this.session.town.grid.size > 0) return [];
+
+    // Two bunkhouses rather than one, deliberately: a single one housed eight against a
+    // starting population of twelve, so a brand-new guild opened already under housing
+    // pressure and losing residents. A starting town should be *comfortable and small*, and
+    // let the player create the pressure by growing — not hand them a deficit on turn one.
+    const founding: readonly [string, number, number][] = [
+      ['guild_hall', 0, 0],
+      ['bunkhouse', 4, 0],
+      ['bunkhouse', 0, 4],
+      ['granary', 8, 0],
+      ['well', 4, 3],
+      ['drill_yard', 6, 3],
+    ];
+
+    const placed: string[] = [];
+    for (const [buildingId, x, y] of founding) {
+      const result = this.placeBuilding(buildingId, x, y);
+      if (result.ok) placed.push(result.value.instanceId);
+    }
+
+    this.session.town.refreshStage();
+    this.session.townJobs.refresh();
+    return placed;
+  }
+
+  /**
+   * Place a building (REQ-TWN-001).
+   *
+   * Cost is computed and reported but **not charged** — the Resources system is Phase 7, and
+   * owning half of it here is the temporary architecture §126 warns against. Same treatment
+   * as refinement in Phase 2, and tracked in TECH_DEBT.md. Unlocks and space are fully
+   * enforced, so the only thing missing is the bill.
+   */
+  placeBuilding(
+    buildingId: string,
+    x: number,
+    y: number,
+    rotation: Rotation = 0,
+  ): Result<Placement, string> {
+    const allowed = this.session.town.canBuild(buildingId);
+    if (isErr(allowed)) return allowed;
+
+    const placed = this.session.town.grid.place(buildingId, x, y, rotation);
+    if (isErr(placed)) return placed;
+
+    this.session.events.emit('town.buildingPlaced', {
+      buildingId,
+      instanceId: placed.value.instanceId,
+      x,
+      y,
+    });
+
+    const stage = this.session.town.refreshStage();
+    if (stage) {
+      this.session.audit.record({
+        actor: { kind: 'player' },
+        system: 'town',
+        outcome: `the town became a ${stage.name}`,
+        reasonCodes: ['town_stage_reached', `stage:${stage.id}`],
+      });
+    }
+
+    // A new building can open new work, so the rota is stale the moment one goes up.
+    this.session.townJobs.refresh();
+    return placed;
+  }
+
+  /** Move or rotate a building. Free, per v1.0 §9. */
+  moveBuilding(
+    instanceId: string,
+    x: number,
+    y: number,
+    rotation?: Rotation,
+  ): Result<Placement, string> {
+    return this.session.town.grid.relocate(instanceId, x, y, rotation);
+  }
+
+  /** Raise a building a tier. Cost reported, not charged (Phase 7). */
+  upgradeBuilding(instanceId: string): Result<Placement, string> {
+    const cost = this.session.town.upgradeCost(instanceId);
+    if (isErr(cost)) return cost;
+
+    const raised = this.session.town.grid.setTier(instanceId, cost.value.tier);
+    if (isErr(raised)) return raised;
+
+    const stage = this.session.town.refreshStage();
+    if (stage) {
+      this.session.audit.record({
+        actor: { kind: 'player' },
+        system: 'town',
+        outcome: `the town became a ${stage.name}`,
+        reasonCodes: ['town_stage_reached', `stage:${stage.id}`],
+      });
+    }
+
+    this.session.townJobs.refresh();
+    return raised;
+  }
+
+  /** Demolish a building. Returns nothing to the guild — Phase 7 owns refunds. */
+  demolishBuilding(instanceId: string): Result<Placement, string> {
+    const removed = this.session.town.grid.remove(instanceId);
+    if (isErr(removed)) return removed;
+    // Note that the town's *stage* does not fall (REQ-TWN-002): progression never resets.
+    this.session.townJobs.refresh();
+    return removed;
+  }
+
+  // --- The Recruitment Hall (REQ-RCT-001/002) -------------------------------
+
+  /**
+   * Who is waiting at the hall, with the recruiter's read on each of them.
+   *
+   * The analysis is computed on demand rather than stored, because it is a function of the
+   * roster: hiring somebody changes what the guild is missing, so an advice snapshot taken
+   * before a hire would be wrong immediately after one.
+   */
+  recruitmentBoard(): {
+    readonly candidates: readonly Candidate[];
+    readonly advice: RecruitmentAdvice;
+    readonly ticksUntilRefresh: number | undefined;
+    readonly paidRefreshGold: number;
+  } {
+    const candidates = this.session.recruitment.available();
+    return {
+      candidates,
+      advice: analysePool(candidates, {
+        roster: this.session.roster.all(),
+        deps: {
+          profileOf: (hunter) => this.session.buildIdentity.profileOf(hunter),
+          potentialOf: (hunter) => hunter.potential.composite,
+        },
+      }),
+      ticksUntilRefresh: this.session.recruitment.ticksUntilRefresh(),
+      paidRefreshGold: this.session.content.recruitment.pool.paidRefreshGold,
+    };
+  }
+
+  /**
+   * Pay for a new set of candidates (REQ-RCT-001).
+   *
+   * The price is reported and not charged — the Phase 7 ledger again. What is fully live is
+   * the *consequence*: everyone currently waiting leaves, so a paid refresh is a real
+   * decision rather than a free reroll of the same faces.
+   */
+  refreshRecruits(): Result<readonly Candidate[], string> {
+    if (this.session.town.grid.countOf('recruitment_hall') === 0) {
+      return err('the guild has no Recruitment Hall');
+    }
+
+    const drawn = this.session.recruitment.refresh(this.session.streams.recruit);
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'recruitment',
+      outcome: `paid to refresh the recruitment pool (${drawn.length} waiting)`,
+      reasonCodes: ['recruitment_refreshed'],
+      inputs: { gold: this.session.content.recruitment.pool.paidRefreshGold },
+    });
+    return ok(drawn);
+  }
+
+  /**
+   * Hire someone from the hall.
+   *
+   * The candidate is already a whole hunter, so this enlists exactly the person the player
+   * was looking at — no re-roll, no reconstruction from a summary. They then walk their
+   * constellation the way any recruit does.
+   */
+  hireRecruit(hunterId: HunterId): Result<Hunter, string> {
+    const taken = this.session.recruitment.hire(String(hunterId));
+    if (isErr(taken)) return taken;
+
+    const hired = this.session.enlist(taken.value.hunter);
+    const developed = this.developRecruit(hired);
+
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'recruitment',
+      outcome:
+        `hired ${developed.name} — ${taken.value.originName}` +
+        (taken.value.exceptional ? ', an exceptional recruit' : ''),
+      reasonCodes: ['recruit_hired', `origin:${taken.value.originId}`],
+      inputs: { cost: taken.value.cost },
+    });
+
+    this.session.townJobs.refresh();
+    return ok(developed);
+  }
+
+  /** Let a candidate go. The seat stays empty until the pool refreshes. */
+  turnAwayRecruit(hunterId: HunterId): Result<Candidate, string> {
+    return this.session.recruitment.turnAway(String(hunterId));
+  }
+
+  /**
+   * Begin researching something (REQ-RES-001).
+   *
+   * Choosing what to research is one of the few decisions in the game that cannot be undone
+   * without paying for it, because taking a node forecloses its conflicts permanently. So it
+   * is audited as a player act, with the foreclosed branches named in the record — the point
+   * of an audit trail is to be able to answer "why can I not build that any more" a hundred
+   * hours later.
+   */
+  beginResearch(nodeId: string): Result<ResearchNodeDef, string> {
+    const started = this.session.research.begin(nodeId);
+    if (isErr(started)) return started;
+
+    const forecloses = started.value.conflictsWith
+      .map((id) => this.session.research.node(id)?.name ?? id)
+      .filter((name) => name.length > 0);
+
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'research',
+      outcome:
+        `began researching ${started.value.name}` +
+        (forecloses.length > 0 ? `, which will rule out ${forecloses.join(' and ')}` : ''),
+      reasonCodes: ['research_begun', `node:${started.value.id}`],
+      inputs: { branch: started.value.branch, cost: started.value.cost },
+    });
+    return started;
+  }
+
+  /**
+   * REQ-RES-001 — reset the research tree with a rare resource.
+   *
+   * The cost is reported, not charged (Phase 7 owns the ledger). What the reset actually
+   * does is release the locks, which is the only way a guild changes its identity.
+   */
+  resetResearch(): { readonly cleared: number; readonly cost: string } {
+    const result = this.session.research.reset();
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'research',
+      outcome: `reset the research tree, unlearning ${result.cleared} advance(s)`,
+      reasonCodes: ['research_reset'],
+    });
+    return {
+      cleared: result.cleared,
+      cost: `${result.cost.amount} × ${result.cost.name}`,
+    };
+  }
+
+  /** Appoint a Department Head (REQ-DEP-002). */
+  appointDepartmentHead(
+    department: TownDepartmentId,
+    hunterId: HunterId | undefined,
+  ): Result<DepartmentState, string> {
+    const result = this.session.departments.appointHead(department, hunterId);
+    if (isErr(result)) return result;
+
+    const name = hunterId ? this.session.roster.get(hunterId)?.name : undefined;
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'departments',
+      outcome: name
+        ? `${name} appointed to head the ${department} department`
+        : `the ${department} department has no head`,
+      reasonCodes: ['department_head_changed', `department:${department}`],
+    });
+    return result;
+  }
+
+  /** Set a department's priority. Guild policy remains the higher authority (REQ-DEP-004). */
+  setDepartmentPriority(
+    department: TownDepartmentId,
+    priority: number,
+  ): Result<DepartmentState, string> {
+    const result = this.session.departments.setPriority(department, priority);
+    if (isErr(result)) return result;
+    this.session.townJobs.refresh();
+    return result;
+  }
+
+  /** Choose a department's policy preset (REQ-DEP-005). Reweights the rota; never filters. */
+  setDepartmentPolicy(
+    department: TownDepartmentId,
+    policyId: string,
+  ): Result<DepartmentState, string> {
+    const result = this.session.departments.setPolicy(department, policyId);
+    if (isErr(result)) return result;
+    this.session.townJobs.refresh();
+    return result;
+  }
+
+  /**
+   * Advance town time by `steps` coarse steps.
+   *
+   * One call, because these things are not independent: people arrive, which changes demand,
+   * which changes recovery, which changes who is free to work. Running them separately from
+   * the UI would let the player observe an inconsistent town between two of them.
+   *
+   * Deliberately *not* wired to a timer here — DL-003 puts everything on the simulation
+   * clock, and the composition root owns advancing it.
+   */
+  advanceTown(steps = 1): {
+    readonly populationChange: number;
+    readonly recovered: readonly HunterId[];
+    readonly stageReached: string | undefined;
+    readonly researchCompleted: readonly string[];
+    readonly hunts: readonly HuntResult[];
+    readonly defense: DefenseResult | undefined;
+  } {
+    // Advance the simulation clock first, because everything below is timed against it.
+    //
+    // This was missing, and it froze more than it looked like it would: the recruitment
+    // refresh, the defense timer and every hunter's `readyAtTick` are all measured in ticks,
+    // so a game where town time passed but the clock did not meant nobody ever recovered,
+    // the pool never refreshed on its own, and the walls were never once tested. DL-003 puts
+    // everything on the simulation clock; this is the town honouring that rather than
+    // keeping a private step counter beside it.
+    //
+    // `runSteps` rather than `advance` because there is no frame to keep responsive here —
+    // it is the same entry point offline catch-up uses (REQ-OFF-001).
+    this.session.clock.runSteps(steps * this.session.clock.coarseStepRatio, () => {});
+
+    // REQ-RES-002: research points come from the Research department's output and from
+    // nowhere else. This one line is what keeps technology and experience on separate
+    // ledgers — there is no path from anything a hunter did well to a research point.
+    const researchCompleted: string[] = [];
+    const researchOutput = this.session.departments.report('research').output;
+    for (let i = 0; i < steps; i++) {
+      const done = this.session.research.contribute(researchOutput);
+      if (done) researchCompleted.push(done.name);
+    }
+
+    const populationChange = this.session.population.step(steps);
+    if (populationChange !== 0) {
+      this.session.events.emit('town.populationChanged', {
+        population: this.session.population.size,
+        delta: populationChange,
+      });
+    }
+
+    const stage = this.session.town.refreshStage();
+    const recovered = this.returnRecoveredHunters();
+
+    // REQ-RCT-001 requires a timed refresh as well as a paid one. It lives here rather than
+    // on its own timer so that town time has exactly one place it advances (DL-003).
+    this.session.recruitment.refreshIfDue(this.session.streams.recruit);
+
+    // Town hunting before defense, and both before the rota is rebuilt: a hunter who came
+    // back tired from the orchard should be considered for tomorrow's rota in that state.
+    const hunts = this.runTownHunts(steps);
+    const defense = this.runDefense();
+
+    this.restIdleHunters(steps);
+    this.session.townJobs.refresh();
+
+    return {
+      populationChange,
+      recovered,
+      stageReached: stage?.name,
+      researchCompleted,
+      hunts,
+      defense,
+    };
+  }
+
+  /**
+   * Run the hunting posts (REQ-TWN-007).
+   *
+   * Who goes is decided by the ordinary work rota — town hunting is a job like any other,
+   * so the AI picks workers under the department policy the player set, with no second
+   * assignment path to keep in step with the first.
+   */
+  private runTownHunts(steps: number): readonly HuntResult[] {
+    const config = this.session.content.threats.hunting;
+    const hunters = this.session.townJobs
+      .all()
+      .filter((assignment) => assignment.jobId === 'town_hunting')
+      .map((assignment) => assignment.hunterId as HunterId)
+      .filter((id) => this.session.roster.get(id) !== undefined);
+
+    if (hunters.length === 0) return [];
+
+    const outings = Math.floor(steps / config.everySteps);
+    if (outings <= 0) return [];
+
+    const results: HuntResult[] = [];
+    for (let i = 0; i < outings; i++) {
+      const rng = this.session.streams.expedition.fork(
+        `hunt:${this.session.clock.tick}:${i}`,
+      );
+      const ground = rng.pick(config.grounds);
+      if (!ground) break;
+
+      const result = this.session.townCombat.hunt(rng, ground, hunters);
+      results.push(result);
+
+      for (const hunterId of hunters) {
+        const hunter = this.session.roster.get(hunterId);
+        if (!hunter) continue;
+
+        // REQ-TWN-007 yields EXP as well as loot, and the same experience curve applies —
+        // town work is slower than an expedition, not a different kind of progress.
+        const progress = applyExperience(
+          hunter.level,
+          hunter.xp,
+          Math.round(result.xp / hunters.length),
+          this.session.content.balance.attributes,
+        );
+        let updated = withLevel(hunter, progress.level, progress.xp);
+        updated = this.session.condition.set(updated, {
+          fatigue: updated.condition.fatigue + config.fatiguePerHunt,
+          morale: updated.condition.morale + (result.won ? 0.02 : -0.03),
+        });
+        this.session.roster.update(updated);
+
+        if (progress.levelsGained > 0) {
+          this.session.events.emit('hunter.leveled', {
+            hunterId: updated.id,
+            level: progress.level,
+          });
+        }
+      }
+
+      if (result.loot) {
+        this.session.armoury.addMany(
+          this.session.itemGenerator.generateMany(this.session.streams.loot, 1, {
+            itemLevel: ground.itemLevel,
+          }),
+        );
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Test the walls, if anything is due (REQ-TWN-008).
+   *
+   * The Guild AI picks the defenders under the player's guard policy; the fight runs through
+   * the real combat system; and losing costs buildings and residents rather than lives.
+   */
+  private runDefense(): DefenseResult | undefined {
+    const rng = this.session.streams.expedition.fork(`defense:${this.session.clock.tick}`);
+    const threat = this.session.defense.threatDue(rng);
+    if (!threat) return undefined;
+
+    const defenders = this.session.defense.defenders(threat);
+    const result = this.session.townCombat.defend(rng, threat, defenders);
+    this.session.defense.recordOutcome(result.held);
+
+    // Defending is work, and a fight at the gate tires people out the way any fight does.
+    for (const hunterId of defenders) {
+      const hunter = this.session.roster.get(hunterId);
+      if (!hunter) continue;
+      this.session.roster.update(
+        this.session.condition.set(hunter, {
+          fatigue: hunter.condition.fatigue + 0.1,
+          morale: hunter.condition.morale + (result.held ? 0.05 : -0.1),
+        }),
+      );
+    }
+
+    if (!result.held) {
+      // Damage the buildings that were actually worth attacking — undamaged ones, chosen
+      // deterministically from the forked stream so a defense replays identically.
+      const standing = this.session.town.grid.all().filter((p) => p.damaged !== true);
+      for (let i = 0; i < result.buildingsDamaged && standing.length > 0; i++) {
+        const index = Math.floor(rng.next() * standing.length);
+        const victim = standing.splice(index, 1)[0];
+        if (victim) this.session.town.grid.damage(victim.instanceId);
+      }
+      if (result.populationLost > 0) this.session.population.adjust(-result.populationLost);
+    }
+
+    this.session.audit.record({
+      actor: { kind: 'system', name: 'guild-ai' },
+      system: 'defense',
+      outcome: `${result.summary} ${this.session.defense.explainDefenders(threat, defenders)}`,
+      reasonCodes: [
+        result.held ? 'defense_held' : 'defense_failed',
+        `threat:${threat.id}`,
+        `policy:${this.session.defense.policy}`,
+      ],
+      inputs: {
+        severity: threat.severity,
+        defenders: defenders.length,
+        buildingsDamaged: result.buildingsDamaged,
+      },
+    });
+
+    return result;
+  }
+
+  /** REQ-TWN-008 — the player sets guard policy; the AI organises under it. */
+  setGuardPolicy(policyId: string): Result<string, string> {
+    const result = this.session.defense.setPolicy(policyId);
+    if (isErr(result)) return result;
+
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'defense',
+      outcome: `guard policy set to "${policyId}"`,
+      reasonCodes: ['guard_policy_changed'],
+    });
+    return result;
+  }
+
+  /** Rebuild something a defense event wrecked. Cost reported, not charged (Phase 7). */
+  repairBuilding(instanceId: string): Result<Placement, string> {
+    const placement = this.session.town.grid.get(instanceId);
+    if (!placement) return err(`nothing placed as "${instanceId}"`);
+    if (placement.damaged !== true) return err('that building is not damaged');
+
+    const repaired = this.session.town.grid.repair(instanceId);
+    if (isErr(repaired)) return repaired;
+
+    this.session.townJobs.refresh();
+    return repaired;
+  }
+
+  /**
+   * Let everyone who is in town shed some fatigue (v1.0 §4).
+   *
+   * This is the other half of recovery, and its absence was a real bug rather than a missing
+   * nicety. `returnRecoveredHunters` handles the *injured* path, which is the only place
+   * recovery ran until now — so a hunter who was `available` and working the hunting camp
+   * gained fatigue every outing and shed none, ever. Two of them hit the ceiling in a
+   * browser session and became permanently unemployable: too tired for the rota, not injured
+   * enough to be resting. The systems were both correct and nothing joined them up.
+   *
+   * §4's clauses — time, food, housing, rest — say nothing about being wounded first. So the
+   * same rate the infirmary uses applies to everybody standing in the town, and whether a
+   * work rota is sustainable becomes a genuine question about the town supporting it.
+   */
+  private restIdleHunters(steps: number): void {
+    for (const hunter of this.session.roster.all()) {
+      // Only people actually in town: someone in the field is not resting, and someone
+      // injured is already on the slower, state-machine-governed path.
+      if (hunter.availability.state !== 'available') continue;
+      if (hunter.condition.fatigue <= 0) continue;
+
+      const rested = this.session.recovery.restPerStep(hunter) * steps;
+      if (rested <= 0) continue;
+
+      this.session.roster.update(
+        this.session.condition.set(hunter, {
+          fatigue: hunter.condition.fatigue - rested,
+          morale: hunter.condition.morale,
+        }),
+      );
+    }
+  }
+
+  /**
+   * Move anyone whose recovery has elapsed back to available.
+   *
+   * Injury heals into recovery rather than straight to deployable — that transition is
+   * enforced by `availability.ts` and this respects it, so an injured hunter takes two hops
+   * home and the second one is subject to the town all over again.
+   */
+  private returnRecoveredHunters(): readonly HunterId[] {
+    const now = this.session.clock.tick;
+    const returned: HunterId[] = [];
+
+    for (const hunter of this.session.roster.all()) {
+      const availability = hunter.availability;
+      if (availability.readyAtTick === undefined || now < availability.readyAtTick) continue;
+
+      if (availability.state === 'injured') {
+        const estimate = this.session.recovery.estimate(hunter, { injured: false });
+        this.session.roster.update(
+          withAvailability(hunter, {
+            state: 'recovering',
+            readyAtTick: now + estimate.ticks,
+            assignment: undefined,
+            recallCompletesAtTick: undefined,
+          }),
+        );
+        continue;
+      }
+
+      if (availability.state === 'recovering') {
+        this.session.roster.update(
+          withAvailability(hunter, {
+            state: 'available',
+            readyAtTick: undefined,
+            assignment: undefined,
+            recallCompletesAtTick: undefined,
+          }),
+        );
+        returned.push(hunter.id);
+      }
+    }
+
+    return returned;
   }
 
   saveGuild(slot = 'autosave'): Result<unknown, string> {

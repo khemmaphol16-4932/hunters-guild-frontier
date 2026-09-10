@@ -41,7 +41,16 @@ if (restored.ok && restored.value.hunters.length > 0) {
   commands.recruit({ archetype: 'vanguard', personality: 'reckless' });
   commands.recruit({ archetype: 'adept', personality: 'protective' });
   commands.recruit({ archetype: 'ranger', personality: 'opportunist' });
+
+  // A new guild has somewhere to live (REQ-TWN-001). Only for a *new* guild: placing
+  // buildings for a restored save would put them somewhere the player did not choose.
+  commands.foundTown();
 }
+
+// Whatever the town looks like, the rota reflects it and the stage is up to date. Cheap,
+// and it means a save written before either existed opens consistent rather than empty.
+session.town.refreshStage();
+session.townJobs.refresh();
 
 const shell = new AppShell(root, session, commands);
 shell.mount();

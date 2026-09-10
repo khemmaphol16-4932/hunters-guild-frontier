@@ -171,3 +171,50 @@ ul.notes.weak li { color: var(--warn); }
 .order-row input { margin-top: 3px; }
 .order-row .order-label { display: block; font-weight: 600; }
 .order-row .subhead { display: block; margin: 1px 0 0; }
+
+/* --- The town (Phase 6) --------------------------------------------------
+   REQ-TWN-001 asks for a *clear grid*, so the cells are real cells rather than a
+   list with coordinates printed next to it — a footprint bug should be visible.
+   Isometric pixel-art presentation is Phase 9 (REQ-UX-007); this is legibility. */
+
+.town-layout { display: grid; gap: 14px; grid-template-columns: auto minmax(280px, 1fr); align-items: start; }
+
+.town-grid { display: grid; gap: 2px; }
+
+.town-cell {
+  width: 22px; height: 22px; padding: 0;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 2px;
+  font-size: 10px; font-weight: 600; color: var(--muted); line-height: 1;
+}
+.town-cell:hover { border-color: var(--accent); }
+.town-cell.built { color: var(--text); }
+.town-cell.selected { outline: 1px solid var(--accent); outline-offset: 1px; }
+
+/* Category colour is the only thing separating one building from another until
+   Phase 9 gives them sprites, so the palette reuses the role colours already in use. */
+.town-cell.cat-management { background: #3c3322; border-color: var(--accent); }
+.town-cell.cat-housing    { background: #22303c; border-color: var(--tank); }
+.town-cell.cat-services   { background: #223c2e; border-color: var(--healer); }
+.town-cell.cat-healing    { background: #1f3a34; border-color: var(--control); }
+.town-cell.cat-revival    { background: #302238; border-color: var(--support); }
+.town-cell.cat-crafting   { background: #3c2a22; border-color: var(--warn); }
+.town-cell.cat-economy    { background: #38321f; border-color: var(--accent); }
+.town-cell.cat-research   { background: #2a2438; border-color: var(--support); }
+.town-cell.cat-defense    { background: #3c2424; border-color: var(--damage); }
+.town-cell.cat-recruitment{ background: #24343c; border-color: var(--control); }
+
+.build-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 3px; flex-wrap: wrap;
+}
+.build-row .meta { color: var(--muted); font-size: 11px; }
+
+.dept-block { padding: 7px 0; border-top: 1px solid var(--line); }
+.dept-block:first-of-type { border-top: none; }
+.dept-block .name { margin: 0 0 2px; font-weight: 600; }
+
+select {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  padding: 3px 6px; border-radius: 3px; font-size: 11px;
+}
+select:hover { border-color: var(--accent); }

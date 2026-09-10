@@ -1,0 +1,173 @@
+{
+  "$comment": "REQ-TWN-001/002/003 and v1.0 §9. Every number the town reads lives here — the grid it is built on, the per-capita demand that turns a population into pressure, and the weights that summarise that pressure as Town Stability. Nothing in systems/town/ carries a constant.\n\nThe one value worth defending: `stability.weights` deliberately does not sum to 1. Stability is a summary of three independent pressures, and normalising it would let a catastrophic housing failure be averaged away by a full granary. See DL-036.",
+  "grid": {
+    "$comment": "Small enough that a Small Camp looks sparse and a Hunter City looks full. Build mode is a toggle over this grid with four-direction rotation (v1.0 §9).",
+    "width": 12,
+    "height": 9
+  },
+  "population": {
+    "$comment": "REQ-TWN-003. Population creates demand; buildings create capacity; the mismatch is pressure. Growth is driven by reputation and prosperity, and it stalls — never reverses into a death spiral — when the town cannot support anyone else.",
+    "starting": 12,
+    "perCapita": {
+      "$comment": "A bed and a meal each; services are shared, so one service point covers about four people. At 1.0 the starting town could not service its own starting population and immediately began losing residents — a new guild opening on a crisis it had no means to fix.",
+      "housing": 1,
+      "food": 1,
+      "services": 0.25
+    },
+    "growth": {
+      "$comment": "Arrivals per coarse step. `perReputation` is arrivals per point of reputation; `prosperityScale` multiplies by how comfortably the town is already coping, so a strained town attracts nobody.",
+      "basePerStep": 0.04,
+      "perReputation": 0.006,
+      "prosperityScale": 1.4,
+      "maxPerStep": 1.5
+    },
+    "departure": {
+      "$comment": "Sustained pressure loses people. Deliberately slower than growth: a bad month should cost the player something without unwinding an hour of building.",
+      "pressureThreshold": 0.35,
+      "perStepAtFullPressure": 0.35
+    }
+  },
+  "stability": {
+    "$comment": "REQ-TWN-003: Town Stability summarises but never replaces the individual food, housing and service indicators. Weights are relative severities, not shares.",
+    "weights": {
+      "housing": 1,
+      "food": 1.25,
+      "services": 0.7
+    },
+    "bands": [
+      {
+        "id": "thriving",
+        "atLeast": 0.85,
+        "label": "Thriving"
+      },
+      {
+        "id": "steady",
+        "atLeast": 0.65,
+        "label": "Steady"
+      },
+      {
+        "id": "strained",
+        "atLeast": 0.4,
+        "label": "Strained"
+      },
+      {
+        "id": "failing",
+        "atLeast": 0,
+        "label": "Failing"
+      }
+    ]
+  },
+  "recovery": {
+    "$comment": "Repays the Phase 3 placeholder. v1.0 §4 requires recovery to vary measurably with time, food, housing and service quality, so the base rate here is what a baseline town achieves and every town term multiplies it (core/hunter/availability.recoveryRatePerStep).\n\n`injuryStepsAtBaseline` is the length of an injury in a town with exactly baseline housing, food and services — a better town shortens it, a strained one lengthens it. The old flat INJURY_TICKS/RECOVERY_TICKS constants are gone.",
+    "baseFatigueClearedPerStep": 0.06,
+    "injuryStepsAtBaseline": 40,
+    "recoveryStepsAtBaseline": 8,
+    "minSteps": 1,
+    "maxSteps": 400,
+    "$cadenceNote": "The fine-ticks-per-coarse-step figure used to live here too, and had already drifted from the clock it was meant to mirror. DL-020 makes that cadence a property of the simulation clock; everything that needs it now asks the clock."
+  },
+  "quality": {
+    "$comment": "A town with no housing at all is not a town with baseline housing — these are the floors used when nothing has been built, so an unbuilt town recovers badly rather than normally. Capacity ratios above 1 raise quality with diminishing returns rather than linearly, or overbuilding would trivialise recovery.",
+    "unbuiltHousingQuality": 0.4,
+    "unbuiltServiceQuality": 0.35,
+    "surplusQualityScale": 0.35,
+    "maxQuality": 2
+  },
+  "stages": {
+    "$comment": "REQ-TWN-002 — Small Camp -> Village -> Fortified Town -> Hunter City, with no reset on progression. Requirements are minimums that must all hold; the stage reached is the highest satisfied, and Town records the highest ever reached so a stage is never lost (DL-037).",
+    "order": [
+      {
+        "id": "small_camp",
+        "name": "Small Camp",
+        "requires": {
+          "population": 0,
+          "buildings": 0,
+          "guildHallTier": 1
+        }
+      },
+      {
+        "id": "village",
+        "name": "Village",
+        "requires": {
+          "population": 20,
+          "buildings": 5,
+          "guildHallTier": 1
+        }
+      },
+      {
+        "id": "fortified_town",
+        "name": "Fortified Town",
+        "requires": {
+          "population": 45,
+          "buildings": 9,
+          "guildHallTier": 2
+        }
+      },
+      {
+        "id": "hunter_city",
+        "name": "Hunter City",
+        "requires": {
+          "population": 90,
+          "buildings": 14,
+          "guildHallTier": 3
+        }
+      }
+    ]
+  },
+  "reputation": {
+    "$comment": "Makes REQ-WLD-002's reputation unlock axis evaluable — it was parsed and reported as 'not yet tracked' through Phase 5. Earned by doing the work the frontier notices: clearing routes, killing wardens, coming home. Bounded so it cannot be farmed into meaninglessness on blue zones.",
+    "starting": 0,
+    "max": 100,
+    "perExpedition": 0.5,
+    "perBossDefeated": 4,
+    "perWorldBossDefeated": 12,
+    "perZoneTier": {
+      "blue": 0,
+      "yellow": 0.5,
+      "red": 1.5,
+      "black": 3
+    },
+    "lossPerWipe": 2,
+    "lossPerDeath": 1
+  },
+  "assignment": {
+    "$comment": "REQ-TWN-009/010 and DL-008. Preferred role and preferred department are scoring INPUTS. They are weights here, next to the capability terms they compete with, precisely so nobody can reintroduce them as vetoes — a preference that can be outweighed is structurally not a veto.",
+    "weights": {
+      "departmentPreference": 0.22,
+      "rolePreference": 0.13,
+      "attributeFit": 0.5,
+      "capability": 0.3,
+      "departmentPriority": 0.35,
+      "moraleFit": 0.1,
+      "fatiguePenalty": 0.3,
+      "outputValue": 0.3
+    },
+    "$note": "attributeFit (0.5) strictly outweighs both preferences combined (0.35), so a well-suited hunter is assigned over a badly-suited one who asked for the job. That ordering is the whole content of DL-008, and it is not left to good intentions: parseDepartments rejects any department policy preset whose modified preference weights would reach attributeFit, and tests/town.test.ts sweeps every preset to prove a hopeless volunteer still loses to a capable draftee.",
+    "$note2": "`capability` is a separate weight from `attributeFit`, and that separation is load-bearing rather than tidy. They were one multiplied term at first — alignment times development — and because both factors sit below 1, the combined term could only reach about a third of its weight at realistic levels, which let a flat 0.22 preference beat it outright. DL-008 was violated in play while the load-time guard, comparing configured weights, reported everything correct. A guard over weights is only sound if each term can actually reach its weight.",
+    "maxFatigueForWork": 0.8,
+    "outputReference": 4,
+    "$note3": "`outputValue` is the AI's own optimisation (v1.0 §2.1 rank 3): between two jobs a hunter is equally suited to, it prefers the one that produces more. Without it the rota was purely a suitability match, so a guild whose hunters were all best at drilling put its whole roster in the drill yard and never staffed the hunting camp — the posts existed and were unreachable. It sits below attributeFit deliberately: the AI may prefer more valuable work, it may not override who is actually good at it."
+  },
+  "departments": {
+    "$comment": "REQ-DEP-001/002/004. There is deliberately no budget field of any kind (REQ-DEP-003 / conflict A10, enforced by tests/architecture.test.ts). A department is staff, a head and a policy — never an allowance.",
+    "headQualification": {
+      "$comment": "How much a qualified head is worth. A department with no head falls back to a deputy (the best-scoring member) at reduced effect, and to the Guild AI at the floor — never to zero, because a leaderless department should underperform rather than stop.",
+      "perLevel": 0.006,
+      "perAttributePoint": 0.004,
+      "maxBonus": 0.5,
+      "deputyScale": 0.5,
+      "guildAiFallback": 0.75
+    },
+    "performance": {
+      "$comment": "Multi-metric by design (REQ-DEP-004): one number per department would hide exactly the trade-off the player is making. `staffingTarget` is heads-per-department at which staffing reads as fully met.",
+      "staffingTarget": 3,
+      "outputPerStaffPoint": 1
+    },
+    "priorities": {
+      "$comment": "Player-set priority per department, and the default spread. Guild policy remains the highest authority (REQ-DEP-004) — priority is a weight in the assignment score, not an override of it.",
+      "min": 0,
+      "max": 3,
+      "default": 1
+    }
+  }
+}

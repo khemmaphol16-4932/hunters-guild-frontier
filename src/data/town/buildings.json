@@ -1,0 +1,721 @@
+{
+  "$comment": "REQ-TWN-001/005/006 and v1.0 §9. Buildings are authored data: a footprint on the grid, a category, and a tier ladder where each tier states its cost and what it adds to the town.\n\nWhat a building contributes is expressed as capacity and quality, never as a direct bonus to a hunter. Housing and food are counted against population demand (REQ-TWN-003); service points become the service quality that recovery reads (v1.0 §4); job slots are how many people can do a given kind of work at all. A building never touches a hunter's stats — the town changes what the guild can support, and that is what changes hunters.\n\nCosts are authored and reported but not yet charged: the Resources system is Phase 7, and holding half of it here is the temporary architecture §126 forbids. Same treatment as refinement in Phase 2. Tracked in TECH_DEBT.md.\n\n`footprint` is pre-rotation. Build mode rotates in four directions (v1.0 §9), which swaps width and height — so a 3x1 palisade can run along either edge.",
+  "categories": {
+    "$comment": "REQ-TWN-005's list, as the category vocabulary. A building declares exactly one; the detail panel groups by it.",
+    "management": "Guild Hall and command functions",
+    "housing": "Where the town sleeps",
+    "services": "Food, water, comfort — what recovery actually reads",
+    "healing": "Injury and recovery",
+    "revival": "The last resort",
+    "crafting": "Turning materials into equipment",
+    "economy": "Producing and moving goods",
+    "research": "Guild technology",
+    "defense": "Holding the walls",
+    "recruitment": "Bringing new hunters in"
+  },
+  "buildings": [
+    {
+      "id": "guild_hall",
+      "name": "Guild Hall",
+      "description": "The heart of the town. Everything the Guild Master does, they do from here.",
+      "category": "management",
+      "unique": true,
+      "providesGuildHallTier": true,
+      "footprint": {
+        "width": 3,
+        "height": 3
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "name": "Command Post",
+          "cost": {
+            "gold": 0,
+            "materials": 0
+          },
+          "capacity": {
+            "service": 1
+          },
+          "note": "A table, a map and a ledger. The guild starts here."
+        },
+        {
+          "tier": 2,
+          "name": "Guild Hall",
+          "cost": {
+            "gold": 2400,
+            "materials": 180
+          },
+          "capacity": {
+            "service": 3,
+            "housing": 4
+          },
+          "jobs": {
+            "archive_work": 1
+          },
+          "note": "Departments get rooms of their own, and the Guild AI gets somewhere to work from."
+        },
+        {
+          "tier": 3,
+          "name": "Great Hall",
+          "cost": {
+            "gold": 9000,
+            "materials": 640
+          },
+          "capacity": {
+            "service": 6,
+            "housing": 8,
+            "defence": 2
+          },
+          "jobs": {
+            "archive_work": 2
+          },
+          "note": "Visible from the treeline. Hunters take contracts here from people who came a long way to offer them."
+        }
+      ]
+    },
+    {
+      "id": "bunkhouse",
+      "name": "Bunkhouse",
+      "description": "Rows of cots and a stove. Nobody's first choice, and everybody's first bed.",
+      "category": "housing",
+      "footprint": {
+        "width": 3,
+        "height": 2
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 220,
+            "materials": 30
+          },
+          "capacity": {
+            "housing": 8
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 700,
+            "materials": 90
+          },
+          "capacity": {
+            "housing": 14,
+            "service": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "longhouse",
+      "name": "Longhouse",
+      "description": "Proper walls, a hearth at each end, and a door that shuts.",
+      "category": "housing",
+      "footprint": {
+        "width": 4,
+        "height": 2
+      },
+      "unlock": {
+        "stage": "village"
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 900,
+            "materials": 130
+          },
+          "capacity": {
+            "housing": 20,
+            "service": 2
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 2600,
+            "materials": 340
+          },
+          "capacity": {
+            "housing": 34,
+            "service": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": "granary",
+      "name": "Granary",
+      "description": "The difference between a hard winter and an empty town.",
+      "category": "services",
+      "footprint": {
+        "width": 2,
+        "height": 2
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 260,
+            "materials": 40
+          },
+          "capacity": {
+            "food": 14
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 820,
+            "materials": 120
+          },
+          "capacity": {
+            "food": 26
+          }
+        }
+      ]
+    },
+    {
+      "id": "field_kitchen",
+      "name": "Cookhouse",
+      "description": "Hot food at any hour, which matters more than anyone admits.",
+      "category": "services",
+      "footprint": {
+        "width": 2,
+        "height": 2
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 300,
+            "materials": 45
+          },
+          "capacity": {
+            "food": 6,
+            "service": 3
+          },
+          "jobs": {
+            "field_kitchen": 1
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 950,
+            "materials": 140
+          },
+          "capacity": {
+            "food": 12,
+            "service": 5
+          },
+          "jobs": {
+            "field_kitchen": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "well",
+      "name": "Well",
+      "description": "Dug once, argued about for years.",
+      "category": "services",
+      "footprint": {
+        "width": 1,
+        "height": 1
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 90,
+            "materials": 12
+          },
+          "capacity": {
+            "service": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "bathhouse",
+      "name": "Bathhouse",
+      "description": "Where a party stops being an expedition and goes back to being people.",
+      "category": "services",
+      "footprint": {
+        "width": 3,
+        "height": 2
+      },
+      "unlock": {
+        "stage": "village",
+        "population": 25
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 1100,
+            "materials": 150
+          },
+          "capacity": {
+            "service": 7
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 3000,
+            "materials": 380
+          },
+          "capacity": {
+            "service": 12
+          }
+        }
+      ]
+    },
+    {
+      "id": "infirmary",
+      "name": "Infirmary",
+      "description": "Clean linen, boiled water, and someone awake at night.",
+      "category": "healing",
+      "footprint": {
+        "width": 3,
+        "height": 2
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 480,
+            "materials": 70
+          },
+          "capacity": {
+            "service": 5
+          },
+          "jobs": {
+            "infirmary_rounds": 1
+          },
+          "note": "Injuries clear faster here than they do on a cot in the bunkhouse."
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 1600,
+            "materials": 210
+          },
+          "capacity": {
+            "service": 9
+          },
+          "jobs": {
+            "infirmary_rounds": 2
+          }
+        },
+        {
+          "tier": 3,
+          "cost": {
+            "gold": 5200,
+            "materials": 620
+          },
+          "capacity": {
+            "service": 15
+          },
+          "jobs": {
+            "infirmary_rounds": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "shrine",
+      "name": "Shrine",
+      "description": "Nobody at the guild agrees on what it is for. Everyone stops at it on the way out.",
+      "category": "revival",
+      "footprint": {
+        "width": 2,
+        "height": 2
+      },
+      "unlock": {
+        "stage": "fortified_town",
+        "reputation": 20
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 3200,
+            "materials": 260
+          },
+          "capacity": {
+            "service": 3
+          },
+          "note": "REQ-TWN-005 lists revival among the town's functions; the method is deliberately left open (v1.0 §20 names exact resurrection methods as an open question), so this tier provides comfort and nothing more until it is decided."
+        }
+      ]
+    },
+    {
+      "id": "smithy",
+      "name": "Smithy",
+      "description": "The loudest building in town and the reason anyone's armour still fits.",
+      "category": "crafting",
+      "footprint": {
+        "width": 3,
+        "height": 2
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 520,
+            "materials": 80
+          },
+          "capacity": {
+            "service": 1
+          },
+          "jobs": {
+            "forge_work": 2
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 1700,
+            "materials": 240
+          },
+          "capacity": {
+            "service": 2
+          },
+          "jobs": {
+            "forge_work": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "tannery",
+      "name": "Tannery",
+      "description": "Downwind. Always downwind.",
+      "category": "crafting",
+      "footprint": {
+        "width": 2,
+        "height": 2
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 380,
+            "materials": 55
+          },
+          "jobs": {
+            "leatherwork": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "lumber_yard",
+      "name": "Lumber Yard",
+      "description": "Stacked, seasoned and spoken for before it dries.",
+      "category": "economy",
+      "footprint": {
+        "width": 3,
+        "height": 2
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 300,
+            "materials": 20
+          },
+          "jobs": {
+            "timber_cutting": 2
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 1000,
+            "materials": 110
+          },
+          "jobs": {
+            "timber_cutting": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": "quarry_camp",
+      "name": "Quarry Camp",
+      "description": "A hole in the hillside and a very determined crew.",
+      "category": "economy",
+      "footprint": {
+        "width": 3,
+        "height": 2
+      },
+      "unlock": {
+        "stage": "village"
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 640,
+            "materials": 60
+          },
+          "jobs": {
+            "quarrying": 2
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 2100,
+            "materials": 200
+          },
+          "jobs": {
+            "quarrying": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": "market_stall",
+      "name": "Market Row",
+      "description": "Four stalls, one of which is always closed.",
+      "category": "economy",
+      "footprint": {
+        "width": 2,
+        "height": 1
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 180,
+            "materials": 20
+          },
+          "capacity": {
+            "service": 2,
+            "food": 4
+          },
+          "note": "Buying and selling proper is the Phase 7 Market; what a stall does now is put food and small comforts within reach."
+        }
+      ]
+    },
+    {
+      "id": "research_annex",
+      "name": "Research Annex",
+      "description": "Where expedition notes stop being anecdotes.",
+      "category": "research",
+      "footprint": {
+        "width": 3,
+        "height": 2
+      },
+      "unlock": {
+        "population": 18
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 780,
+            "materials": 100
+          },
+          "jobs": {
+            "archive_work": 2,
+            "field_survey": 1
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 2400,
+            "materials": 300
+          },
+          "capacity": {
+            "service": 1
+          },
+          "jobs": {
+            "archive_work": 3,
+            "field_survey": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "watchtower",
+      "name": "Watchtower",
+      "description": "Two floors, one horn, and a very long view.",
+      "category": "defense",
+      "footprint": {
+        "width": 2,
+        "height": 2
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 340,
+            "materials": 50
+          },
+          "capacity": {
+            "defence": 3
+          },
+          "jobs": {
+            "gate_watch": 1
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 1150,
+            "materials": 160
+          },
+          "capacity": {
+            "defence": 6
+          },
+          "jobs": {
+            "gate_watch": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "palisade",
+      "name": "Palisade",
+      "description": "Sharpened trunks, sunk deep. It has been repaired more often than it was built.",
+      "category": "defense",
+      "footprint": {
+        "width": 3,
+        "height": 1
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 150,
+            "materials": 35
+          },
+          "capacity": {
+            "defence": 2
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 520,
+            "materials": 110
+          },
+          "capacity": {
+            "defence": 5
+          },
+          "jobs": {
+            "wall_patrol": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "recruitment_hall",
+      "name": "Recruitment Hall",
+      "description": "A bench, a board of notices, and a recruiter who has seen everything.",
+      "category": "recruitment",
+      "footprint": {
+        "width": 3,
+        "height": 2
+      },
+      "unlock": {
+        "population": 20
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 860,
+            "materials": 110
+          },
+          "capacity": {
+            "service": 2
+          },
+          "jobs": {
+            "escort_duty": 1
+          },
+          "note": "The building stands and staffs jobs now. The dynamic pool, Guild Fit analysis and regional identity of REQ-RCT-001/002 arrive with the Recruitment pass — see TECH_DEBT.md."
+        }
+      ]
+    },
+    {
+      "id": "drill_yard",
+      "name": "Drill Yard",
+      "description": "Packed earth, a rack of blunted weapons, and no shade.",
+      "category": "management",
+      "footprint": {
+        "width": 3,
+        "height": 3
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 200,
+            "materials": 25
+          },
+          "jobs": {
+            "hunter_drill": 3
+          }
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 720,
+            "materials": 95
+          },
+          "jobs": {
+            "hunter_drill": 5,
+            "wall_patrol": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "hunting_camp",
+      "name": "Hunting Camp",
+      "description": "A drying rack, a fire pit, and a well-worn path out through the scrub.",
+      "category": "economy",
+      "footprint": {
+        "width": 2,
+        "height": 2
+      },
+      "tiers": [
+        {
+          "tier": 1,
+          "cost": {
+            "gold": 260,
+            "materials": 35
+          },
+          "capacity": {
+            "food": 4
+          },
+          "jobs": {
+            "town_hunting": 2
+          },
+          "note": "REQ-TWN-007: the posts here send hunters out to fight, with the same combat system an expedition uses."
+        },
+        {
+          "tier": 2,
+          "cost": {
+            "gold": 880,
+            "materials": 120
+          },
+          "capacity": {
+            "food": 8
+          },
+          "jobs": {
+            "town_hunting": 4
+          }
+        }
+      ]
+    }
+  ]
+}

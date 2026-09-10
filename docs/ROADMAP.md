@@ -113,11 +113,21 @@ World map · regions · zone tiers · expedition generation · branching · even
 
 Key DoD: an expedition completes end-to-end in ≤10 minutes with continue/retreat honoring hard constraints.
 
-## Phase 6 — Town + Guild ⬜ ← **next**
+## Phase 6 — Town + Guild ✅
 
 Grid · buildings · guild hall · population · housing · services · departments · policies · town hunting · defense · recruitment hall · research.
 
 Key DoD: the town is physically observable and hunters visibly move through it (REQ-PRIME-006).
+
+**Delivered (6a — the physical town and the guild that runs it).** A real grid with footprints, four-direction rotation, collision and free relocation (`systems/town/TownGrid`) · 18 buildings across REQ-TWN-005's nine functions, each a tier ladder of cost and capacity · the Small Camp → Village → Fortified Town → Hunter City ladder, stored and monotonic so progression never resets (DL-037) · population, per-axis demand and pressure, and a Town Stability summary that cannot be returned without the three indicators it summarises (DL-036) · five departments with appointed heads, deputy and Guild-AI fallback, per-department priority and four policy presets, and a four-metric dashboard with no combined score (REQ-DEP-004) · idle-hunter job assignment through a scorer where preference is a weight and never a filter · **guild reputation**, which makes REQ-WLD-002's reputation unlock axis evaluable instead of permanently shut · **recovery wired to the actual town**, repaying the Phase 3 placeholder. Save at v7 with a v6→v7 migration. 409 tests green, typecheck and build clean.
+
+**Found by measurement, fixed at the source.** The DL-008 sweep caught a live REQ-TWN-010 violation: `attributeFit` multiplied alignment by capability, so the term could never reach its configured weight and a hunter's stated preference beat a specialist's competence — while the load-time guard, comparing weights, reported everything correct (DL-039). Two content problems surfaced the same way: a starting town that could not service its own starting population and began losing residents on turn one, and a services indicator quoting capacity units as if they were people. Both are written up in DEVLOG.
+
+**Delivered (6b — research, recruitment, and the walls).** The research tree: three branches, symmetric conflicts that make it an identity rather than a checklist, effects consumed by real systems, and REQ-RES-001's reset · the Recruitment Hall: a dynamic pool sized and populated by the guild's standing, refresh both paid and timed, five regionally distinct origins biasing names, archetypes, personalities and potential, exceptional recruits flagged rather than inferred, and a Guild Fit analysis that ranks by *what the guild is missing* and is willing to be discouraging · town hunting and town defense, both fought with the actual combat system · guard policy, building damage and repair. Saves v8, v9 and v10 with their migrations. 493 tests green, typecheck and build clean.
+
+**Found by measurement, fixed at the source.** A deadlock that shipped — the Research Department was unlocked by research whose points only that department could produce, so a new guild could never research anything, and the existing content check passed because it verified only that *some* node opened the department (DL-040). Two hunters made permanently unemployable by fatigue that nothing ever cleared for an available hunter (DL-041). Town time advancing without the simulation clock, freezing recovery, recruitment and defense together (DL-042). And a hunting camp whose posts could never be filled, because the rota had no notion of what work was worth (DL-043). All four are written up in DEVLOG.
+
+**Phase DoD.** The town is physically observable, hunters move through it as work, and REQ-PRIME-006 is met at the level Phase 9 presentation will build on.
 
 ## Phase 7 — Economy ⬜
 

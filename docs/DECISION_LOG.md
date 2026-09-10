@@ -375,3 +375,95 @@ The Guild AI picks by matching the option's risk against the objective's risk pr
 **Decision.** Elapsed expedition time accrues per node and is tested before entering the next one. A run can overshoot by at most the length of the node it was already in.
 
 **Why.** Stopping the clock mid-encounter would make a run's outcome depend on where the tick landed, which breaks the determinism REQ-TEC-005 and §18 rest on. `outOfTime` is its own flag rather than being folded into `retreated`, because running out of daylight is not a decision the party made.
+
+---
+
+## DL-036 — Town Stability weights are severities, not shares
+
+**Ambiguity.** REQ-TWN-003 says Town Stability "summarises, but never replaces" the individual population, food, housing and service indicators. It does not say how the summary is computed.
+
+**Decision.** Stability is a weighted mean of *relieved* pressure across housing, food and services, and the weights (1.0 / 1.25 / 0.7) deliberately do not sum to 1. `Population.report()` always returns the three individual readings alongside the summary, and there is no code path that produces the summary alone.
+
+**Why.** Normalised weights would let one healthy axis average away a collapse on another — a full granary reassuring the player at exactly the moment a housing failure should alarm them. Severities keep the axes comparable without making them substitutable. The structural half matters more than the arithmetic: a `report()` that could return a bare score would let a UI or a test display it *instead of* the detail, which is precisely what the requirement forbids, so the type does not offer that shape.
+
+---
+
+## DL-037 — The town's stage is stored and monotonic, not derived
+
+**Ambiguity.** REQ-TWN-002 fixes the ladder Small Camp → Village → Fortified Town → Hunter City and says there is **no reset** on progression. It does not say whether a stage is a fact about the town's history or a live reading of its current buildings.
+
+**Decision.** `Town` derives a candidate stage from population, building count and Guild Hall tier, but what the town *is* is the highest index it has ever derived — stored in the save, raised only by `refreshStage`, with no public way to lower it. `derivedStage()` remains available and can fall; `stage()` cannot.
+
+**Why.** "No reset" has to survive the cases that would otherwise quietly break it: a demolished building, a population loss, a defense event, or a save loaded against content whose ladder has since changed. A purely derived stage would violate the requirement on load rather than in play, which is the worst place to find out. The content is validated non-decreasing at load for the same reason (`parseTownBalance`), so the ladder cannot be authored into a shape where a growing town satisfies Hunter City while failing Fortified Town.
+
+---
+
+## DL-038 — Town work does not make a hunter `assigned`
+
+**Ambiguity.** v1.0 §4 fixes five availability states, of which `assigned` means "not deployable". REQ-TWN-009 says idle hunters automatically work. Nothing says which state a hunter on the work rota is in.
+
+**Decision.** Town work is tracked entirely in `TownJobs` and does not change availability. A hunter cutting timber is still `available`, still a candidate for an expedition, and is dropped from the rota the moment they are deployed, injured or killed.
+
+**Why.** It looked obvious the other way and it is wrong. If town work occupied `assigned`, the town would compete with the field for the same roster, and a player who built a productive town would discover they had nobody left to send anywhere — punished for engaging with the system. Town work is what idle hunters do *while* idle. It still costs something real: it is gated on the fatigue ceiling, and fatigue is what recovery clears.
+
+---
+
+## DL-039 — Alignment and capability are separate scoring terms
+
+**Ambiguity.** None in the design — this records a bug and the rule that came out of it.
+
+**Decision.** `attributeFit` measures only how well a hunter's build *points at* a job. `capabilityOf` measures only how developed they are. Both are separately weighted terms in the assignment score, never multiplied together.
+
+**Why.** They were one term to begin with — alignment × capability — and the DL-008 sweep in `tests/town.test.ts` caught the consequence: both factors sit below 1, so the combined term could only reach about a third of its configured weight at realistic levels (0.5 × 0.82 × 0.41 ≈ 0.17), while `departmentPreference` delivered a flat 0.22. A hunter who was hopeless at the work but had asked for it beat a specialist who had not, so REQ-TWN-010's "input, never veto" was violated in play — while the load-time guard, which compares configured *weights*, reported everything in order.
+
+**The rule worth keeping:** a guard that compares configured weights is only sound if each term can actually reach its weight. Two factors answering different questions belong in different terms, where each is separately weighted, separately readable, and separately tunable.
+
+---
+
+## DL-040 — The Research Department cannot be unlocked by research
+
+**Ambiguity.** REQ-DEP-001 says departments unlock through Research. REQ-RES-002 says research is technology, earned by the guild rather than by hunters — and the natural implementation of that is to make research points come from the Research Department's own output.
+
+**Decision.** Every department may be gated behind a research node except Research itself, which is open from a guild's first day. `crossValidateResearch` fails the build if that is ever changed.
+
+**Why.** Taken together the two requirements are a deadlock, and it shipped: no department means no output, no output means no points, no points means the node that opens the department can never be completed. It was found by playing — a guild ran for four hundred steps with a research target selected and zero progress — rather than by review or by any of the existing content checks, which only verified that *some* node opened each department.
+
+A guild's single archive post in the Guild Hall is the bootstrap, and Record Keeping now unlocks the Research *Annex* instead: the thing that turns one post into a department worth the name. The load-time check is the interesting half — the class of bug is "a resource that can only be produced by something the resource unlocks", and it will not be the last time that shape appears.
+
+---
+
+## DL-041 — Town work is idle work, and idle hunters rest
+
+**Ambiguity.** v1.0 §4 makes recovery depend on time, food, housing and rest. It does not say who is recovering.
+
+**Decision.** Every hunter who is in town and `available` sheds fatigue each coarse step, at the same rate the infirmary uses. Hunters in the field or already `injured`/`recovering` are excluded — the first are not resting, the second are on the slower state-machine path.
+
+**Why.** Recovery ran only on the injured path, which meant an *available* hunter doing town work gained fatigue every outing and shed none, ever. Two hunters hit fatigue 1.0 in a browser session and became permanently unemployable: above the work ceiling so off the rota, not injured so never resting. Both systems were individually correct and nothing joined them up.
+
+None of §4's clauses say "only if wounded". Making rest universal also gives the work rota a real economy: town work costs fatigue, the town repays it, and whether a given rota is sustainable becomes a genuine question about the town supporting it — which is exactly the trade REQ-TWN-003 is built around.
+
+---
+
+## DL-042 — The coarse cadence belongs to the clock, and town time advances it
+
+**Ambiguity.** None. This records two related mistakes and the rule that came out of them.
+
+**Decision.** `SimulationClock.coarseStepRatio` is the only definition of how many fine ticks make a coarse step; the town balance file no longer carries a second one. And `advanceTown` advances the simulation clock through `runSteps`, rather than keeping a private step counter beside it.
+
+**Why.** The balance file had its own `ticksPerCoarseStep: 50` against the clock's 20, so two parts of the game disagreed about how long a step was — precisely the drift DL-020 exists to prevent, reintroduced in a different file.
+
+The second mistake was worse and less visible. Advancing "town time" never moved the clock, and everything timed in ticks — every hunter's `readyAtTick`, the recruitment refresh, the defense timer — was measured against it. So a guild could run for hundreds of steps during which nobody ever recovered, the pool never refreshed on its own, and the walls were never once tested. Nothing failed; the game was simply missing three of its systems. A test had even been written around it, shoving the clock forward by hand to make a refresh happen, which was the bug wearing a workaround.
+
+**The rule:** if a system measures anything in ticks, the thing that advances its time must advance the clock. A private counter beside the clock is not a shortcut, it is a second clock.
+
+---
+
+## DL-043 — The assignment score includes what the work is worth
+
+**Ambiguity.** v1.0 §2.1 places "AI optimization" at rank 3, above department policy and below guild policy. It does not say what the AI optimises *for*.
+
+**Decision.** The job-assignment score carries an `outputValue` term: between two jobs a hunter is comparably suited to, the AI prefers the one that produces more. Weighted below `attributeFit`, so it reorders comparable candidates without overriding who is actually good at the work.
+
+**Why.** Without it the rota was a pure suitability match, and a guild whose hunters were all best at drilling put its entire roster in the drill yard and never staffed the hunting camp next door. The posts existed and were unreachable — the same class of failure as an unreachable region (DL-033): nothing errors, the content is simply never seen.
+
+It is also the honest reading of rank 3. An optimiser that cannot express "this work matters more" is not optimising, it is matching; and the alternative fixes on offer were both worse — hand-tuning slot counts until the arithmetic happened to work, or giving the player a per-job priority lever that department priority already covers at the right altitude.

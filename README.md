@@ -6,7 +6,7 @@ An autonomous Hunter Guild management RPG. The player is the Guild Master: they 
 
 The design goal is that a Hunter does not merely *have* a build — they **become** one, through what they actually do. Mastery grows from use, and build identity is what the AI reads when it decides how to act.
 
-**Status:** Phase 2 of 10 complete. Hunter foundation and equipment are built and tested; combat and AI are next.
+**Status:** Phases 0–6 complete. The loop runs end to end — a town you build on a grid, departments and a work rota, research, recruitment, expeditions, deterministic combat, and reports you can read the reasoning out of. Economy is next.
 
 ---
 
@@ -88,17 +88,23 @@ If you change its interface, you are changing the thing every later phase depend
 npm test
 ```
 
-212 tests across 10 suites. Beyond ordinary unit coverage, some tests exist to protect design decisions and will fail if a decision is quietly reversed:
+493 tests across 19 suites. Beyond ordinary unit coverage, some tests exist to protect design decisions and will fail if a decision is quietly reversed:
 
 - `tests/architecture.test.ts` — layer violations, unseeded randomness, wall-clock reads, and the absence of both a reaction-skill category and a department budget system
 - `tests/buildIdentity.test.ts` — two hunters of the same class built differently must be *measurably* different
 - `tests/policy.test.ts` — an enormous utility score must still lose to a hard constraint
 - `tests/items.test.ts` — set and card effects must be behavioural rather than flat stats
+- `tests/town.test.ts` — a town's stage never falls, the stability summary never arrives without the three indicators it summarises, and a hunter's stated preference loses to competence under *every* department policy preset
+- `tests/townCombat.test.ts` — a town hunt must produce real combat log entries, because a dice roll that returns loot passes any test that only checks outputs
+
+The last two both earn their place by having caught live requirement failures rather than regressions — a hunter's preference beating competence (DL-039), and a research deadlock that no existing content check noticed (DL-040). See DEVLOG's Phase 6 entries.
 
 ---
 
 ## What is not built yet
 
-Combat and Hunter AI (Phase 4) · world and expeditions (Phase 5) · town and guild management (Phase 6) · economy (Phase 7) · legacy and NG+ (Phase 8) · isometric pixel-art presentation (Phase 9).
+Economy, crafting and the market (Phase 7) · legacy and NG+ (Phase 8) · isometric pixel-art presentation (Phase 9).
 
-The largest open question is deliberate and tracked as risk R2: build differentiation is currently proven at the *profile* level, but the claim that different builds produce different AI **decisions** cannot be tested until combat exists. `ROADMAP.md` Phase 4 is where that is settled.
+Gold and materials are computed and displayed wherever they apply — refinement, building, upgrades — and charged nowhere, because the ledger belongs to Phase 7 and owning half of it early is the temporary architecture the design forbids. `TECH_DEBT.md` lists every such stub together with the trigger that repays it.
+
+Risk R2 — the claim that different builds produce different AI **decisions** and not merely different profiles — was settled in Phase 4 by the §140 A–M scenarios, which caught a live failure in the process. `RISK_AUDIT.md` has the write-up.

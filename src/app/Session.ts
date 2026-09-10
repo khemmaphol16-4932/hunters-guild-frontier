@@ -49,6 +49,18 @@ import { hunterCombatant, monsterCombatant } from '../systems/combat/combatants.
 import { HunterAI } from '../ai/hunter/hunterAI.js';
 import { Expedition } from '../sim/expedition/Expedition.js';
 import { WorldKnowledge } from '../systems/world/WorldKnowledge.js';
+import { Town } from '../systems/town/Town.js';
+import { Population } from '../systems/town/Population.js';
+import { Departments } from '../systems/town/Departments.js';
+import { TownJobs } from '../systems/town/TownJobs.js';
+import { Reputation } from '../systems/town/Reputation.js';
+import { Recovery } from '../systems/town/Recovery.js';
+import { Research } from '../systems/town/Research.js';
+import { Recruitment } from '../systems/town/Recruitment.js';
+import { Defense } from '../systems/town/Defense.js';
+import { TownCombat } from '../sim/town/TownCombat.js';
+import { assignJobs } from '../ai/town/jobAssignment.js';
+import type { TownDepartmentId } from '../data/townSchema.js';
 import { SaveGame, type SaveStorage } from '../save/SaveGame.js';
 import type { CurrentSavePayload } from '../save/envelope.js';
 
@@ -120,6 +132,23 @@ export interface GenerateHunterOptions {
   readonly preferredDepartment?: DepartmentId;
   readonly level?: number;
   readonly name?: string;
+  /**
+   * Which name pool to draw from (REQ-RCT-002). Defaults to the first, which is `frontier`.
+   */
+  readonly namePool?: string;
+  /**
+   * Multiplier on the rolled potential's composite, from a recruit's origin.
+   * Some places genuinely do produce better hunters (REQ-RCT-002).
+   */
+  readonly potentialBias?: number;
+  /**
+   * Whether to add the hunter to the roster.
+   *
+   * Recruitment needs fully-formed hunters that are *not* in the guild yet — a candidate at
+   * the hall is a real person the player has not hired. Defaults to true so every existing
+   * caller is unchanged.
+   */
+  readonly enlist?: boolean;
 }
 
 export class Session {
@@ -153,6 +182,20 @@ export class Session {
 
   /** What the guild knows about the world. Permanent (REQ-WLD-001). */
   readonly worldKnowledge: WorldKnowledge;
+
+  /** The town, and everything that follows from having one (REQ-TWN-*, REQ-DEP-*). */
+  readonly town: Town;
+  readonly population: Population;
+  readonly departments: Departments;
+  readonly townJobs: TownJobs;
+  readonly reputation: Reputation;
+  readonly recovery: Recovery;
+  readonly research: Research;
+  readonly recruitment: Recruitment;
+  readonly defense: Defense;
+  /** Town hunting and town defense, fought with the same combat system (REQ-TWN-007/008). */
+  readonly townCombat: TownCombat;
+
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
   readonly expedition: Expedition;
@@ -275,6 +318,179 @@ export class Session {
       },
     });
 
+    // --- The town ----------------------------------------------------------
+    //
+    // These five reference each other, so every dependency is a closure read lazily rather
+    // than a value passed in: population needs the town's capacity, the town needs the
+    // population and the food its staffed jobs produce, departments need the town's job
+    // slots and the rota's staff, and the rota needs the departments' priorities. Nothing
+    // is *called* during construction, so declaration order below is arbitrary — what
+    // matters is that no system holds a stale copy of another's state.
+    // Research is built first: every other town system asks it something, and it asks
+    // nothing of them. The one genuinely acyclic corner of this cluster.
+    this.research = new Research({
+      content: this.content.research,
+      onCompleted: (node) => {
+        this.events.emit('research.completed', { nodeId: node.id, name: node.name });
+      },
+    });
+
+    this.reputation = new Reputation({
+      balance: this.content.balance.town,
+      researchScale: () => session.research.reputationScale(),
+    });
+
+    this.population = new Population({
+      balance: this.content.balance.town,
+      capacityOf: () => session.town.capacity(),
+      reputationOf: () => session.reputation.current,
+    });
+
+    this.town = new Town({
+      balance: this.content.balance.town,
+      buildings: this.content.town.buildings,
+      populationOf: () => session.population.size,
+      reputationOf: () => session.reputation.current,
+      jobFoodOf: () => session.departments.foodOutput(),
+      researchCapacity: (axis) => session.research.capacityBonus(axis),
+      researchQuality: (axis) => session.research.qualityScale(axis),
+      researchUnlockedBuilding: (id) => session.research.unlocksBuilding(id),
+      onStageReached: (stage) => {
+        this.events.emit('town.stageReached', { stageId: stage.id, name: stage.name });
+      },
+    });
+
+    this.departments = new Departments({
+      balance: this.content.balance.town,
+      attributes: this.content.balance.attributes,
+      content: this.content.departments,
+      jobs: this.content.townJobs.jobs,
+      hunterOf: (id) => this.roster.get(id),
+      staffOf: () => session.townJobs.all(),
+      slotsOf: () => session.town.jobSlots(),
+      // REQ-DEP-001: departments unlock through Research. Phase 6a stood this in with a
+      // town-stage predicate because Research did not exist; this is the real one, and it
+      // is the whole reason the dependency was injected rather than decided inside
+      // `Departments` — the class did not change when the stand-in was replaced.
+      researchUnlocked: (department: TownDepartmentId) =>
+        session.research.unlocksDepartment(department),
+    });
+
+    this.townJobs = new TownJobs({
+      jobs: this.content.townJobs.jobs,
+      rosterOf: () => this.roster.all(),
+      slotsOf: () => session.town.jobSlots(),
+      // The scorer lives in `ai/`, above `systems/`, so the rota receives it here rather
+      // than importing it — the same inversion `Expedition` uses for the hunter AI.
+      assign: (request) =>
+        assignJobs({
+          ...request,
+          deps: {
+            balance: this.content.balance.town,
+            attributes: this.content.balance.attributes,
+            profileOf: (hunter) => this.buildIdentity.profileOf(hunter),
+          },
+          priorityOf: (department) => session.departments.priority(department as TownDepartmentId),
+          policyModifiersOf: (department) =>
+            session.departments.policyModifiers(department as TownDepartmentId),
+          isUnlocked: (department) =>
+            session.departments.isUnlocked(department as TownDepartmentId),
+        }),
+    });
+
+    // v1.0 §4 wants recovery to vary with food, housing and services. It reads the town
+    // through closures for the same reason: the answer has to be current at the moment a
+    // hunter comes home, not at the moment the session was built.
+    this.recovery = new Recovery({
+      balance: this.content.balance.town,
+      traitsById: this.content.traitsById,
+      housingQuality: () => session.town.housingQuality(),
+      serviceQuality: () => session.town.serviceQuality(),
+      foodAvailable: () => session.town.foodAvailable(),
+      researchScale: () => session.research.recoveryScale(),
+      ticksPerStep: () => session.clock.coarseStepRatio,
+    });
+
+    // REQ-RCT-001: the Recruitment Hall is load-bearing — no building, no pool. Generation
+    // is injected because building a hunter needs the name pools, the potential roller and
+    // the constellation, none of which Recruitment should know about: it decides who shows
+    // up, the composition root decides how a hunter is made.
+    this.recruitment = new Recruitment({
+      content: this.content.recruitment,
+      reputationOf: () => session.reputation.current,
+      hallStanding: () => session.town.grid.countOf('recruitment_hall') > 0,
+      currentTick: () => session.clock.tick,
+      ticksPerStep: () => session.clock.coarseStepRatio,
+      generate: (origin) => {
+        const archetype = weightedPick(
+          session.content.archetypes.map((a) => a.id),
+          origin.archetypeBias,
+          session.streams.recruit,
+        );
+        const personality = weightedPick(
+          session.content.personalities.map((p) => p.id),
+          origin.personalityBias,
+          session.streams.recruit,
+        );
+
+        const hunter = session.generateHunter({
+          enlist: false,
+          namePool: origin.namePool,
+          potentialBias: origin.potentialBias,
+          // Spread conditionally so an absent pick falls through to `generateHunter`'s own
+          // default rather than being passed as an explicit `undefined`.
+          ...(archetype !== undefined ? { archetype } : {}),
+          ...(personality !== undefined ? { personality } : {}),
+        });
+        return { hunter, potential: hunter.potential.composite };
+      },
+    });
+
+    // The same combat system an expedition uses, pointed at the town (REQ-TWN-007/008).
+    // A hunter walking out to the orchard is built exactly as they would be for a black
+    // zone — that identity of construction is the whole content of "town hunting is real".
+    this.townCombat = new TownCombat({
+      balance: this.content.balance.combat,
+      // Read through a getter because the hunter AI is constructed below — the same lazy
+      // read the expedition uses for the policy book, and for the same reason: the town
+      // cluster has to be built before the things that consume its readings.
+      get ai() {
+        return session.hunterAI;
+      },
+      skillOf: (id) => this.content.skillsById.get(asSkillId(id)),
+      statusOf: (id) => this.content.statusesById.get(id),
+      monsterOf: (id) => this.content.monstersById.get(id),
+      combatantFor: (hunterId) =>
+        hunterCombatant(this.roster.require(hunterId), {
+          attributeBalance: this.content.balance.attributes,
+          combatBalance: this.content.balance.combat,
+          profileOf: (hunter) => this.buildIdentity.profileOf(hunter),
+          conditionMultiplier: (hunter) => this.condition.statMultiplier(hunter),
+          equipmentStats: (hunter) => this.equipment.aggregateStats(hunter),
+        }),
+      monsterCombatant,
+    });
+
+    this.defense = new Defense({
+      config: this.content.threats.defense,
+      reputationOf: () => session.reputation.current,
+      currentTick: () => session.clock.tick,
+      ticksPerStep: () => session.clock.coarseStepRatio,
+      rosterOf: () => this.roster.all(),
+      // The posted watch is whoever the ordinary work rota put on a defense-department job.
+      // Defense does not run an assignment pass of its own: a second way of deciding who
+      // does what would drift out of step with the first one within a phase.
+      postedGuardsOf: () =>
+        session.townJobs
+          .all()
+          .filter(
+            (assignment) =>
+              this.content.townJobsById.get(assignment.jobId)?.department === 'defense',
+          )
+          .map((assignment) => assignment.hunterId as HunterId),
+      defenceCapacityOf: () => session.town.capacity().defence,
+    });
+
     // Party planning is pre-combat strategy — the last point the player has direct
     // influence (v1.0 §7). Four is the MVP party size.
     this.partyPlanner = new PartyPlanner({
@@ -350,12 +566,26 @@ export class Session {
       options.personality ?? rng.pick(this.content.personalities)?.id ?? 'stoic',
     );
 
-    const pool = this.content.namePools[0];
+    // REQ-RCT-002: a recruit's origin decides which names they could have. Falls back to the
+    // first pool — the frontier default — so every pre-recruitment caller is unaffected.
+    const pool =
+      (options.namePool !== undefined
+        ? this.content.namePools.find((p) => p.id === options.namePool)
+        : undefined) ?? this.content.namePools[0];
     const given = pool ? (rng.pick(pool.given) ?? 'Hunter') : 'Hunter';
     const family = pool ? (rng.pick(pool.family) ?? 'of the Frontier') : 'of the Frontier';
     const name = options.name ?? `${given} ${family}`;
 
-    const potential = rollPotential(rng, balance.potential, this.content.traits);
+    // An origin's bias is applied to the composite *after* the roll rather than to the roll
+    // itself, so the facets and traits a hunter actually carries stay exactly what the
+    // potential system produced. An origin makes better hunters more likely; it does not
+    // reach in and rewrite what a particular hunter is.
+    const rolled = rollPotential(rng, balance.potential, this.content.traits);
+    const bias = options.potentialBias ?? 1;
+    const potential =
+      bias === 1
+        ? rolled
+        : { ...rolled, composite: Math.min(1, Math.max(0, rolled.composite * bias)) };
 
     const archetype = this.content.archetypesById.get(archetypeId);
     const preferredRole =
@@ -382,6 +612,17 @@ export class Session {
       balance.attributes,
     );
 
+    // A candidate at the Recruitment Hall is a fully-formed hunter who is *not* in the
+    // guild yet, so enlisting is opt-out rather than unconditional.
+    if (options.enlist !== false) {
+      this.roster.add(hunter);
+      this.events.emit('hunter.created', { hunterId: hunter.id, name: hunter.name });
+    }
+    return hunter;
+  }
+
+  /** Put a hunter the guild has decided to take onto the roster. */
+  enlist(hunter: Hunter): Hunter {
     this.roster.add(hunter);
     this.events.emit('hunter.created', { hunterId: hunter.id, name: hunter.name });
     return hunter;
@@ -403,6 +644,14 @@ export class Session {
       audit: this.audit.snapshot(),
       emergencyAuthorisations: this.emergency.snapshot(),
       worldKnowledge: this.worldKnowledge.snapshot(),
+      town: this.town.snapshot(),
+      population: this.population.snapshot(),
+      departments: this.departments.snapshot(),
+      townJobs: this.townJobs.snapshot(),
+      reputation: this.reputation.snapshot(),
+      research: this.research.snapshot(),
+      recruitment: this.recruitment.snapshot(),
+      defense: this.defense.snapshot(),
     };
   }
 
@@ -417,10 +666,48 @@ export class Session {
     this.audit.restore(payload.audit ?? []);
     this.emergency.restore(payload.emergencyAuthorisations ?? []);
     this.worldKnowledge.restore(payload.worldKnowledge);
+    // Order matters here in one place only: the town's stage is stored rather than derived
+    // (REQ-TWN-002), so restoring it after the population cannot lower it either way — but
+    // restoring the rota last means it is read back against a town that is already whole.
+    this.town.restore(payload.town);
+    this.population.restore(payload.population);
+    this.reputation.restore(payload.reputation);
+    this.departments.restore(payload.departments);
+    this.research.restore(payload.research);
+    this.recruitment.restore(payload.recruitment);
+    this.defense.restore(payload.defense);
+    this.townJobs.restore(payload.townJobs);
   }
 
   dispose(): void {
     this.chronicle.dispose();
     this.events.clear();
   }
+}
+
+/**
+ * Weighted pick over ids, where the weights are *biases* on an otherwise flat draw.
+ *
+ * Used by recruitment (REQ-RCT-002). An id with no entry keeps weight 1, which is what makes
+ * a bias a bias rather than a filter: an origin that never mentions Adepts still produces
+ * them, just at the base rate. Returning `undefined` when there is nothing to pick lets the
+ * caller fall back to its own default rather than inventing one here.
+ */
+function weightedPick(
+  ids: readonly string[],
+  bias: Readonly<Record<string, number>>,
+  rng: { next(): number },
+): string | undefined {
+  if (ids.length === 0) return undefined;
+
+  const weights = ids.map((id) => Math.max(0, bias[id] ?? 1));
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  if (total <= 0) return ids[0];
+
+  let roll = rng.next() * total;
+  for (let i = 0; i < ids.length; i++) {
+    roll -= weights[i]!;
+    if (roll <= 0) return ids[i];
+  }
+  return ids[ids.length - 1];
 }

@@ -46,6 +46,20 @@ export interface DomainEventMap {
 
   'loot.rareFound': { hunterId: HunterId; itemId: ItemId; rarity: string };
   'expedition.completed': { hunterId: HunterId; expeditionId: string; durationSeconds: number };
+
+  /**
+   * The town grew into a new stage (REQ-TWN-002).
+   *
+   * Guild-scoped rather than hunter-scoped, which makes it the first event here without a
+   * `hunterId`. The Chronicle is per-hunter and deliberately ignores it — a town becoming a
+   * Fortified Town is the *guild's* history, and §19's "the town is a physical Chronicle"
+   * means the town records it by looking like one, not by writing into anyone's record.
+   */
+  'town.stageReached': { stageId: string; name: string };
+  'town.buildingPlaced': { buildingId: string; instanceId: string; x: number; y: number };
+  'town.populationChanged': { population: number; delta: number };
+  /** Guild technology, not hunter experience — REQ-RES-002 keeps the two ledgers apart. */
+  'research.completed': { nodeId: string; name: string };
 }
 
 export type DomainEventName = keyof DomainEventMap;

@@ -14,7 +14,7 @@ Every entry names what is owed, why it was deferred, and what triggers repayment
 | Behavior memory | `systems/hunter/` | Phase 5+ | first behavior-memory-driven decision |
 | ~~`zone.firstEntered` never fires~~ | — | — | **done in Phase 5** — `WorldKnowledge` emits it on a region's first entry |
 | `no_rescues` and `save_ultimates` orders have no dedicated scenario coverage | `tests/scenarios.test.ts` | next AI pass |
-| Friendship | `systems/hunter/` | Phase 6 | recruitment lands (the Recruitment Hall is a Phase 6 building) |
+| Friendship | `systems/hunter/` | Phase 6b | recruitment lands (the Recruitment Hall stands and staffs jobs; its dynamic pool does not exist yet) |
 
 ## Balance values needing simulation calibration
 
@@ -30,7 +30,7 @@ All are data values; none require code changes to retune.
 | Threat decay rate, taunt magnitude | `balance/combat.json` | Phase 5 volume testing |
 | The four new AI weights, `retreatUrgencyScale` and `disengageSeconds` — calibrated by hand against the scenarios | `balance/combat.json` | simulation calibration |
 | Monster stat lines — trash is trivial at the region's recommended level, so continue/retreat only bites on an underlevelled party | `combat/monsters.json` | Phase 4 balance pass |
-| Injury and recovery durations — flat placeholders until housing/food/services exist | `app/GuildCommands` | Phase 6 |
+| ~~Injury and recovery durations — flat placeholders~~ | — | **done in Phase 6a** — `systems/town/Recovery` computes both from the live town; the two constants are gone |
 | ~~Rescue risk/benefit threshold~~ | — | **done in Phase 4** — `HunterAI.rescueViability`, covered by §140-F |
 | Build-identity axis weights beyond the §16 ratios | `balance/build-identity.json` | Phase 4 behavioral differentiation |
 
@@ -85,3 +85,28 @@ A null object satisfies the compiler but proves nothing about whether the consum
 | Wall-clock or frame-delta reads in gameplay | DL-003, risk R1 | architecture test |
 | Department budget reappearing | REQ-DEP-003 | code review; explicitly forbidden |
 | Capability collapsed to a scalar | REQ-CAP-001 | code review each phase |
+
+## Deferred out of Phase 6a
+
+| Item | Requirement | Deferred to | Why |
+|---|---|---|---|
+| ~~Town hunting~~ | — | **done in Phase 6b** — `sim/town/TownCombat.hunt` runs a real `CombatEncounter`; watching it a tick at a time is Phase 9 |
+| ~~Town defense~~ | — | **done in Phase 6b** — building damage is real, and DL-037 held: a wrecked granary does not demote a Village |
+| ~~Recruitment Hall~~ | — | **done in Phase 6b** — pool, both refresh routes, five origins and a Guild Fit analysis with reasons, gains and concerns |
+| ~~Research tree~~ | — | **done in Phase 6b** — three branches, symmetric conflicts, and the real department-unlock predicate |
+| ~~Department unlock keys off town stage~~ | — | **done in Phase 6b** — replaced by the real research predicate; `Departments` did not change, which was the point of injecting it |
+| Building costs are computed and displayed but never charged | REQ-ECO-* | Phase 7 | same treatment as refinement in Phase 2 — owning half a ledger here is the temporary architecture §126 forbids |
+| `JobOutput.materials` is authored and produced but goes nowhere | REQ-ECO-* | Phase 7 | the economy owns the ledger; jobs will not need rewriting when it lands |
+| ~~Town defence capacity unused~~ | — | **done in Phase 6b** — the Guild AI weighs it when deciding whether the posted watch is enough |
+| The Shrine provides comfort only | REQ-TWN-005 | open | v1.0 §20 names exact resurrection methods as an open design question, so the building deliberately does not invent one |
+| Population growth ignores the Chronicle | REQ-TWN-003 | Phase 8 | §60 ties growth to reputation, events and prosperity — all three exist; "events" as a town-event system does not |
+
+## Deferred out of Phase 6b
+
+| Item | Requirement | Deferred to | Why |
+|---|---|---|---|
+| Watching a town hunt or a defense as it happens | REQ-TWN-007, §7 | Phase 9 | `CombatEncounter.step` is public precisely so a renderer can drive it a tick at a time; nothing does yet, for expeditions either |
+| Recruit fees, the research reset resource, and building repair costs | REQ-ECO-* | Phase 7 | computed and displayed, charged nowhere — same treatment as every other price |
+| Friendship | `systems/hunter/` | Phase 8 | recruitment lands, but friendship is behaviour memory rather than a recruitment feature |
+| The Shrine still provides comfort and no revival | REQ-TWN-005 | open | v1.0 §20 leaves exact resurrection methods an open design question; inventing one here would be the wrong kind of initiative |
+| Departments have no per-job lever | REQ-DEP-004 | if it proves needed | department priority separates departments, not jobs within one. `outputValue` (DL-043) covers the case that motivated it; a finer lever would sit below the altitude the design works at |

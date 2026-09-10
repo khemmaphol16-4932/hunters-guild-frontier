@@ -1,0 +1,83 @@
+{
+  "$comment": "REQ-DEP-001/002/004/005. The five departments, the metrics their performance is read on, and the policy presets the player picks from.\n\nThere is no budget field here and there never will be: REQ-DEP-003 forbids a Department Budget system (conflict A10), tests/architecture.test.ts fails the build if the identifier reappears, and parseTownBalance rejects any key matching /budget/i. A department is staff, a head and a policy.\n\nA department policy is a *weight* modifier, never a filter. That is not a stylistic choice — v1.0 §2.1 places department policy at rank 4, below AI optimization at rank 3 and far below guild policy at rank 2, so a department that could veto an assignment would be outranking the things above it. Modifying weights is the only shape a rank-4 preference can legally take, and it is why `modifies` names assignment weights rather than eligibility.",
+  "departments": [
+    {
+      "id": "hunter",
+      "name": "Hunter Department",
+      "description": "The people who go out. Drills, escorts, and sitting up with the ones who came back worse.",
+      "unlockedFromStart": true
+    },
+    {
+      "id": "defense",
+      "name": "Defense Department",
+      "description": "The wall, the gate, and whoever is looking the right way tonight.",
+      "unlockedFromStart": true
+    },
+    {
+      "id": "resource",
+      "name": "Resource Department",
+      "description": "Timber, stone and the food that keeps the town from emptying.",
+      "unlockedFromStart": true
+    },
+    {
+      "id": "crafting",
+      "name": "Crafting Department",
+      "description": "Everything that came back bent, made straight again.",
+      "unlockedFromStart": false
+    },
+    {
+      "id": "research",
+      "name": "Research Department",
+      "description": "Turning expedition notes into things the guild knows for good.",
+      "unlockedFromStart": true,
+      "$note": "Open from the start, and it has to be. REQ-DEP-001 unlocks departments through research — but research points come only from this department's own output, so gating it behind a research node was a deadlock: no department, no points, no way to open the department. A new guild's single archive post in the Guild Hall is the bootstrap. `crossValidateResearch` now fails the build if this is ever set false."
+    }
+  ],
+  "metrics": {
+    "$comment": "REQ-DEP-004 requires a multi-metric dashboard. One number per department would hide the trade-off the player is making — a fully staffed department run by nobody and a half-staffed one under a good head should not read the same. Each metric is reported in its own right and never collapsed into a single score.",
+    "staffing": "How much of the department's available work is actually being done",
+    "output": "What that work produces, per step",
+    "leadership": "Whether it is being run by a qualified head, a deputy, or the Guild AI",
+    "fit": "How well suited its staff are to the work they are doing"
+  },
+  "policies": [
+    {
+      "id": "steady",
+      "name": "Steady",
+      "description": "Assign the best-suited people and leave them there.",
+      "modifies": {}
+    },
+    {
+      "id": "push",
+      "name": "Push output",
+      "description": "Take the most capable hands regardless of what they would rather be doing, and accept the fatigue.",
+      "modifies": {
+        "attributeFit": 1.5,
+        "departmentPreference": 0.4,
+        "rolePreference": 0.4,
+        "fatiguePenalty": 0.5
+      }
+    },
+    {
+      "id": "conserve",
+      "name": "Conserve people",
+      "description": "Keep the roster fresh. Tired hunters stay off the work rota even if the work suffers.",
+      "modifies": {
+        "fatiguePenalty": 2,
+        "moraleFit": 1.6,
+        "attributeFit": 0.8
+      }
+    },
+    {
+      "id": "respect_wishes",
+      "name": "Respect wishes",
+      "description": "Put people where they asked to be. Morale over throughput.",
+      "modifies": {
+        "departmentPreference": 1.4,
+        "rolePreference": 1.4,
+        "moraleFit": 1.4
+      },
+      "$note": "The strongest the preferences are allowed to get. At these multipliers they reach 0.49 against attributeFit's 0.5 — as close to decisive as a rank-4 preference may legally come, and still strictly less, so a hunter who is hopeless at the work and asked for it loses to one who is good at it and asked for something else. parseDepartments enforces that inequality at load time rather than trusting this note, and tests/town.test.ts sweeps all four presets to prove DL-008 survives every one."
+    }
+  ]
+}

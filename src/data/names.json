@@ -1,8 +1,9 @@
 {
-  "$comment": "Hunter name pools. Regional pools (REQ-RCT-002 — different regions produce clearly different hunter pools) arrive in Phase 3; this is the single default pool the prototype recruits from.",
+  "$comment": "Hunter name pools, one per origin (REQ-RCT-002 — different regions produce clearly different hunter pools). Phase 1 shipped a single `frontier` pool and named the gap in TECH_DEBT; this repays it.\n\nNames alone would not be enough — `town/origins.json` also biases archetype, personality and potential, because pools that differ only in spelling read as the same pool. But names are what the player actually notices first, so they are worth authoring rather than generating.",
   "pools": [
     {
       "id": "frontier",
+      "$note": "The default pool. Anything generated without an origin still lands here.",
       "given": [
         "Aldric", "Bryn", "Cassia", "Doran", "Elsa", "Fenn", "Gerda", "Halvor",
         "Isolde", "Jorund", "Ketil", "Liesel", "Maren", "Nils", "Orla", "Perrin",
@@ -12,6 +13,55 @@
         "Ashdown", "Brackwater", "Coldfell", "Drakemoor", "Eastmarch", "Fernhollow",
         "Greyholt", "Hartwind", "Ironvale", "Karsthold", "Lowmarsh", "Mirefen",
         "Northgate", "Oakenshield", "Pinecross", "Ravensmoot", "Stonebrook", "Thornbury"
+      ]
+    },
+    {
+      "id": "marshfolk",
+      "$note": "Soft consonants, water and weather. Family names are places you could drown in.",
+      "given": [
+        "Alwen", "Ceri", "Enid", "Ffion", "Idris", "Lowri", "Meredith", "Nesta",
+        "Owain", "Rhian", "Sioned", "Tegan", "Wyn", "Eirlys", "Gwilym", "Heledd"
+      ],
+      "family": [
+        "Reedmere", "Sallowbank", "Duskwater", "Willowfen", "Lampreys", "Silt",
+        "Otterhythe", "Nettlebed", "Tidewash", "Heronsford", "Bogmyrtle", "Slackwater"
+      ]
+    },
+    {
+      "id": "highland",
+      "$note": "Hard, short, and mostly consonant. Family names are weather and stone.",
+      "given": [
+        "Bramm", "Corrin", "Dagny", "Eirik", "Frida", "Gunnar", "Hild", "Ingvar",
+        "Kjell", "Magnhild", "Ordulf", "Rurik", "Sigrun", "Torvald", "Unnr", "Vidar"
+      ],
+      "family": [
+        "Craghold", "Stormfast", "Blackscree", "Ironbrow", "Windbite", "Snowmantle",
+        "Hollowcrag", "Bitterpeak", "Sternvald", "Frostgate", "Grimtarn", "Shalefall"
+      ]
+    },
+    {
+      "id": "collegium",
+      "$note": "Longer, latinate, faintly pleased with itself. Family names are institutions.",
+      "given": [
+        "Aurelia", "Benedict", "Cassian", "Demetria", "Evander", "Faustina",
+        "Gregor", "Hypatia", "Ignatius", "Juliana", "Lucian", "Marcellus",
+        "Octavia", "Priscian", "Theodora", "Valerius"
+      ],
+      "family": [
+        "Vanterre", "Aldebrand", "Quillory", "Sennacourt", "Marbury", "Lexworth",
+        "Halloran", "Provence", "Auberon", "Casterly", "Dunhallow", "Veritas"
+      ]
+    },
+    {
+      "id": "farroad",
+      "$note": "From no single place. The pool is deliberately heterogeneous — that is the point of it.",
+      "given": [
+        "Ashen", "Baruk", "Cinder", "Dova", "Emrys", "Haruki", "Ilse", "Jarek",
+        "Kestrel", "Lior", "Mahir", "Noor", "Rasha", "Solveig", "Tamsin", "Zev"
+      ],
+      "family": [
+        "of the Long Road", "Nowhere-born", "Saltwind", "Ninefold", "Emberwake",
+        "the Unclaimed", "Farwander", "Threadbare", "Lastlight", "Milesend"
       ]
     }
   ]

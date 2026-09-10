@@ -25,6 +25,14 @@ import worldJson from './world/regions.json';
 import eventsJson from './world/events.json';
 import combatBalanceJson from './balance/combat.json';
 
+import buildingsJson from './town/buildings.json';
+import jobsJson from './town/jobs.json';
+import departmentsJson from './town/departments.json';
+import researchJson from './town/research.json';
+import originsJson from './town/origins.json';
+import threatsJson from './town/threats.json';
+import townBalanceJson from './balance/town.json';
+
 import raritiesJson from './items/rarities.json';
 import itemTypesJson from './items/item-types.json';
 import substatsJson from './items/substats.json';
@@ -92,6 +100,30 @@ import {
 } from './combatSchema.js';
 import { ZONE_TIERS } from './combatSchema.js';
 import {
+  parseBuildings,
+  parseDepartments,
+  parseJobs,
+  parseTownBalance,
+  type BuildingData,
+  type BuildingDef,
+  type DepartmentData,
+  type JobData,
+  type JobDef,
+  type TownBalance,
+} from './townSchema.js';
+import { parseResearch, type ResearchData, type ResearchNodeDef } from './researchSchema.js';
+import {
+  crossValidateRecruitment,
+  parseRecruitment,
+  type OriginDef,
+  type RecruitData,
+} from './recruitSchema.js';
+import {
+  crossValidateThreats,
+  parseThreats,
+  type ThreatData,
+} from './threatSchema.js';
+import {
   parseCards,
   parseItemTypes,
   parseLootBalance,
@@ -158,6 +190,20 @@ export interface GameContent {
   /** v1.0 §2.1 canonical precedence, as data rather than as source order. */
   readonly policyPrecedence: PolicyPrecedence;
 
+  /** The town: what can be built, what work exists, and how it is managed (REQ-TWN-*). */
+  readonly town: BuildingData;
+  readonly buildingsById: ReadonlyMap<string, BuildingDef>;
+  readonly townJobs: JobData;
+  readonly townJobsById: ReadonlyMap<string, JobDef>;
+  readonly departments: DepartmentData;
+  readonly research: ResearchData;
+  readonly researchById: ReadonlyMap<string, ResearchNodeDef>;
+  /** Where recruits come from, and how the pool refreshes (REQ-RCT-001/002). */
+  readonly recruitment: RecruitData;
+  readonly originsById: ReadonlyMap<string, OriginDef>;
+  /** Town hunting grounds and the things that come to the walls (REQ-TWN-007/008). */
+  readonly threats: ThreatData;
+
   readonly balance: {
     readonly attributes: AttributeBalance;
     readonly mastery: MasteryBalance;
@@ -168,7 +214,95 @@ export interface GameContent {
     readonly refinement: RefinementBalance;
     readonly loot: LootBalance;
     readonly combat: CombatBalance;
+    readonly town: TownBalance;
   };
+}
+
+/**
+ * Town referential integrity.
+ *
+ * Every failure here is silent rather than loud, which is why it is worth checking:
+ *
+ *   - a building granting slots for a job that does not exist gives the town posts nobody
+ *     can be assigned to, so the building looks built and does nothing;
+ *   - a job no building offers is unreachable work — it would show in a department's slot
+ *     count as zero forever with no indication why;
+ *   - a building gated behind a town stage that does not exist can never be built, and
+ *     nothing fails: the player simply never sees it become available (the same class of bug
+ *     as an unreachable region, DL-033);
+ *   - a department with no job at all would report 0% staffing permanently and read as
+ *     broken rather than as empty.
+ */
+function crossValidateTown(content: {
+  town: BuildingData;
+  jobs: JobData;
+  departments: DepartmentData;
+  balance: TownBalance;
+}): void {
+  const jobIds = new Set(content.jobs.jobs.map((j) => j.id));
+  const stageIds = new Set(content.balance.stages.map((s) => s.id));
+  const offered = new Set<string>();
+
+  for (const building of content.town.buildings) {
+    for (const tier of building.tiers) {
+      for (const jobId of Object.keys(tier.jobs)) {
+        if (!jobIds.has(jobId)) {
+          throw new ContentValidationError(
+            `buildings.json:${building.id}.tiers[${tier.tier}].jobs`,
+            `offers work "${jobId}", which is not a job`,
+          );
+        }
+        offered.add(jobId);
+      }
+    }
+
+    const unlock = building.unlock;
+    if (unlock?.stage !== undefined && !stageIds.has(unlock.stage)) {
+      throw new ContentValidationError(
+        `buildings.json:${building.id}.unlock.stage`,
+        `gated behind town stage "${unlock.stage}", which does not exist`,
+      );
+    }
+    if (unlock?.reputation !== undefined && unlock.reputation > content.balance.reputation.max) {
+      throw new ContentValidationError(
+        `buildings.json:${building.id}.unlock.reputation`,
+        `needs ${unlock.reputation} reputation, above the maximum of ` +
+          `${content.balance.reputation.max}, so it could never be built`,
+      );
+    }
+  }
+
+  for (const job of content.jobs.jobs) {
+    if (!offered.has(job.id)) {
+      throw new ContentValidationError(
+        `jobs.json:${job.id}`,
+        'no building offers this work at any tier, so nobody could ever be assigned to it',
+      );
+    }
+  }
+
+  for (const department of content.departments.departments) {
+    if (!content.jobs.jobs.some((job) => job.department === department.id)) {
+      throw new ContentValidationError(
+        `jobs.json`,
+        `no job belongs to the ${department.id} department, so it can never be staffed`,
+      );
+    }
+  }
+
+  // REQ-TWN-003's pressure has to be *answerable*. A town whose buildings could never cover
+  // the starting population's housing would open on a crisis the player cannot fix, which
+  // reads as a broken game rather than as a challenge.
+  const bestHousing = content.town.buildings.reduce(
+    (best, b) => Math.max(best, b.tiers.reduce((sum, t) => sum + t.capacity.housing, 0)),
+    0,
+  );
+  if (bestHousing <= 0) {
+    throw new ContentValidationError(
+      'buildings.json',
+      'no building provides housing, so REQ-TWN-003 housing pressure could never be relieved',
+    );
+  }
 }
 
 /**
@@ -287,6 +421,72 @@ function crossValidateWorld(content: {
         'no region matches its zone tiers and hazards, so it can never occur',
       );
     }
+  }
+}
+
+/**
+ * Research referential integrity.
+ *
+ * Research's whole job is to unlock things, so every id it names has to exist — a node
+ * promising a department or a building that does not is a node the player completes and
+ * receives nothing for, with nothing failing anywhere.
+ *
+ * The last check is the one worth having: a department that research is *supposed* to open
+ * but which no node opens would be permanently shut. That is the exact bug Phase 5 shipped
+ * with reputation and Phase 6a stood in for with a town-stage predicate, and it is invisible
+ * without a check like this one.
+ */
+function crossValidateResearch(content: {
+  research: ResearchData;
+  town: BuildingData;
+  departments: DepartmentData;
+}): void {
+  const buildingIds = new Set(content.town.buildings.map((b) => b.id));
+  const departmentIds = new Set(content.departments.departments.map((d) => d.id));
+  const opened = new Set<string>();
+
+  for (const node of content.research.nodes) {
+    for (const effect of node.effects) {
+      if (effect.kind === 'building' && !buildingIds.has(String(effect.value))) {
+        throw new ContentValidationError(
+          `research.json:${node.id}`,
+          `unlocks building "${String(effect.value)}", which does not exist`,
+        );
+      }
+      if (effect.kind === 'department') {
+        if (!departmentIds.has(String(effect.value) as never)) {
+          throw new ContentValidationError(
+            `research.json:${node.id}`,
+            `unlocks department "${String(effect.value)}", which does not exist`,
+          );
+        }
+        opened.add(String(effect.value));
+      }
+    }
+  }
+
+  for (const department of content.departments.departments) {
+    if (department.unlockedFromStart) continue;
+    if (!opened.has(department.id)) {
+      throw new ContentValidationError(
+        'research.json',
+        `the ${department.id} department is not open from the start and no research opens it, ` +
+          'so it could never be used (REQ-DEP-001)',
+      );
+    }
+  }
+
+  // The bootstrap, and it is a real deadlock rather than a theoretical one — it shipped and
+  // was found by playing: research points come only from the Research Department's output,
+  // so gating that department behind a research node means no department, no points, and no
+  // way to ever open the department. Every other department may be gated; this one cannot.
+  const researchDepartment = content.departments.departments.find((d) => d.id === 'research');
+  if (researchDepartment && !researchDepartment.unlockedFromStart) {
+    throw new ContentValidationError(
+      'departments.json:research',
+      'the Research Department cannot be gated behind research — points come only from its ' +
+        'own output, so a new guild could never research anything (REQ-RES-002)',
+    );
   }
 }
 
@@ -445,6 +645,7 @@ export function loadContent(): GameContent {
   const skills = parseSkills(skillsJson);
   const personalities = parsePersonalities(personalitiesJson);
   const traits = parseTraits(traitsJson);
+  const namePools = parseNamePools(namesJson);
 
   const rarities = parseRarities(raritiesJson);
   const itemTypes = parseItemTypes(itemTypesJson);
@@ -458,9 +659,33 @@ export function loadContent(): GameContent {
   const world = parseWorld(worldJson);
   const events = parseEvents(eventsJson);
 
+  const townBalance = parseTownBalance(townBalanceJson);
+  const town = parseBuildings(buildingsJson);
+  const townJobs = parseJobs(jobsJson);
+  // Departments are parsed against the assignment weights, because the DL-008 inequality
+  // ("a preference is never a veto") is a relationship between the two files.
+  const departments = parseDepartments(departmentsJson, townBalance.assignment.weights);
+  const research = parseResearch(researchJson);
+  const recruitment = parseRecruitment(originsJson);
+  const threats = parseThreats(threatsJson);
+
   crossValidateConstellation({ archetypes, regions, constellation, skills, itemTypes });
   crossValidateItems({ rarities, itemTypes, substats, cards, uniqueEffects, skills });
   crossValidateWorld({ world, monsters, statuses, events });
+  crossValidateTown({ town, jobs: townJobs, departments, balance: townBalance });
+  crossValidateResearch({ research, town, departments });
+  crossValidateRecruitment({
+    recruitment,
+    namePoolIds: new Set(namePools.map((p) => p.id)),
+    archetypeIds: new Set(archetypes.map((a) => a.id)),
+    personalityIds: new Set(personalities.map((p) => p.id)),
+    reputationMax: townBalance.reputation.max,
+  });
+  crossValidateThreats({
+    threats,
+    monsterIds: new Set(monsters.map((m) => m.id)),
+    reputationMax: townBalance.reputation.max,
+  });
 
   cached = Object.freeze({
     archetypes,
@@ -477,7 +702,7 @@ export function loadContent(): GameContent {
     personalitiesById: new Map(personalities.map((p) => [p.id, p])),
     traits,
     traitsById: new Map(traits.map((t) => [t.id, t])),
-    namePools: parseNamePools(namesJson),
+    namePools,
 
     rarities,
     raritiesById: new Map(rarities.rarities.map((r) => [r.id, r])),
@@ -502,6 +727,17 @@ export function loadContent(): GameContent {
 
     policyPrecedence: parsePolicyPrecedence(policyPrecedenceJson),
 
+    town,
+    buildingsById: new Map(town.buildings.map((b) => [b.id, b])),
+    townJobs,
+    townJobsById: new Map(townJobs.jobs.map((j) => [j.id, j])),
+    departments,
+    research,
+    researchById: new Map(research.nodes.map((n) => [n.id, n])),
+    recruitment,
+    originsById: new Map(recruitment.origins.map((o) => [o.id, o])),
+    threats,
+
     balance: {
       attributes: parseAttributeBalance(attributeBalanceJson),
       mastery: parseMasteryBalance(masteryBalanceJson),
@@ -512,6 +748,7 @@ export function loadContent(): GameContent {
       refinement: parseRefinementBalance(refinementBalanceJson),
       loot: parseLootBalance(lootBalanceJson),
       combat: parseCombatBalance(combatBalanceJson),
+      town: townBalance,
     },
   });
 

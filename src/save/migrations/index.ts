@@ -209,7 +209,135 @@ const v5ToV6: Migration = {
   },
 };
 
-export const MIGRATIONS: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6];
+/**
+ * v6 → v7: the town exists (REQ-TWN-001/002/003, REQ-DEP-*).
+ *
+ * A v6 guild had no town, so the honest migration is an *empty* one — no buildings, the
+ * starting population, no department heads, nobody on the work rota, and zero reputation.
+ * Every one of those systems restores a missing snapshot to its own configured default, so
+ * writing the empty shapes here rather than omitting the keys keeps the payload's *type*
+ * correct without asserting anything about the guild's history.
+ *
+ * Two things this deliberately does not do.
+ *
+ * It does not place a Guild Hall. A v6 save loaded into v7 arrives with an empty grid, and
+ * the composition root builds the starting town for a *new* guild only — because placing a
+ * building during migration would put it somewhere the player did not choose, on a grid
+ * whose dimensions come from balance data that may since have changed.
+ *
+ * It does not infer reputation from the save's expedition history. The Chronicle knows how
+ * many expeditions a v6 guild ran and it would be easy to back-calculate a number from it,
+ * which is exactly why it is worth refusing: reputation's formula is expected to be retuned
+ * (it is a Phase 7 balance item), and a migration that computed it would bake today's
+ * constants into every old save forever. A v6 guild starts unknown and earns it again.
+ */
+const v6ToV7: Migration = {
+  from: 6,
+  to: 7,
+  describe: 'add the town, its population, departments, work rota and guild reputation',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) {
+      throw new SaveMigrationError('v6 payload is not an object');
+    }
+    return {
+      ...(payload as Record<string, unknown>),
+      town: { grid: { placements: [], nextInstance: 1 }, highestStageIndex: 0 },
+      // `population` is deliberately *absent* rather than zeroed. `Population.restore`
+      // falls back to the configured starting population when the snapshot is missing,
+      // which is the right reading for a guild that always had people living around it;
+      // writing `{ count: 0 }` would restore a town with nobody in it, no demand, and a
+      // stage ladder that could never advance.
+      departments: { departments: [] },
+      townJobs: { assignments: [] },
+      reputation: { value: 0, recent: [] },
+    };
+  },
+};
+
+/**
+ * v7 → v8: the guild learns things (REQ-RES-001/002).
+ *
+ * Empty, and that is the only defensible reading. A v7 guild researched nothing, so it has
+ * completed nothing and — more importantly — has *foreclosed* nothing. Research conflicts
+ * are permanent, so a migration that guessed at completed nodes would not merely invent
+ * progress, it would silently rule out branches the player never chose against.
+ *
+ * Note that this is not the same as the v6→v7 population case. There, an absent snapshot
+ * meant "use the configured default", because a guild always had people. Here the empty
+ * snapshot *is* the truth: a guild that predates research has genuinely learned nothing.
+ */
+const v7ToV8: Migration = {
+  from: 7,
+  to: 8,
+  describe: 'add guild research',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) {
+      throw new SaveMigrationError('v7 payload is not an object');
+    }
+    return {
+      ...(payload as Record<string, unknown>),
+      research: { completed: [], active: undefined, progress: 0 },
+    };
+  },
+};
+
+/**
+ * v8 -> v9: the Recruitment Hall.
+ *
+ * An empty pool with the refresh due immediately, which is exactly right: a v8 guild had no
+ * hall, and if it builds one the first refresh should happen at once rather than after a
+ * wait the player cannot see the reason for.
+ */
+const v8ToV9: Migration = {
+  from: 8,
+  to: 9,
+  describe: 'add the recruitment pool',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) {
+      throw new SaveMigrationError('v8 payload is not an object');
+    }
+    return {
+      ...(payload as Record<string, unknown>),
+      recruitment: { candidates: [], nextRefreshTick: 0 },
+    };
+  },
+};
+
+/**
+ * v9 -> v10: town defense.
+ *
+ * The policy is left absent so `Defense.restore` falls back to the *authored* default
+ * rather than to a hardcoded one — the same reasoning as the v6→v7 population case. The
+ * threat timer is likewise absent, which means a migrated guild gets the full grace period
+ * again: it has never had a wall tested, and starting its clock mid-cycle would attack it
+ * for reasons it could not see.
+ */
+const v9ToV10: Migration = {
+  from: 9,
+  to: 10,
+  describe: 'add town defense: guard policy and the threat timer',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) {
+      throw new SaveMigrationError('v9 payload is not an object');
+    }
+    return {
+      ...(payload as Record<string, unknown>),
+      defense: { threatsFaced: 0, threatsHeld: 0 },
+    };
+  },
+};
+
+export const MIGRATIONS: readonly Migration[] = [
+  v1ToV2,
+  v2ToV3,
+  v3ToV4,
+  v4ToV5,
+  v5ToV6,
+  v6ToV7,
+  v7ToV8,
+  v8ToV9,
+  v9ToV10,
+];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */
 export function migratePayload(
