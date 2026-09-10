@@ -27,8 +27,9 @@ import type { ReputationSnapshot } from '../systems/town/Reputation.js';
 import type { ResearchSnapshot } from '../systems/town/Research.js';
 import type { RecruitmentSnapshot } from '../systems/town/Recruitment.js';
 import type { DefenseSnapshot } from '../systems/town/Defense.js';
+import type { ResourcesSnapshot } from '../systems/economy/Resources.js';
 
-export const CURRENT_SAVE_VERSION = 10;
+export const CURRENT_SAVE_VERSION = 11;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -184,7 +185,12 @@ export interface SavePayloadV10 extends SavePayloadV9 {
   readonly defense: DefenseSnapshot;
 }
 
-export type CurrentSavePayload = SavePayloadV10;
+/** v11 — the Phase 7 guild economy begins with one authoritative resource ledger. */
+export interface SavePayloadV11 extends SavePayloadV10 {
+  readonly resources: ResourcesSnapshot;
+}
+
+export type CurrentSavePayload = SavePayloadV11;
 
 export interface Migration {
   readonly from: number;

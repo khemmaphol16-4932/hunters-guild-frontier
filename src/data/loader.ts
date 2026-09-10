@@ -32,6 +32,8 @@ import researchJson from './town/research.json';
 import originsJson from './town/origins.json';
 import threatsJson from './town/threats.json';
 import townBalanceJson from './balance/town.json';
+import resourcesJson from './economy/resources.json';
+import { parseEconomy, type EconomyData, type ResourceDef } from './economySchema.js';
 
 import raritiesJson from './items/rarities.json';
 import itemTypesJson from './items/item-types.json';
@@ -203,6 +205,8 @@ export interface GameContent {
   readonly originsById: ReadonlyMap<string, OriginDef>;
   /** Town hunting grounds and the things that come to the walls (REQ-TWN-007/008). */
   readonly threats: ThreatData;
+  readonly economy: EconomyData;
+  readonly resourcesById: ReadonlyMap<string, ResourceDef>;
 
   readonly balance: {
     readonly attributes: AttributeBalance;
@@ -668,6 +672,7 @@ export function loadContent(): GameContent {
   const research = parseResearch(researchJson);
   const recruitment = parseRecruitment(originsJson);
   const threats = parseThreats(threatsJson);
+  const economy = parseEconomy(resourcesJson);
 
   crossValidateConstellation({ archetypes, regions, constellation, skills, itemTypes });
   crossValidateItems({ rarities, itemTypes, substats, cards, uniqueEffects, skills });
@@ -737,6 +742,8 @@ export function loadContent(): GameContent {
     recruitment,
     originsById: new Map(recruitment.origins.map((o) => [o.id, o])),
     threats,
+    economy,
+    resourcesById: new Map(economy.resources.map((resource) => [resource.id, resource])),
 
     balance: {
       attributes: parseAttributeBalance(attributeBalanceJson),

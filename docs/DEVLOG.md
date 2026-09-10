@@ -348,3 +348,15 @@ The Recruitment Hall reads as intended too. Candidates arrive from named places 
 ## Open
 
 Building costs, recruit fees and the research reset resource are all computed and displayed and charged nowhere — Phase 7 owns the ledger. The world boss is still unplaced. The Shrine still provides comfort and no revival, because v1.0 §20 leaves resurrection an open design question and inventing one here would be the wrong kind of initiative.
+
+---
+
+# Phase 7a — The ledger
+
+Phase 7 begins at the seam every earlier phase deliberately left alone: one authoritative guild ledger. `systems/economy/Resources` owns the balances and applies multi-resource debits and credits atomically, so a failed purchase cannot consume only half its inputs. The resource catalogue and founding grant live in `data/economy/resources.json`; TypeScript owns no balance constants.
+
+Save **v11** persists the ledger and migrates old saves without inventing production they never earned. New guilds receive the authored founding grant; migrated pre-economy guilds begin with zero balances. 496 tests green, typecheck and production build clean.
+
+## Next
+
+Wire the costs and outputs already computed by refinement, buildings, recruitment, research reset and town jobs through the ledger. Only after every existing price is real should crafting and the market add new transaction paths.

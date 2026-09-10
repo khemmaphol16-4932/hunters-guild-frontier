@@ -1,0 +1,12 @@
+{
+  "$comment": "REQ-ECO-001/002: the economy starts with one trade currency and a deliberately small resource set. Values and starting balances are content, never TypeScript constants.",
+  "resources": [
+    { "id": "gold", "name": "Gold", "category": "currency", "starting": 1500 },
+    { "id": "food", "name": "Provisions", "category": "core", "starting": 120 },
+    { "id": "timber", "name": "Timber", "category": "construction", "starting": 80 },
+    { "id": "stone", "name": "Stone", "category": "construction", "starting": 60 },
+    { "id": "iron", "name": "Iron", "category": "crafting", "starting": 30 },
+    { "id": "essence", "name": "Monster Essence", "category": "specialized", "starting": 0 },
+    { "id": "astral_shard", "name": "Astral Shard", "category": "rare", "starting": 0 }
+  ]
+}

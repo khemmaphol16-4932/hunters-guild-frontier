@@ -327,6 +327,20 @@ const v9ToV10: Migration = {
   },
 };
 
+const v10ToV11: Migration = {
+  from: 10,
+  to: 11,
+  describe: 'add the authoritative guild resource ledger',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) {
+      throw new SaveMigrationError('v10 payload is not an object');
+    }
+    // A pre-economy guild receives no invented accumulated production. The configured
+    // founding grant is applied only to new sessions; migrated saves start from zero.
+    return { ...(payload as Record<string, unknown>), resources: { balances: {} } };
+  },
+};
+
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -337,6 +351,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v7ToV8,
   v8ToV9,
   v9ToV10,
+  v10ToV11,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

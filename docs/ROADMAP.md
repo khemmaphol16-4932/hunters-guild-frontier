@@ -129,9 +129,11 @@ Key DoD: the town is physically observable and hunters visibly move through it (
 
 **Phase DoD.** The town is physically observable, hunters move through it as work, and REQ-PRIME-006 is met at the level Phase 9 presentation will build on.
 
-## Phase 7 — Economy ⬜
+## Phase 7 — Economy 🟨 **in progress**
 
 Gold · resources · food · production · crafting · market · contracts · reputation · factions · economy simulation.
+
+**Foundation delivered.** One authoritative, data-authored resource ledger now owns gold and the deliberately small resource set (REQ-ECO-001/002). Multi-resource transactions are atomic, new guild balances come from content, and save v11 persists the ledger with a v10→v11 migration. Next: route existing computed costs and town-job production through this ledger before adding crafting or the market.
 
 Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
 

@@ -63,6 +63,7 @@ import { assignJobs } from '../ai/town/jobAssignment.js';
 import type { TownDepartmentId } from '../data/townSchema.js';
 import { SaveGame, type SaveStorage } from '../save/SaveGame.js';
 import type { CurrentSavePayload } from '../save/envelope.js';
+import { Resources } from '../systems/economy/Resources.js';
 
 export interface SessionOptions {
   readonly worldSeed: string;
@@ -195,6 +196,7 @@ export class Session {
   readonly defense: Defense;
   /** Town hunting and town defense, fought with the same combat system (REQ-TWN-007/008). */
   readonly townCombat: TownCombat;
+  readonly resources: Resources;
 
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
@@ -230,6 +232,7 @@ export class Session {
     // Empty by default, so hard constraints stay absolute until the player says otherwise.
     this.emergency = new EmergencyPolicy();
     this.policy = new PolicyBook();
+    this.resources = new Resources(this.content.economy.resources);
 
     this.registry = new SkillRegistry(this.content);
 
@@ -652,6 +655,7 @@ export class Session {
       research: this.research.snapshot(),
       recruitment: this.recruitment.snapshot(),
       defense: this.defense.snapshot(),
+      resources: this.resources.snapshot(),
     };
   }
 
@@ -676,6 +680,7 @@ export class Session {
     this.research.restore(payload.research);
     this.recruitment.restore(payload.recruitment);
     this.defense.restore(payload.defense);
+    this.resources.restore(payload.resources);
     this.townJobs.restore(payload.townJobs);
   }
 
