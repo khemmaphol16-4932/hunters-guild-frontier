@@ -391,8 +391,10 @@ Crafting: validated recipes, previewed inputs and outcome range, crafter capabil
 
 Four data-authored recipes now provide the certainty half of “craft = certainty, loot = jackpot”: the player chooses the item type and known rarity, sees every input, the estimated work time and the capability-driven quality floor, then receives an item from the same generator loot uses. Payment is atomic and an unavailable hunter cannot craft. Crafted tiers stop at Rare while Ancient and Legendary remain drop-only aspirations.
 
-The content loader rejects recipes with unknown item types, rarities or resource ids. The item generator gained a general quality-floor input rather than a second crafting-only roll path, so deterministic generation and item identity remain shared. 507 tests green, typecheck and production build clean.
+The content loader rejects recipes with unknown item types, rarities or resource ids. The item generator gained a general quality-floor input rather than a second crafting-only roll path, so deterministic generation and item identity remain shared.
+
+The first pass only reported duration while delivering the item immediately. That made time decorative and let one hunter craft an unlimited number of things at once. Work is now a persisted order: payment and the deterministic item are reserved at the start, the crafter becomes assigned, and the item enters the armoury only when the shared clock reaches its deadline. Save **v13** carries outstanding orders, their items and their ticks. 508 tests green, typecheck and production build clean.
 
 ## Next
 
-Persisted crafting orders that consume the displayed duration, followed by the bounded market, contracts/factions and the long-run balance harness. Phase 8 begins only when those Phase 7 gates are green.
+The bounded market, followed by contracts/factions and the long-run balance harness. Phase 8 begins only when those Phase 7 gates are green.

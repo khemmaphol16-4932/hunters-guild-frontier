@@ -23,7 +23,11 @@ describe('crafting (REQ-ECO-004)', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.item.typeId).toBe('blade');
+    expect(session.armoury.get(result.value.item.id)).toBeUndefined();
+    expect(session.roster.require(hunter.id).availability.state).toBe('assigned');
+    commands.advanceTown(20);
     expect(session.armoury.get(result.value.item.id)).toBeDefined();
+    expect(session.roster.require(hunter.id).availability.state).toBe('available');
     expect(session.resources.amount('gold')).toBe(before['gold']! - 140);
     expect(session.resources.amount('iron')).toBe(before['iron']! - 5);
     expect(session.resources.amount('salvage')).toBe(before['salvage']! - 2);
@@ -49,5 +53,20 @@ describe('crafting (REQ-ECO-004)', () => {
     if (!preview.ok || !result.ok) return;
     expect(itemQuality(result.value.item)).toBeGreaterThanOrEqual(preview.value.qualityFloor);
     expect(session.content.crafting.recipes.some((recipe) => recipe.rarity === 'legendary')).toBe(false);
+  });
+
+  it('round-trips an unfinished order and completes it only after its saved deadline', () => {
+    const first = testSession('craft-save');
+    const hunter = first.debug.spawnHunter({ level: 30 });
+    first.session.resources.transact({ credits: { salvage: 10 } });
+    const started = first.commands.craftItem('forge_blade', hunter.id);
+    expect(started.ok).toBe(true);
+    const second = testSession('craft-load');
+    second.session.restore(first.session.snapshot());
+    expect(second.session.crafting.active()).toHaveLength(1);
+    expect(second.session.armoury.all()).toHaveLength(0);
+    second.commands.advanceTown(20);
+    expect(second.session.crafting.active()).toHaveLength(0);
+    expect(second.session.armoury.all()).toHaveLength(1);
   });
 });

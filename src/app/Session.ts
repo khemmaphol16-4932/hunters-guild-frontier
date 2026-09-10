@@ -264,6 +264,8 @@ export class Session {
         qualityFloor,
         setChance: 0,
       }),
+      () => this.clock.tick,
+      () => this.clock.coarseStepRatio,
     );
 
     this.constellation = new Constellation({
@@ -675,6 +677,7 @@ export class Session {
       defense: this.defense.snapshot(),
       resources: this.resources.snapshot(),
       food: this.food.snapshot(),
+      crafting: this.crafting.snapshot(),
     };
   }
 
@@ -701,6 +704,7 @@ export class Session {
     this.defense.restore(payload.defense);
     this.resources.restore(payload.resources);
     this.food.restore(payload.food);
+    this.crafting.restore(payload.crafting);
     this.townJobs.restore(payload.townJobs);
   }
 

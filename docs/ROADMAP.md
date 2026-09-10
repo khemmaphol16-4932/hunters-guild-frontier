@@ -137,7 +137,7 @@ Gold · resources · food · production · crafting · market · contracts · re
 
 **Transactions and provisions delivered.** Existing costs now debit the ledger and existing yields credit it. Provisions are stored, produced by staffed work, consumed by population, and shortages feed back into food pressure and recovery. Expedition and town-hunting resource hauls scale from authored reward tables. Save v12 preserves supply fulfilment so hunger cannot be cleared by reloading. Next: crafting and dismantling depth, then the bounded market.
 
-**Crafting foundation delivered.** Validated recipes preview every input, the targeted item, duration and quality range. Crafter capability raises a deterministic quality floor; payment is atomic; and crafted output uses the production item generator. Recipes stop below Ancient and Legendary, preserving loot as the jackpot. The next crafting pass will turn the duration estimate into persisted work orders alongside the market implementation.
+**Crafting delivered.** Validated recipes preview every input, the targeted item, duration and quality range. Crafter capability raises a deterministic quality floor; payment is atomic; and crafted output uses the production item generator. Work orders occupy the crafter, complete on the shared simulation clock, and persist in save v13. Recipes stop below Ancient and Legendary, preserving loot as the jackpot. Next: the bounded market.
 
 Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
 

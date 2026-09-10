@@ -52,7 +52,7 @@ import { analysePool } from '../ai/town/guildFit.js';
 import type { DefenseResult, HuntResult } from '../sim/town/TownCombat.js';
 import type { EconomyReward } from '../data/economySchema.js';
 import type { FoodReport } from '../systems/economy/Food.js';
-import type { CraftPreview } from '../systems/economy/Crafting.js';
+import type { CraftOrder, CraftPreview } from '../systems/economy/Crafting.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -83,15 +83,17 @@ export class GuildCommands {
     return this.session.crafting.preview(recipeId, crafter);
   }
 
-  craftItem(recipeId: string, crafterId: HunterId): Result<{ readonly item: Item; readonly durationSteps: number }, string> {
+  craftItem(recipeId: string, crafterId: HunterId): Result<CraftOrder, string> {
     const crafter = this.session.roster.get(crafterId);
     if (!crafter) return err(`unknown hunter ${crafterId}`);
     if (crafter.availability.state !== 'available') return err(`${crafter.name} is not available to craft`);
-    const result = this.session.crafting.craft(this.session.streams.crafting, recipeId, crafter);
+    const result = this.session.crafting.start(this.session.streams.crafting, recipeId, crafter);
     if (!result.ok) return result;
-    this.session.armoury.add(result.value.item);
-    this.session.audit.record({ actor: { kind: 'hunter', id: crafter.id }, system: 'crafting', outcome: `${crafter.name} crafted ${result.value.item.name}`, reasonCodes: ['item_crafted', `recipe:${recipeId}`], inputs: { durationSteps: result.value.preview.durationSteps, cost: result.value.preview.recipe.cost } });
-    return ok({ item: result.value.item, durationSteps: result.value.preview.durationSteps });
+    const order = result.value.order;
+    this.session.roster.update(withAvailability(crafter, { state: 'assigned', assignment: order.id, recallCompletesAtTick: undefined, readyAtTick: order.readyAtTick }));
+    this.session.townJobs.release(crafter.id);
+    this.session.audit.record({ actor: { kind: 'hunter', id: crafter.id }, system: 'crafting', outcome: `${crafter.name} began ${result.value.preview.recipe.name}`, reasonCodes: ['crafting_started', `recipe:${recipeId}`], inputs: { durationSteps: result.value.preview.durationSteps, cost: result.value.preview.recipe.cost } });
+    return ok(order);
   }
 
   /**
@@ -1064,6 +1066,7 @@ export class GuildCommands {
     readonly hunts: readonly HuntResult[];
     readonly defense: DefenseResult | undefined;
     readonly economy: { readonly materialsProduced: number; readonly food: FoodReport };
+    readonly completedCrafts: readonly Item[];
   } {
     // Advance the simulation clock first, because everything below is timed against it.
     //
@@ -1077,6 +1080,15 @@ export class GuildCommands {
     // `runSteps` rather than `advance` because there is no frame to keep responsive here —
     // it is the same entry point offline catch-up uses (REQ-OFF-001).
     this.session.clock.runSteps(steps * this.session.clock.coarseStepRatio, () => {});
+    const completedCrafts: Item[] = [];
+    for (const order of this.session.crafting.completeReady()) {
+      this.session.armoury.add(order.item);
+      completedCrafts.push(order.item);
+      const crafter = this.session.roster.get(order.crafterId as HunterId);
+      if (crafter?.availability.assignment === order.id) {
+        this.session.roster.update(withAvailability(crafter, { state: 'available', assignment: undefined, recallCompletesAtTick: undefined, readyAtTick: undefined }));
+      }
+    }
 
     // REQ-RES-002: research points come from the Research department's output and from
     // nowhere else. This one line is what keeps technology and experience on separate
@@ -1129,6 +1141,7 @@ export class GuildCommands {
       hunts,
       defense,
       economy: { materialsProduced, food },
+      completedCrafts,
     };
   }
 
