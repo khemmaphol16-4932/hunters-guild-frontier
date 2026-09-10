@@ -129,7 +129,7 @@ Key DoD: the town is physically observable and hunters visibly move through it (
 
 **Phase DoD.** The town is physically observable, hunters move through it as work, and REQ-PRIME-006 is met at the level Phase 9 presentation will build on.
 
-## Phase 7 — Economy 🟨 **in progress**
+## Phase 7 — Economy ✅
 
 Gold · resources · food · production · crafting · market · contracts · reputation · factions · economy simulation.
 
@@ -142,6 +142,8 @@ Gold · resources · food · production · crafting · market · contracts · re
 **Market delivered.** A Market Stall exposes authored goods with finite stock, a buy/sell spread, demand-driven prices clamped to a narrow band, and deterministic reversion toward baseline. Trades are atomic ledger transactions and save v14 preserves stock and price state. Next: contracts, clients and faction standing.
 
 **Contracts and factions delivered.** Authored clients issue regional offers with objectives and resource rewards. The Guild AI analyses roster readiness, region level and value before acceptance; only the player accepts. Matching expeditions resolve active contracts and apply ledger, global reputation, faction-standing, audit and Hunter Chronicle consequences. Save v15 preserves offers, active work and faction standing. Next: the long-run balance harness—the final Phase 7 gate.
+
+**Phase DoD.** `sim/Balance.ts` runs 10,000 deterministic economy steps and rejects negative balances, resource-cap escape, unrecoverable food collapse and free-profit round trips. Authored capacities bound accumulation and the market remains inside its controlled band. Phase 7 is complete at 518 passing tests.
 
 Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
 

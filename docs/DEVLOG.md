@@ -422,3 +422,11 @@ Success pays the contract's ledger reward and raises both global and client-spec
 ## Next
 
 The Phase 7 exit gate: `sim/Balance.ts` runs long deterministic economies and rejects negative balances, unbounded resource growth, price escape, free-profit trading and unrecoverable food collapse.
+
+---
+
+# Phase 7g — Ten thousand seasons
+
+`sim/Balance.ts` now soaks the resource, provisions and market systems for 10,000 deterministic steps. It checks every balance against zero and its authored storage capacity, exercises lossy market round trips, verifies a sustainably staffed town does not collapse, and proves an identical run produces an identical report. Resource capacities are content rather than hidden clamps.
+
+The exit gate is green: 518 tests across 24 suites, typecheck and production build clean. Phase 7 is complete. The next code belongs to Phase 8: Guild Mastery and the multidimensional Capability vector first, because legacy, contracts at scale and endgame gates all need those institutional readings.

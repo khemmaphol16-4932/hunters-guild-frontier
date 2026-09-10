@@ -13,6 +13,7 @@ export interface ResourceDef {
   readonly name: string;
   readonly category: ResourceCategory;
   readonly starting: number;
+  readonly capacity: number;
 }
 
 export interface EconomyData {
@@ -98,13 +99,15 @@ export function parseEconomy(value: unknown): EconomyData {
     const name = record['name'];
     const category = record['category'];
     const starting = record['starting'];
+    const capacity = record['capacity'];
     if (typeof id !== 'string' || id.length === 0) throw new ContentValidationError(`${path}.id`, 'must be a non-empty string');
     if (seen.has(id)) throw new ContentValidationError(`${path}.id`, `duplicate resource "${id}"`);
     seen.add(id);
     if (typeof name !== 'string' || name.length === 0) throw new ContentValidationError(`${path}.name`, 'must be a non-empty string');
     if (typeof category !== 'string' || !CATEGORIES.has(category as ResourceCategory)) throw new ContentValidationError(`${path}.category`, 'is not a valid category');
     if (typeof starting !== 'number' || !Number.isFinite(starting) || starting < 0) throw new ContentValidationError(`${path}.starting`, 'must be a non-negative number');
-    return { id, name, category: category as ResourceCategory, starting };
+    if (typeof capacity !== 'number' || !Number.isFinite(capacity) || capacity < starting) throw new ContentValidationError(`${path}.capacity`, 'must be at least the starting balance');
+    return { id, name, category: category as ResourceCategory, starting, capacity };
   });
   if (!seen.has('gold')) throw new ContentValidationError('resources.json', 'must define the gold ledger');
   return { resources, repairCostScale, foodConsumptionPerResidentPerStep: foodConsumption, expeditionRewards, townHuntRewards, market };

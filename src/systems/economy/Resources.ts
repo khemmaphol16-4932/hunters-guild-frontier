@@ -32,7 +32,10 @@ export class Resources {
       if (this.amount(id) < amount) return err(`not enough ${this.definitions.get(id)?.name ?? id}`);
     }
     for (const [id, amount] of Object.entries(debits)) this.balances.set(id, this.amount(id) - amount);
-    for (const [id, amount] of Object.entries(credits)) this.balances.set(id, this.amount(id) + amount);
+    for (const [id, amount] of Object.entries(credits)) {
+      const capacity = this.definitions.get(id)?.capacity ?? Number.MAX_SAFE_INTEGER;
+      this.balances.set(id, Math.min(capacity, this.amount(id) + amount));
+    }
     return ok(this.snapshot());
   }
 
@@ -49,7 +52,7 @@ export class Resources {
     if (!snapshot) return;
     for (const definition of this.definitions.values()) {
       const value = snapshot.balances[definition.id];
-      this.balances.set(definition.id, typeof value === 'number' && value >= 0 ? value : 0);
+      this.balances.set(definition.id, typeof value === 'number' && value >= 0 ? Math.min(definition.capacity, value) : 0);
     }
   }
 
