@@ -410,3 +410,15 @@ The buy/sell spread makes an immediate round trip lossy, trades use the atomic l
 ## Next
 
 Contracts and factions: generated offers tied to client identity, region, risk and rewards; analysis before acceptance; completion consequences for the ledger, reputation and Chronicle.
+
+---
+
+# Phase 7f — Work with a name on it
+
+Contracts now connect the economy back to the world. Three authored clients issue offers tied to a region and objective; the pre-acceptance analysis names the recommended level, the guild's best available level, the client and the reward. It is advice rather than automation: the player accepts, and only a real matching expedition can resolve the work.
+
+Success pays the contract's ledger reward and raises both global and client-specific standing. Failure pays nothing and lowers both. Every participating hunter receives a Chronicle counter and entry, while the audit trail records acceptance and resolution. Faction standings are deliberately bounded at ±100 rather than becoming a political simulation. Save **v15** persists the board, active contract and all standings. 516 tests green, typecheck and production build clean.
+
+## Next
+
+The Phase 7 exit gate: `sim/Balance.ts` runs long deterministic economies and rejects negative balances, unbounded resource growth, price escape, free-profit trading and unrecoverable food collapse.

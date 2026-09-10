@@ -1,0 +1,13 @@
+{
+  "$comment": "REQ-CON-001/REQ-FAC-001. Names and numbers are data-driven launch defaults.",
+  "factions": [
+    { "id": "frontier_settlers", "name": "Frontier Settlers" },
+    { "id": "caravan_compact", "name": "Caravan Compact" },
+    { "id": "scholars_conclave", "name": "Scholars' Conclave" }
+  ],
+  "templates": [
+    { "id": "reach_patrol", "name": "Patrol the Reach", "factionId": "frontier_settlers", "regionId": "verdant_reach", "objective": "clear", "reward": { "gold": 180, "food": 18, "materials": 8 }, "reputation": 1.5 },
+    { "id": "quarry_recovery", "name": "Recover the Quarry Route", "factionId": "caravan_compact", "regionId": "coldwater_quarry", "objective": "clear", "reward": { "gold": 360, "food": 10, "materials": 18 }, "reputation": 2.5 },
+    { "id": "barrow_survey", "name": "Survey the Barrows", "factionId": "scholars_conclave", "regionId": "ashfall_barrows", "objective": "survive", "reward": { "gold": 620, "food": 12, "materials": 28 }, "reputation": 4 }
+  ]
+}

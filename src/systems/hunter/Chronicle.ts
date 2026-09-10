@@ -212,6 +212,10 @@ export class Chronicle {
         );
       }
     });
+    on('contract.completed', ({ hunterId, name, succeeded }) => {
+      this.increment(hunterId, succeeded ? 'contractsCompleted' : 'contractsFailed', 1);
+      this.record(hunterId, succeeded ? 'contractCompleted' : 'contractFailed', `${succeeded ? 'Completed' : 'Failed'} ${name}.`);
+    });
 
     on('mastery.milestone', ({ hunterId, skillId, milestone }) => {
       this.record(hunterId, 'masteryMilestone', `Reached ${milestone} mastery in ${skillId}.`);

@@ -54,6 +54,7 @@ import type { EconomyReward } from '../data/economySchema.js';
 import type { FoodReport } from '../systems/economy/Food.js';
 import type { CraftOrder, CraftPreview } from '../systems/economy/Crafting.js';
 import type { MarketQuote } from '../systems/economy/Market.js';
+import type { ContractAnalysis, ContractOffer } from '../systems/economy/Contracts.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -89,6 +90,15 @@ export class GuildCommands {
   sellToMarket(resourceId: string, amount: number): Result<MarketQuote, string> {
     if (this.session.town.grid.countOf('market_stall') === 0) return err('the town has no Market Stall');
     return this.session.market.sell(resourceId, amount);
+  }
+  contractBoard(): readonly ContractAnalysis[] {
+    const offers = this.session.contracts.available().length > 0 ? this.session.contracts.available() : this.session.contracts.refresh();
+    return offers.map((offer) => this.session.contracts.analyse(offer));
+  }
+  acceptContract(offerId: string): Result<ContractOffer, string> {
+    const result = this.session.contracts.accept(offerId);
+    if (result.ok) this.session.audit.record({ actor:{kind:'player'},system:'contracts',outcome:`accepted ${result.value.name} from ${result.value.clientName}`,reasonCodes:['contract_accepted',`faction:${result.value.factionId}`] });
+    return result;
   }
 
   craftingPreview(recipeId: string, crafterId: HunterId): Result<CraftPreview, string> {
@@ -694,6 +704,16 @@ export class GuildCommands {
       deaths: result.aftermath.filter((a) => a.died).length,
       regionName: region.name,
     });
+
+    const contract = this.session.contracts.resolve(regionId, proposal.objective.id);
+    if (contract) {
+      const succeeded = result.completed && !result.wiped;
+      if (succeeded) this.session.resources.transact({ credits: { gold: contract.reward.gold, food: contract.reward.food, materials: contract.reward.materials } });
+      this.session.factions.change(contract.factionId, succeeded ? 3 : -2);
+      this.session.reputation.change(succeeded ? contract.reputation : -contract.reputation, `${succeeded ? 'completed' : 'failed'} contract ${contract.name}`);
+      for (const member of proposal.members) this.session.events.emit('contract.completed', { hunterId: member.hunterId, contractId: contract.offerId, name: contract.name, succeeded });
+      this.session.audit.record({ actor:{kind:'system',name:'guild-ai'},system:'contracts',outcome:`${succeeded ? 'completed' : 'failed'} ${contract.name}`,reasonCodes:[succeeded?'contract_completed':'contract_failed',`faction:${contract.factionId}`],inputs:{reward:succeeded?contract.reward:{}} });
+    }
 
     // Loot is rolled once, for the guild, at the region's item level — a shared haul rather
     // than per-hunter drops, because the guild owns the armoury (§16).

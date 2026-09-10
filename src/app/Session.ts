@@ -67,6 +67,8 @@ import { Resources } from '../systems/economy/Resources.js';
 import { Food } from '../systems/economy/Food.js';
 import { Crafting } from '../systems/economy/Crafting.js';
 import { Market } from '../systems/economy/Market.js';
+import { Contracts } from '../systems/economy/Contracts.js';
+import { Factions } from '../systems/economy/Factions.js';
 
 export interface SessionOptions {
   readonly worldSeed: string;
@@ -203,6 +205,8 @@ export class Session {
   readonly food: Food;
   readonly crafting: Crafting;
   readonly market: Market;
+  readonly contracts: Contracts;
+  readonly factions: Factions;
 
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
@@ -241,6 +245,8 @@ export class Session {
     this.resources = new Resources(this.content.economy.resources);
     this.food = new Food(this.resources, this.content.economy.foodConsumptionPerResidentPerStep);
     this.market = new Market(this.content.economy.market, this.resources);
+    this.factions = new Factions(this.content.contracts.factions);
+    this.contracts = new Contracts(this.content.contracts, (id) => this.content.worldRegionsById.get(id)?.recommendedLevel, () => this.roster.all().map((hunter) => hunter.level));
 
     this.registry = new SkillRegistry(this.content);
 
@@ -682,6 +688,8 @@ export class Session {
       food: this.food.snapshot(),
       crafting: this.crafting.snapshot(),
       market: this.market.snapshot(),
+      contracts: this.contracts.snapshot(),
+      factions: this.factions.snapshot(),
     };
   }
 
@@ -710,6 +718,8 @@ export class Session {
     this.food.restore(payload.food);
     this.crafting.restore(payload.crafting);
     this.market.restore(payload.market);
+    this.contracts.restore(payload.contracts);
+    this.factions.restore(payload.factions);
     this.townJobs.restore(payload.townJobs);
   }
 

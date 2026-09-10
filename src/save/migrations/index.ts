@@ -367,6 +367,7 @@ const v13ToV14: Migration = {
     return { ...(payload as Record<string, unknown>), market: { stock: {}, priceScale: {} } };
   },
 };
+const v14ToV15: Migration = { from:14,to:15,describe:'persist contract offers, active work and faction standing',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v14 payload is not an object');return{...(payload as Record<string,unknown>),contracts:{offers:[],sequence:1},factions:{standing:{}}}}};
 
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
@@ -382,6 +383,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v11ToV12,
   v12ToV13,
   v13ToV14,
+  v14ToV15,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

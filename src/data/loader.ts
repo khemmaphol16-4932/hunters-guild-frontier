@@ -34,8 +34,10 @@ import threatsJson from './town/threats.json';
 import townBalanceJson from './balance/town.json';
 import resourcesJson from './economy/resources.json';
 import recipesJson from './economy/recipes.json';
+import contractsJson from './economy/contracts.json';
 import { parseEconomy, type EconomyData, type ResourceDef } from './economySchema.js';
 import { parseCrafting, type CraftingData } from './craftingSchema.js';
+import { parseContracts, type ContractData } from './contractSchema.js';
 
 import raritiesJson from './items/rarities.json';
 import itemTypesJson from './items/item-types.json';
@@ -210,6 +212,7 @@ export interface GameContent {
   readonly economy: EconomyData;
   readonly resourcesById: ReadonlyMap<string, ResourceDef>;
   readonly crafting: CraftingData;
+  readonly contracts: ContractData;
 
   readonly balance: {
     readonly attributes: AttributeBalance;
@@ -701,6 +704,7 @@ export function loadContent(): GameContent {
   const threats = parseThreats(threatsJson);
   const economy = parseEconomy(resourcesJson);
   const crafting = parseCrafting(recipesJson);
+  const contracts = parseContracts(contractsJson);
   const refinementBalance = parseRefinementBalance(refinementBalanceJson);
   const lootBalance = parseLootBalance(lootBalanceJson);
 
@@ -728,6 +732,10 @@ export function loadContent(): GameContent {
     for (const resource of Object.keys(recipe.cost)) if (!economy.resources.some((entry) => entry.id === resource)) throw new ContentValidationError(`recipes.json:${recipe.id}.cost`, `unknown resource "${resource}"`);
   }
   for (const resource of Object.keys(economy.market.goods)) if (!economy.resources.some((entry) => entry.id === resource)) throw new ContentValidationError('resources.json.market.goods', `unknown resource "${resource}"`);
+  for (const template of contracts.templates) {
+    if (!contracts.factions.some((faction) => faction.id === template.factionId)) throw new ContentValidationError(`contracts.json:${template.id}`, `unknown faction "${template.factionId}"`);
+    if (!world.regions.some((region) => region.id === template.regionId)) throw new ContentValidationError(`contracts.json:${template.id}`, `unknown region "${template.regionId}"`);
+  }
 
   cached = Object.freeze({
     archetypes,
@@ -782,6 +790,7 @@ export function loadContent(): GameContent {
     economy,
     resourcesById: new Map(economy.resources.map((resource) => [resource.id, resource])),
     crafting,
+    contracts,
 
     balance: {
       attributes: parseAttributeBalance(attributeBalanceJson),

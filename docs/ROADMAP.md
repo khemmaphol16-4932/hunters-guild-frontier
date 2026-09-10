@@ -141,6 +141,8 @@ Gold · resources · food · production · crafting · market · contracts · re
 
 **Market delivered.** A Market Stall exposes authored goods with finite stock, a buy/sell spread, demand-driven prices clamped to a narrow band, and deterministic reversion toward baseline. Trades are atomic ledger transactions and save v14 preserves stock and price state. Next: contracts, clients and faction standing.
 
+**Contracts and factions delivered.** Authored clients issue regional offers with objectives and resource rewards. The Guild AI analyses roster readiness, region level and value before acceptance; only the player accepts. Matching expeditions resolve active contracts and apply ledger, global reputation, faction-standing, audit and Hunter Chronicle consequences. Save v15 preserves offers, active work and faction standing. Next: the long-run balance harness—the final Phase 7 gate.
+
 Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
 
 ## Phase 8 — Progression ⬜

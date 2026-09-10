@@ -46,6 +46,7 @@ export interface DomainEventMap {
 
   'loot.rareFound': { hunterId: HunterId; itemId: ItemId; rarity: string };
   'expedition.completed': { hunterId: HunterId; expeditionId: string; durationSeconds: number };
+  'contract.completed': { hunterId: HunterId; contractId: string; name: string; succeeded: boolean };
 
   /**
    * The town grew into a new stage (REQ-TWN-002).
