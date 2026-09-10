@@ -72,6 +72,9 @@ export class Research {
   isComplete(id: string): boolean {
     return this.completed.has(id);
   }
+  completedCount(): number {
+    return this.completed.size;
+  }
 
   completedNodes(): readonly ResearchNodeDef[] {
     return this.deps.content.nodes.filter((n) => this.completed.has(n.id));

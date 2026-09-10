@@ -6,7 +6,7 @@ An autonomous Hunter Guild management RPG. The player is the Guild Master: they 
 
 The design goal is that a Hunter does not merely *have* a build — they **become** one, through what they actually do. Mastery grows from use, and build identity is what the AI reads when it decides how to act.
 
-**Status:** Phases 0–7 complete. The loop runs end to end — town, departments, research, recruitment, expeditions, deterministic combat, a bounded resource economy, crafting, market, contracts and factions. Progression and legacy are next.
+**Status:** Phases 0–7 complete; Phase 8 is in progress. The loop runs end to end — town, departments, research, recruitment, expeditions, deterministic combat, a bounded resource economy, crafting, market, contracts and factions. Institutional Guild Mastery and the seven-axis Capability vector now form the progression foundation; legacy and NG+ remain ahead.
 
 ---
 
@@ -103,7 +103,7 @@ The last two both earn their place by having caught live requirement failures ra
 
 ## What is not built yet
 
-Legacy and NG+ (Phase 8) · isometric pixel-art presentation (Phase 9).
+Progression depth, legacy and NG+ (Phase 8) · isometric pixel-art presentation (Phase 9).
 
 The Phase 7 ledger now charges refinement, construction, repairs, recruitment and research resets; item sales, dismantling and staffed town work feed their proceeds back into the same ledger. Crafting and the market are the next consumers.
 

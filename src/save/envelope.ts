@@ -33,8 +33,9 @@ import type { CraftingSnapshot } from '../systems/economy/Crafting.js';
 import type { MarketSnapshot } from '../systems/economy/Market.js';
 import type { ContractsSnapshot } from '../systems/economy/Contracts.js';
 import type { FactionsSnapshot } from '../systems/economy/Factions.js';
+import type { GuildMasterySnapshot } from '../systems/guild/GuildMastery.js';
 
-export const CURRENT_SAVE_VERSION = 15;
+export const CURRENT_SAVE_VERSION = 16;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -203,7 +204,8 @@ export interface SavePayloadV12 extends SavePayloadV11 {
 export interface SavePayloadV13 extends SavePayloadV12 { readonly crafting: CraftingSnapshot }
 export interface SavePayloadV14 extends SavePayloadV13 { readonly market: MarketSnapshot }
 export interface SavePayloadV15 extends SavePayloadV14 { readonly contracts: ContractsSnapshot; readonly factions: FactionsSnapshot }
-export type CurrentSavePayload = SavePayloadV15;
+export interface SavePayloadV16 extends SavePayloadV15 { readonly guildMastery: GuildMasterySnapshot }
+export type CurrentSavePayload = SavePayloadV16;
 
 export interface Migration {
   readonly from: number;

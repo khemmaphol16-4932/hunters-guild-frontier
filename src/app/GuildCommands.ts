@@ -117,6 +117,7 @@ export class GuildCommands {
     this.session.roster.update(withAvailability(crafter, { state: 'assigned', assignment: order.id, recallCompletesAtTick: undefined, readyAtTick: order.readyAtTick }));
     this.session.townJobs.release(crafter.id);
     this.session.audit.record({ actor: { kind: 'hunter', id: crafter.id }, system: 'crafting', outcome: `${crafter.name} began ${result.value.preview.recipe.name}`, reasonCodes: ['crafting_started', `recipe:${recipeId}`], inputs: { durationSteps: result.value.preview.durationSteps, cost: result.value.preview.recipe.cost } });
+    this.session.guildMastery.record('crafting', 1);
     return ok(order);
   }
 
@@ -574,6 +575,7 @@ export class GuildCommands {
     // same session never share a draw sequence and each one replays on its own.
     const rng = this.session.streams.expedition.fork(`${regionId}:${this.session.clock.tick}`);
     const result = this.session.expedition.run(rng, region, proposal);
+    this.session.guildMastery.record('expedition', Math.max(1, result.reachedNode));
 
     for (const decision of result.decisions) {
       this.session.audit.record({
@@ -713,6 +715,7 @@ export class GuildCommands {
       this.session.reputation.change(succeeded ? contract.reputation : -contract.reputation, `${succeeded ? 'completed' : 'failed'} contract ${contract.name}`);
       for (const member of proposal.members) this.session.events.emit('contract.completed', { hunterId: member.hunterId, contractId: contract.offerId, name: contract.name, succeeded });
       this.session.audit.record({ actor:{kind:'system',name:'guild-ai'},system:'contracts',outcome:`${succeeded ? 'completed' : 'failed'} ${contract.name}`,reasonCodes:[succeeded?'contract_completed':'contract_failed',`faction:${contract.factionId}`],inputs:{reward:succeeded?contract.reward:{}} });
+      this.session.guildMastery.record('contract', succeeded ? 4 : 1);
     }
 
     // Loot is rolled once, for the guild, at the region's item level — a shared haul rather
@@ -980,6 +983,7 @@ export class GuildCommands {
     });
 
     this.session.townJobs.refresh();
+    this.session.guildMastery.record('recruitment', 2);
     return ok(developed);
   }
 
@@ -1132,7 +1136,10 @@ export class GuildCommands {
     const researchOutput = this.session.departments.report('research').output;
     for (let i = 0; i < steps; i++) {
       const done = this.session.research.contribute(researchOutput);
-      if (done) researchCompleted.push(done.name);
+      if (done) {
+        researchCompleted.push(done.name);
+        this.session.guildMastery.record('research', 3);
+      }
     }
 
     const materialsProduced = this.session.departments.materialsOutput() * steps;
@@ -1164,6 +1171,7 @@ export class GuildCommands {
     // back tired from the orchard should be considered for tomorrow's rota in that state.
     const hunts = this.runTownHunts(steps);
     const defense = this.runDefense();
+    if (defense) this.session.guildMastery.record('defense', defense.held ? 3 : 1);
 
     this.restIdleHunters(steps);
     this.session.townJobs.refresh();

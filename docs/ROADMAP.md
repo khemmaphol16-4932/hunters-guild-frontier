@@ -147,9 +147,11 @@ Gold · resources · food · production · crafting · market · contracts · re
 
 Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
 
-## Phase 8 — Progression ⬜
+## Phase 8 — Progression 🟨 in progress
 
 Guild mastery · capability · reputation depth · research depth · legacy · NG+ · generational hunters · mentors · legacy traits · endless scaling.
+
+Foundation complete: institutional Guild Mastery is earned from expeditions, crafting, recruitment, defense, research and contracts, and persists in save v16. Capability reports seven independent operational axes—combat, expedition, crafting, resource, defense, research and economic—with no universal score. Progression depth and legacy systems remain.
 
 ## Phase 9 — UX / Presentation ⬜
 

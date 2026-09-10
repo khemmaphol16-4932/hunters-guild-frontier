@@ -69,6 +69,8 @@ import { Crafting } from '../systems/economy/Crafting.js';
 import { Market } from '../systems/economy/Market.js';
 import { Contracts } from '../systems/economy/Contracts.js';
 import { Factions } from '../systems/economy/Factions.js';
+import { GuildMastery } from '../systems/guild/GuildMastery.js';
+import { Capability } from '../systems/guild/Capability.js';
 
 export interface SessionOptions {
   readonly worldSeed: string;
@@ -207,6 +209,8 @@ export class Session {
   readonly market: Market;
   readonly contracts: Contracts;
   readonly factions: Factions;
+  readonly guildMastery: GuildMastery;
+  readonly capability: Capability;
 
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
@@ -247,6 +251,7 @@ export class Session {
     this.market = new Market(this.content.economy.market, this.resources);
     this.factions = new Factions(this.content.contracts.factions);
     this.contracts = new Contracts(this.content.contracts, (id) => this.content.worldRegionsById.get(id)?.recommendedLevel, () => this.roster.all().map((hunter) => hunter.level));
+    this.guildMastery = new GuildMastery();
 
     this.registry = new SkillRegistry(this.content);
 
@@ -522,6 +527,15 @@ export class Session {
           .map((assignment) => assignment.hunterId as HunterId),
       defenceCapacityOf: () => session.town.capacity().defence,
     });
+    this.capability = new Capability({
+      hunterLevels: () => this.roster.all().map((hunter) => hunter.level),
+      armouryValue: () => this.armoury.all().reduce((sum, item) => sum + this.armoury.sellValue(item), 0),
+      departmentOutput: (id) => this.departments.report(id).output,
+      defenseCapacity: () => this.town.capacity().defence,
+      researchCompleted: () => this.research.completedCount(),
+      gold: () => this.resources.amount('gold'),
+      reputation: () => this.reputation.current,
+    });
 
     // Party planning is pre-combat strategy — the last point the player has direct
     // influence (v1.0 §7). Four is the MVP party size.
@@ -690,6 +704,7 @@ export class Session {
       market: this.market.snapshot(),
       contracts: this.contracts.snapshot(),
       factions: this.factions.snapshot(),
+      guildMastery: this.guildMastery.snapshot(),
     };
   }
 
@@ -720,6 +735,7 @@ export class Session {
     this.market.restore(payload.market);
     this.contracts.restore(payload.contracts);
     this.factions.restore(payload.factions);
+    this.guildMastery.restore(payload.guildMastery);
     this.townJobs.restore(payload.townJobs);
   }
 

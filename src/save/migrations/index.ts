@@ -368,6 +368,7 @@ const v13ToV14: Migration = {
   },
 };
 const v14ToV15: Migration = { from:14,to:15,describe:'persist contract offers, active work and faction standing',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v14 payload is not an object');return{...(payload as Record<string,unknown>),contracts:{offers:[],sequence:1},factions:{standing:{}}}}};
+const v15ToV16: Migration = { from:15,to:16,describe:'persist institutional Guild Mastery',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v15 payload is not an object');return{...(payload as Record<string,unknown>),guildMastery:{points:0,byActivity:{}}}}};
 
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
@@ -384,6 +385,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v12ToV13,
   v13ToV14,
   v14ToV15,
+  v15ToV16,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

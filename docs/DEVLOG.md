@@ -430,3 +430,13 @@ The Phase 7 exit gate: `sim/Balance.ts` runs long deterministic economies and re
 `sim/Balance.ts` now soaks the resource, provisions and market systems for 10,000 deterministic steps. It checks every balance against zero and its authored storage capacity, exercises lossy market round trips, verifies a sustainably staffed town does not collapse, and proves an identical run produces an identical report. Resource capacities are content rather than hidden clamps.
 
 The exit gate is green: 518 tests across 24 suites, typecheck and production build clean. Phase 7 is complete. The next code belongs to Phase 8: Guild Mastery and the multidimensional Capability vector first, because legacy, contracts at scale and endgame gates all need those institutional readings.
+
+---
+
+# Phase 8a — Guild progression foundation
+
+Guild Mastery now records institutional experience from the actions that create it: expeditions, crafting, recruitment, defense, research completions and contract resolutions. Its total, per-activity history and nonlinear level survive save/load through the v15→v16 migration.
+
+Capability now reads the guild across seven independent axes: combat, expedition, crafting, resource, defense, research and economic. It deliberately exposes no total score, preserving distinct guild identities and giving future unlocks concrete dimensions to query.
+
+The checkpoint closes with 521 tests across 25 suites, including persistence, vector-shape and divergent-investment coverage. Typecheck and production build are clean.
