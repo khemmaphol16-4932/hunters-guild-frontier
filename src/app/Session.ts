@@ -73,6 +73,7 @@ import { GuildMastery } from '../systems/guild/GuildMastery.js';
 import { Capability } from '../systems/guild/Capability.js';
 import { Monument } from '../systems/progression/Monument.js';
 import { Legacy } from '../systems/progression/Legacy.js';
+import { Mentors } from '../systems/progression/Mentors.js';
 
 export interface SessionOptions {
   readonly worldSeed: string;
@@ -215,6 +216,7 @@ export class Session {
   readonly capability: Capability;
   readonly monument: Monument;
   readonly legacy: Legacy;
+  readonly mentors: Mentors;
 
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
@@ -344,6 +346,7 @@ export class Session {
     });
     this.monument = new Monument({ events: this.events, currentTick: () => this.clock.tick });
     this.legacy = new Legacy(() => this.monument.all());
+    this.mentors = new Mentors();
     this.worldKnowledge = new WorldKnowledge({
       regions: this.content.world.regions,
       // §19: the first time the guild sets foot somewhere is worth remembering, and it is
@@ -714,6 +717,7 @@ export class Session {
       guildMastery: this.guildMastery.snapshot(),
       monument: this.monument.snapshot(),
       legacy: this.legacy.snapshot(),
+      mentors: this.mentors.snapshot(),
     };
   }
 
@@ -747,6 +751,7 @@ export class Session {
     this.guildMastery.restore(payload.guildMastery);
     this.monument.restore(payload.monument);
     this.legacy.restore(payload.legacy);
+    this.mentors.restore(payload.mentors);
     this.townJobs.restore(payload.townJobs);
   }
 

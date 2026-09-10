@@ -161,6 +161,8 @@ Guild Monument complete: a passive event subscriber records world-boss victories
 
 Legacy foundation complete: Monument achievements award bounded, one-time Legacy points from multiple sources. The player explicitly spends them on starting choices, convenience, systems, archetypes, world variants and prestige; the catalogue contains no raw combat-stat upgrades. Save v19 preserves earned/spent points, claimed achievements and unlocks.
 
+Retirement and mentors complete: retirement is an explicit player command gated by the Mentor Hall unlock, level 30 and availability. Retirees leave the active roster and become distinct mentor profiles derived from their level, attributes, mastery, potential and historic Chronicle entries. Their bounded effects improve experience and mastery training; save v20 preserves mentors and Legacy Traits.
+
 ## Phase 9 — UX / Presentation ⬜
 
 Progressive UI · build dashboard polish · chronicle · combat timeline · AI explain · guild report · notifications · town and world presentation · **isometric pixel-art** · audio hooks · accessibility.

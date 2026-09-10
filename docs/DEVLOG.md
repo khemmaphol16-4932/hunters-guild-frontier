@@ -480,3 +480,13 @@ Every unique Monument achievement now awards Legacy points according to its hist
 Six initial unlocks cover starting choices, recruitment convenience, the mentor system, a starting archetype, a world variant and prestige. Purchasing is an explicit player command, and none of the unlock descriptions or effects grants attack, damage, health or a universal power increase.
 
 Save v19 preserves lifetime points, spending, awarded achievements and unlocks. The checkpoint closes with 532 tests across 28 suites; typecheck and production build are clean.
+
+---
+
+# Phase 8f — Retirement, mentors and Legacy Traits
+
+The player can now retire an available level-30 hunter after unlocking the Mentor Hall. Nothing in AI, policy or simulation can retire one automatically. The hunter leaves the active roster and becomes a permanent mentor whose speciality and bounded experience, mastery and training effects derive from that individual hunter's development.
+
+Historic Chronicle entries become named Legacy Traits on the mentor profile. This conversion is explicit and separate from Chronicle itself, preserving the rule that history alone has no mechanical effect.
+
+Save v20 preserves mentors and their traits. The checkpoint closes with 535 tests across 29 suites; typecheck and production build are clean.

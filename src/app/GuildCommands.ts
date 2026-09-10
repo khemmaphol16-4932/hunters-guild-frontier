@@ -56,6 +56,7 @@ import type { CraftOrder, CraftPreview } from '../systems/economy/Crafting.js';
 import type { MarketQuote } from '../systems/economy/Market.js';
 import type { ContractAnalysis, ContractOffer } from '../systems/economy/Contracts.js';
 import type { LegacyUnlock } from '../systems/progression/Legacy.js';
+import type { MentorProfile } from '../systems/progression/Mentors.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -92,6 +93,27 @@ export class GuildCommands {
       });
     }
     return result;
+  }
+
+  retireHunter(hunterId: HunterId): Result<MentorProfile, string> {
+    if (!this.session.legacy.has('mentor_hall')) return err('the Mentor Hall Legacy unlock is required');
+    const hunter = this.session.roster.get(hunterId);
+    if (!hunter) return err(`unknown hunter ${hunterId}`);
+    if (hunter.level < 30) return err(`${hunter.name} must reach level 30 before retiring`);
+    if (hunter.availability.state !== 'available') return err(`${hunter.name} is not available to retire`);
+
+    this.session.townJobs.release(hunter.id);
+    const historic = this.session.chronicle.entriesAtLevel(hunter.id, 'historic');
+    const mentor = this.session.mentors.retire(hunter, historic);
+    this.session.roster.remove(hunter.id);
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'legacy',
+      outcome: `${hunter.name} retired as a ${mentor.speciality} mentor`,
+      reasonCodes: ['hunter_retired', `hunter:${hunter.id}`],
+      inputs: { level: hunter.level, legacyTraits: mentor.legacyTraits },
+    });
+    return ok(mentor);
   }
 
   marketQuote(resourceId: string, amount: number, side: 'buy' | 'sell'): Result<MarketQuote, string> {
@@ -297,7 +319,10 @@ export class GuildCommands {
       return err(`${hunter.name} does not know that skill`);
     }
 
-    const aptitude = hunter.potential.facets['masteryAptitude'] ?? 1;
+    const aptitude =
+      (hunter.potential.facets['masteryAptitude'] ?? 1) *
+      this.session.mentors.masteryScale() *
+      this.session.mentors.trainingEfficiency();
     for (let i = 0; i < uses; i++) {
       hunter = this.session.mastery.gainFromUse(hunter, id, significance, aptitude).hunter;
     }
@@ -1247,7 +1272,7 @@ export class GuildCommands {
         const progress = applyExperience(
           hunter.level,
           hunter.xp,
-          Math.round(result.xp / hunters.length),
+          Math.round(result.xp / hunters.length * this.session.mentors.experienceScale()),
           this.session.content.balance.attributes,
         );
         let updated = withLevel(hunter, progress.level, progress.xp);

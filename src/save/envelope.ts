@@ -36,8 +36,9 @@ import type { FactionsSnapshot } from '../systems/economy/Factions.js';
 import type { GuildMasterySnapshot } from '../systems/guild/GuildMastery.js';
 import type { MonumentSnapshot } from '../systems/progression/Monument.js';
 import type { LegacySnapshot } from '../systems/progression/Legacy.js';
+import type { MentorsSnapshot } from '../systems/progression/Mentors.js';
 
-export const CURRENT_SAVE_VERSION = 19;
+export const CURRENT_SAVE_VERSION = 20;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -210,7 +211,8 @@ export interface SavePayloadV16 extends SavePayloadV15 { readonly guildMastery: 
 export interface SavePayloadV17 extends Omit<SavePayloadV16, 'reputation'> { readonly reputation: ReputationSnapshot }
 export interface SavePayloadV18 extends SavePayloadV17 { readonly monument: MonumentSnapshot }
 export interface SavePayloadV19 extends SavePayloadV18 { readonly legacy: LegacySnapshot }
-export type CurrentSavePayload = SavePayloadV19;
+export interface SavePayloadV20 extends SavePayloadV19 { readonly mentors: MentorsSnapshot }
+export type CurrentSavePayload = SavePayloadV20;
 
 export interface Migration {
   readonly from: number;
