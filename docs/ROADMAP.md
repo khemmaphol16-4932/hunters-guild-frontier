@@ -159,6 +159,8 @@ Research depth complete: three advanced branch nodes extend Combat, Economy and 
 
 Guild Monument complete: a passive event subscriber records world-boss victories, dangerous-frontier discoveries, legendary finds, historic contracts, legendary hunters, town milestones and research breakthroughs. Stable achievement ids deduplicate party-wide events, and save v18 preserves the permanent record.
 
+Legacy foundation complete: Monument achievements award bounded, one-time Legacy points from multiple sources. The player explicitly spends them on starting choices, convenience, systems, archetypes, world variants and prestige; the catalogue contains no raw combat-stat upgrades. Save v19 preserves earned/spent points, claimed achievements and unlocks.
+
 ## Phase 9 — UX / Presentation ⬜
 
 Progressive UI · build dashboard polish · chronicle · combat timeline · AI explain · guild report · notifications · town and world presentation · **isometric pixel-art** · audio hooks · accessibility.

@@ -55,6 +55,7 @@ import type { FoodReport } from '../systems/economy/Food.js';
 import type { CraftOrder, CraftPreview } from '../systems/economy/Crafting.js';
 import type { MarketQuote } from '../systems/economy/Market.js';
 import type { ContractAnalysis, ContractOffer } from '../systems/economy/Contracts.js';
+import type { LegacyUnlock } from '../systems/progression/Legacy.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -78,6 +79,20 @@ export interface ExpeditionOutcome {
 
 export class GuildCommands {
   constructor(private readonly session: Session) {}
+
+  purchaseLegacyUnlock(unlockId: string): Result<LegacyUnlock, string> {
+    const result = this.session.legacy.purchase(unlockId);
+    if (result.ok) {
+      this.session.audit.record({
+        actor: { kind: 'player' },
+        system: 'legacy',
+        outcome: `unlocked ${result.value.name}`,
+        reasonCodes: ['legacy_unlock', `unlock:${result.value.id}`],
+        inputs: { cost: result.value.cost, category: result.value.category },
+      });
+    }
+    return result;
+  }
 
   marketQuote(resourceId: string, amount: number, side: 'buy' | 'sell'): Result<MarketQuote, string> {
     if (this.session.town.grid.countOf('market_stall') === 0) return err('the town has no Market Stall');

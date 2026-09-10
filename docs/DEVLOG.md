@@ -470,3 +470,13 @@ The Guild Monument turns verified game events into a permanent institutional rec
 The Monument is a passive subscriber and cannot feed effects back into gameplay. Stable ids make achievements idempotent, so an event emitted for every party member creates one plaque rather than four. Save v18 persists the sorted record and older saves migrate to an empty monument.
 
 The checkpoint closes with 529 tests across 27 suites. Typecheck and production build are clean.
+
+---
+
+# Phase 8e — Legacy foundation
+
+Every unique Monument achievement now awards Legacy points according to its historic category. Awards reconcile by stable achievement id, so re-emission, reload and party-wide events cannot mint points twice.
+
+Six initial unlocks cover starting choices, recruitment convenience, the mentor system, a starting archetype, a world variant and prestige. Purchasing is an explicit player command, and none of the unlock descriptions or effects grants attack, damage, health or a universal power increase.
+
+Save v19 preserves lifetime points, spending, awarded achievements and unlocks. The checkpoint closes with 532 tests across 28 suites; typecheck and production build are clean.
