@@ -8,7 +8,7 @@ Every entry names what is owed, why it was deferred, and what triggers repayment
 |---|---|---|---|
 | ~~`EquipmentContribution` null object~~ | — | — | **done in Phase 2** — replaced by `systems/items/identityContributions` with no change to `BuildIdentity`'s interface |
 | ~~`CardContribution` null object~~ | — | — | **done in Phase 2** |
-| Gold and resource accounting for refinement, selling and dismantling | `app/GuildCommands` | Phase 7 | Resources system lands. Costs and yields are already computed and returned, so wiring them to a ledger is a small change. The *risk* half of refinement is fully live. |
+| ~~Gold and resource accounting for refinement, selling and dismantling~~ | — | — | **done in Phase 7b** — all three transact through `systems/economy/Resources` |
 | Rebirth | `core/hunter/leveling` | Phase 8 | a hunter reaches level 100 in play |
 | ~~Policy pipeline weight stages~~ | — | — | **done in Phase 3** — seven build-reading stages in `ai/hunter/hunterAI` |
 | Behavior memory | `systems/hunter/` | Phase 5+ | first behavior-memory-driven decision |
@@ -95,8 +95,8 @@ A null object satisfies the compiler but proves nothing about whether the consum
 | ~~Recruitment Hall~~ | — | **done in Phase 6b** — pool, both refresh routes, five origins and a Guild Fit analysis with reasons, gains and concerns |
 | ~~Research tree~~ | — | **done in Phase 6b** — three branches, symmetric conflicts, and the real department-unlock predicate |
 | ~~Department unlock keys off town stage~~ | — | **done in Phase 6b** — replaced by the real research predicate; `Departments` did not change, which was the point of injecting it |
-| Building costs are computed and displayed but never charged | REQ-ECO-* | Phase 7 | same treatment as refinement in Phase 2 — owning half a ledger here is the temporary architecture §126 forbids |
-| `JobOutput.materials` is authored and produced but goes nowhere | REQ-ECO-* | Phase 7 | the economy owns the ledger; jobs will not need rewriting when it lands |
+| ~~Building costs are computed and displayed but never charged~~ | — | **done in Phase 7b** — placement and payment commit atomically |
+| ~~`JobOutput.materials` is authored and produced but goes nowhere~~ | — | **done in Phase 7b** — town advancement deposits it into the ledger |
 | ~~Town defence capacity unused~~ | — | **done in Phase 6b** — the Guild AI weighs it when deciding whether the posted watch is enough |
 | The Shrine provides comfort only | REQ-TWN-005 | open | v1.0 §20 names exact resurrection methods as an open design question, so the building deliberately does not invent one |
 | Population growth ignores the Chronicle | REQ-TWN-003 | Phase 8 | §60 ties growth to reputation, events and prosperity — all three exist; "events" as a town-event system does not |
@@ -106,7 +106,7 @@ A null object satisfies the compiler but proves nothing about whether the consum
 | Item | Requirement | Deferred to | Why |
 |---|---|---|---|
 | Watching a town hunt or a defense as it happens | REQ-TWN-007, §7 | Phase 9 | `CombatEncounter.step` is public precisely so a renderer can drive it a tick at a time; nothing does yet, for expeditions either |
-| Recruit fees, the research reset resource, and building repair costs | REQ-ECO-* | Phase 7 | computed and displayed, charged nowhere — same treatment as every other price |
+| ~~Recruit fees, the research reset resource, and building repair costs~~ | — | **done in Phase 7b** — all are real ledger debits; repair scale is authored economy data |
 | Friendship | `systems/hunter/` | Phase 8 | recruitment lands, but friendship is behaviour memory rather than a recruitment feature |
 | The Shrine still provides comfort and no revival | REQ-TWN-005 | open | v1.0 §20 leaves exact resurrection methods an open design question; inventing one here would be the wrong kind of initiative |
 | Departments have no per-job lever | REQ-DEP-004 | if it proves needed | department priority separates departments, not jobs within one. `outputValue` (DL-043) covers the case that motivated it; a finer lever would sit below the altitude the design works at |

@@ -103,8 +103,8 @@ The last two both earn their place by having caught live requirement failures ra
 
 ## What is not built yet
 
-Economy, crafting and the market (Phase 7) · legacy and NG+ (Phase 8) · isometric pixel-art presentation (Phase 9).
+Crafting, the market, contracts and factions (the remainder of Phase 7) · legacy and NG+ (Phase 8) · isometric pixel-art presentation (Phase 9).
 
-Gold and materials are computed and displayed wherever they apply — refinement, building, upgrades — and charged nowhere, because the ledger belongs to Phase 7 and owning half of it early is the temporary architecture the design forbids. `TECH_DEBT.md` lists every such stub together with the trigger that repays it.
+The Phase 7 ledger now charges refinement, construction, repairs, recruitment and research resets; item sales, dismantling and staffed town work feed their proceeds back into the same ledger. Crafting and the market are the next consumers.
 
 Risk R2 — the claim that different builds produce different AI **decisions** and not merely different profiles — was settled in Phase 4 by the §140 A–M scenarios, which caught a live failure in the process. `RISK_AUDIT.md` has the write-up.

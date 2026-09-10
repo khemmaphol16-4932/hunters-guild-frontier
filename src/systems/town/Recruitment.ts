@@ -174,8 +174,8 @@ export class Recruitment {
    * What a candidate costs to take on.
    *
    * Scales with potential rather than with current power, because v1.0 §4 makes recruitment
-   * about *who they could become*. Reported and not charged until the Phase 7 ledger exists,
-   * like every other price in the game right now.
+   * about *who they could become*. The command boundary charges this authored quote before
+   * removing the candidate from the board.
    */
   private costOf(recruit: GeneratedRecruit): number {
     const base = this.deps.content.pool.paidRefreshGold / 2;

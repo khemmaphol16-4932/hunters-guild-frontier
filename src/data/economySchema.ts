@@ -17,6 +17,7 @@ export interface ResourceDef {
 
 export interface EconomyData {
   readonly resources: readonly ResourceDef[];
+  readonly repairCostScale: number;
 }
 
 const CATEGORIES = new Set<ResourceCategory>([
@@ -28,6 +29,10 @@ export function parseEconomy(value: unknown): EconomyData {
     throw new ContentValidationError('resources.json', 'must be an object');
   }
   const raw = (value as Record<string, unknown>)['resources'];
+  const repairCostScale = (value as Record<string, unknown>)['repairCostScale'];
+  if (typeof repairCostScale !== 'number' || repairCostScale <= 0 || repairCostScale > 1) {
+    throw new ContentValidationError('resources.json.repairCostScale', 'must be above 0 and at most 1');
+  }
   if (!Array.isArray(raw) || raw.length === 0) {
     throw new ContentValidationError('resources.json.resources', 'must be a non-empty array');
   }
@@ -51,5 +56,5 @@ export function parseEconomy(value: unknown): EconomyData {
     return { id, name, category: category as ResourceCategory, starting };
   });
   if (!seen.has('gold')) throw new ContentValidationError('resources.json', 'must define the gold ledger');
-  return { resources };
+  return { resources, repairCostScale };
 }

@@ -101,8 +101,11 @@ describe('the research tree (REQ-RES-001)', () => {
     expect(harness.session.research.availabilityOf('travel_light').state).toBe('foreclosed');
 
     const reset = harness.commands.resetResearch();
-    expect(reset.cleared).toBe(2);
-    expect(reset.cost).toMatch(/Insight Crystal/);
+    expect(reset.ok).toBe(false);
+    harness.session.resources.transact({ credits: { insight_crystal: 3 } });
+    const paidReset = harness.commands.resetResearch();
+    expect(paidReset.ok && paidReset.value.cleared).toBe(2);
+    expect(paidReset.ok && paidReset.value.cost).toMatch(/Insight Crystal/);
 
     // The lock is gone, and so is everything that had been learned.
     expect(harness.session.research.isComplete('standing_watch')).toBe(false);

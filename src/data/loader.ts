@@ -309,6 +309,30 @@ function crossValidateTown(content: {
   }
 }
 
+function crossValidateEconomy(content: {
+  economy: EconomyData;
+  research: ResearchData;
+  refinement: RefinementBalance;
+  loot: LootBalance;
+}): void {
+  const ids = new Set(content.economy.resources.map((resource) => resource.id));
+  const required = [
+    'gold',
+    'materials',
+    content.research.resetResource.id,
+    content.refinement.protection.resourceId,
+    content.loot.conversion.dismantleResourceId,
+  ];
+  for (const id of required) {
+    if (!ids.has(id)) {
+      throw new ContentValidationError(
+        'resources.json',
+        `does not define referenced resource "${id}", so a transaction would silently fail`,
+      );
+    }
+  }
+}
+
 /**
  * World referential integrity.
  *
@@ -673,6 +697,8 @@ export function loadContent(): GameContent {
   const recruitment = parseRecruitment(originsJson);
   const threats = parseThreats(threatsJson);
   const economy = parseEconomy(resourcesJson);
+  const refinementBalance = parseRefinementBalance(refinementBalanceJson);
+  const lootBalance = parseLootBalance(lootBalanceJson);
 
   crossValidateConstellation({ archetypes, regions, constellation, skills, itemTypes });
   crossValidateItems({ rarities, itemTypes, substats, cards, uniqueEffects, skills });
@@ -691,6 +717,7 @@ export function loadContent(): GameContent {
     monsterIds: new Set(monsters.map((m) => m.id)),
     reputationMax: townBalance.reputation.max,
   });
+  crossValidateEconomy({ economy, research, refinement: refinementBalance, loot: lootBalance });
 
   cached = Object.freeze({
     archetypes,
@@ -752,8 +779,8 @@ export function loadContent(): GameContent {
       potential: parsePotentialBalance(potentialBalanceJson),
       personality: parsePersonalityBalance(personalityBalanceJson),
       chronicle: parseChronicleBalance(chronicleBalanceJson),
-      refinement: parseRefinementBalance(refinementBalanceJson),
-      loot: parseLootBalance(lootBalanceJson),
+      refinement: refinementBalance,
+      loot: lootBalance,
       combat: parseCombatBalance(combatBalanceJson),
       town: townBalance,
     },

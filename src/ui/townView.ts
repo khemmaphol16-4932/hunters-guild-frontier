@@ -314,8 +314,7 @@ export class TownView {
         const raised = this.commands.upgradeBuilding(placement.instanceId);
         this.say(
           raised.ok
-            ? `Raised the ${this.nameOf(raised.value)} to tier ${raised.value.tier}. ` +
-                'Nothing was charged — the ledger arrives with the economy.'
+            ? `Raised the ${this.nameOf(raised.value)} to tier ${raised.value.tier}.`
             : raised.error,
           !raised.ok,
         );
@@ -380,7 +379,7 @@ export class TownView {
       el(
         'p',
         'subhead',
-        'Costs are shown but not charged — gold and materials arrive with the economy.',
+        'Construction draws gold and materials from the guild ledger.',
       ),
     );
     return card;
@@ -620,7 +619,12 @@ export class TownView {
     reset.textContent = 'Reset the tree';
     reset.onclick = () => {
       const result = this.commands.resetResearch();
-      this.say(`Unlearned ${result.cleared} advance(s). Costs ${result.cost} — not charged yet.`);
+      this.say(
+        result.ok
+          ? `Unlearned ${result.value.cleared} advance(s). Paid ${result.value.cost}.`
+          : result.error,
+        !result.ok,
+      );
     };
     card.append(reset);
 
@@ -751,4 +755,3 @@ export class TownView {
 function capitalise(text: string): string {
   return text.replace(/^./, (c) => c.toUpperCase());
 }
-

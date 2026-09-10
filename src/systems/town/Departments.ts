@@ -338,7 +338,7 @@ export class Departments {
     }, 0);
   }
 
-  /** Materials produced per coarse step. Held for the Phase 7 economy ledger. */
+  /** Materials produced per coarse step and deposited into the economy ledger. */
   materialsOutput(): number {
     return this.deps.staffOf().reduce((sum, staff) => {
       const job = this.jobsById.get(staff.jobId);

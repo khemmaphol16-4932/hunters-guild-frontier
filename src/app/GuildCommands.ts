@@ -306,10 +306,8 @@ export class GuildCommands {
   /**
    * Attempt one refinement (REQ-EQP-005).
    *
-   * The gold and protection cost is computed and returned but **not yet charged** — the
-   * Resources system arrives in Phase 7 and owning a half-version of it here is exactly
-   * the temporary architecture §126 warns against. The *risk* half of risk/reward is fully
-   * live: a failed attempt can downgrade or destroy the item. Tracked in TECH_DEBT.md.
+   * The ledger charges before the roll, so failure is a real gold sink and reloading cannot
+   * turn an unaffordable attempt into a free random draw.
    */
   refineItem(itemId: string, useProtection = false): Result<RefineResult, string> {
     const id = asItemId(itemId);
@@ -317,8 +315,19 @@ export class GuildCommands {
     if (!item) return err(`unknown item ${itemId}`);
 
     const options = { useProtection };
+    if (this.session.refinement.isAtMax(item)) {
+      return err(`${item.name} is already at maximum refinement`);
+    }
+    const cost = this.session.refinement.cost(item, options);
+    const debits: Record<string, number> = { gold: cost.gold };
+    if (cost.protection) debits[cost.protection.resourceId] = cost.protection.amount;
+    const paid = this.session.resources.transact({ debits });
+    if (isErr(paid)) return err(paid.error);
     const attempt = this.session.refinement.attempt(this.session.streams.refine, item, options);
-    if (isErr(attempt)) return attempt;
+    if (isErr(attempt)) {
+      this.session.resources.transact({ credits: debits });
+      return attempt;
+    }
 
     const outcome = attempt.value;
     if (outcome.kind === 'destroyed') {
@@ -338,18 +347,25 @@ export class GuildCommands {
     const equipped = Equipment.equippedIdsAcross(this.session.roster.all());
     const result = this.session.armoury.sell(id, equipped);
     if (isErr(result)) return result;
+    this.session.resources.transact({ credits: { gold: result.value.gold } });
     return ok({ gold: result.value.gold });
   }
 
   dismantleItem(itemId: string): Result<DismantleOutcome, string> {
     const equipped = Equipment.equippedIdsAcross(this.session.roster.all());
-    return this.session.armoury.dismantle(asItemId(itemId), equipped);
+    const result = this.session.armoury.dismantle(asItemId(itemId), equipped);
+    if (isErr(result)) return result;
+    this.session.resources.transact({
+      credits: Object.fromEntries(result.value.resources.map((gain) => [gain.resourceId, gain.amount])),
+    });
+    return result;
   }
 
   /** Bulk-sell everything below a rarity, skipping locked and equipped items. */
   sellJunk(rarityId: string): { gold: number; sold: number } {
     const equipped = Equipment.equippedIdsAcross(this.session.roster.all());
     const result = this.session.armoury.sellBelowRarity(rarityId, equipped);
+    this.session.resources.transact({ credits: { gold: result.gold } });
     return { gold: result.gold, sold: result.sold };
   }
 
@@ -689,7 +705,7 @@ export class GuildCommands {
 
     const placed: string[] = [];
     for (const [buildingId, x, y] of founding) {
-      const result = this.placeBuilding(buildingId, x, y);
+      const result = this.placeBuildingWithoutCharge(buildingId, x, y);
       if (result.ok) placed.push(result.value.instanceId);
     }
 
@@ -701,10 +717,7 @@ export class GuildCommands {
   /**
    * Place a building (REQ-TWN-001).
    *
-   * Cost is computed and reported but **not charged** — the Resources system is Phase 7, and
-   * owning half of it here is the temporary architecture §126 warns against. Same treatment
-   * as refinement in Phase 2, and tracked in TECH_DEBT.md. Unlocks and space are fully
-   * enforced, so the only thing missing is the bill.
+   * Placement and payment commit together. A blocked cell never consumes resources.
    */
   placeBuilding(
     buildingId: string,
@@ -712,11 +725,34 @@ export class GuildCommands {
     y: number,
     rotation: Rotation = 0,
   ): Result<Placement, string> {
+    return this.placeBuildingPaid(buildingId, x, y, rotation, true);
+  }
+
+  private placeBuildingWithoutCharge(buildingId: string, x: number, y: number): Result<Placement, string> {
+    return this.placeBuildingPaid(buildingId, x, y, 0, false);
+  }
+
+  private placeBuildingPaid(
+    buildingId: string,
+    x: number,
+    y: number,
+    rotation: Rotation,
+    charge: boolean,
+  ): Result<Placement, string> {
     const allowed = this.session.town.canBuild(buildingId);
     if (isErr(allowed)) return allowed;
 
+    const before = this.session.town.grid.snapshot();
     const placed = this.session.town.grid.place(buildingId, x, y, rotation);
     if (isErr(placed)) return placed;
+    const tier = this.session.content.buildingsById.get(buildingId)?.tiers.find((entry) => entry.tier === 1);
+    if (charge && tier) {
+      const paid = this.session.resources.transact({ debits: { gold: tier.cost.gold, materials: tier.cost.materials } });
+      if (isErr(paid)) {
+        this.session.town.grid.restore(before);
+        return err(paid.error);
+      }
+    }
 
     this.session.events.emit('town.buildingPlaced', {
       buildingId,
@@ -750,13 +786,19 @@ export class GuildCommands {
     return this.session.town.grid.relocate(instanceId, x, y, rotation);
   }
 
-  /** Raise a building a tier. Cost reported, not charged (Phase 7). */
+  /** Raise a building a tier and charge its authored cost atomically. */
   upgradeBuilding(instanceId: string): Result<Placement, string> {
     const cost = this.session.town.upgradeCost(instanceId);
     if (isErr(cost)) return cost;
 
+    const before = this.session.town.grid.snapshot();
     const raised = this.session.town.grid.setTier(instanceId, cost.value.tier);
     if (isErr(raised)) return raised;
+    const paid = this.session.resources.transact({ debits: { gold: cost.value.gold, materials: cost.value.materials } });
+    if (isErr(paid)) {
+      this.session.town.grid.restore(before);
+      return err(paid.error);
+    }
 
     const stage = this.session.town.refreshStage();
     if (stage) {
@@ -814,14 +856,16 @@ export class GuildCommands {
   /**
    * Pay for a new set of candidates (REQ-RCT-001).
    *
-   * The price is reported and not charged — the Phase 7 ledger again. What is fully live is
-   * the *consequence*: everyone currently waiting leaves, so a paid refresh is a real
-   * decision rather than a free reroll of the same faces.
+   * Payment and the refresh happen together: an unaffordable request leaves the current
+   * candidates in place rather than turning the board into a free reroll.
    */
   refreshRecruits(): Result<readonly Candidate[], string> {
     if (this.session.town.grid.countOf('recruitment_hall') === 0) {
       return err('the guild has no Recruitment Hall');
     }
+    const price = this.session.content.recruitment.pool.paidRefreshGold;
+    const paid = this.session.resources.transact({ debits: { gold: price } });
+    if (isErr(paid)) return err(paid.error);
 
     const drawn = this.session.recruitment.refresh(this.session.streams.recruit);
     this.session.audit.record({
@@ -842,8 +886,15 @@ export class GuildCommands {
    * constellation the way any recruit does.
    */
   hireRecruit(hunterId: HunterId): Result<Hunter, string> {
+    const candidate = this.session.recruitment.available().find((entry) => entry.hunter.id === hunterId);
+    if (!candidate) return err('that candidate is no longer at the hall');
+    const paid = this.session.resources.transact({ debits: { gold: candidate.cost } });
+    if (isErr(paid)) return err(paid.error);
     const taken = this.session.recruitment.hire(String(hunterId));
-    if (isErr(taken)) return taken;
+    if (isErr(taken)) {
+      this.session.resources.transact({ credits: { gold: candidate.cost } });
+      return taken;
+    }
 
     const hired = this.session.enlist(taken.value.hunter);
     const developed = this.developRecruit(hired);
@@ -899,10 +950,13 @@ export class GuildCommands {
   /**
    * REQ-RES-001 — reset the research tree with a rare resource.
    *
-   * The cost is reported, not charged (Phase 7 owns the ledger). What the reset actually
-   * does is release the locks, which is the only way a guild changes its identity.
+   * The rare resource is charged before locks are released, which is the only way a guild
+   * changes its research identity.
    */
-  resetResearch(): { readonly cleared: number; readonly cost: string } {
+  resetResearch(): Result<{ readonly cleared: number; readonly cost: string }, string> {
+    const resetCost = this.session.content.research.resetResource;
+    const paid = this.session.resources.transact({ debits: { [resetCost.id]: resetCost.amount } });
+    if (isErr(paid)) return err(paid.error);
     const result = this.session.research.reset();
     this.session.audit.record({
       actor: { kind: 'player' },
@@ -910,10 +964,10 @@ export class GuildCommands {
       outcome: `reset the research tree, unlearning ${result.cleared} advance(s)`,
       reasonCodes: ['research_reset'],
     });
-    return {
+    return ok({
       cleared: result.cleared,
       cost: `${result.cost.amount} × ${result.cost.name}`,
-    };
+    });
   }
 
   /** Appoint a Department Head (REQ-DEP-002). */
@@ -997,6 +1051,11 @@ export class GuildCommands {
     for (let i = 0; i < steps; i++) {
       const done = this.session.research.contribute(researchOutput);
       if (done) researchCompleted.push(done.name);
+    }
+
+    const materialsProduced = this.session.departments.materialsOutput() * steps;
+    if (materialsProduced > 0) {
+      this.session.resources.transact({ credits: { materials: materialsProduced } });
     }
 
     const populationChange = this.session.population.step(steps);
@@ -1174,14 +1233,23 @@ export class GuildCommands {
     return result;
   }
 
-  /** Rebuild something a defense event wrecked. Cost reported, not charged (Phase 7). */
+  /** Rebuild something a defense event wrecked, paying a fraction of its tier cost. */
   repairBuilding(instanceId: string): Result<Placement, string> {
     const placement = this.session.town.grid.get(instanceId);
     if (!placement) return err(`nothing placed as "${instanceId}"`);
     if (placement.damaged !== true) return err('that building is not damaged');
+    const tier = this.session.content.buildingsById.get(placement.buildingId)?.tiers.find((entry) => entry.tier === placement.tier);
+    if (!tier) return err('that building tier no longer exists');
+    const scale = this.session.content.economy.repairCostScale;
+    const debits = { gold: Math.ceil(tier.cost.gold * scale), materials: Math.ceil(tier.cost.materials * scale) };
+    const paid = this.session.resources.transact({ debits });
+    if (isErr(paid)) return err(paid.error);
 
     const repaired = this.session.town.grid.repair(instanceId);
-    if (isErr(repaired)) return repaired;
+    if (isErr(repaired)) {
+      this.session.resources.transact({ credits: debits });
+      return repaired;
+    }
 
     this.session.townJobs.refresh();
     return repaired;

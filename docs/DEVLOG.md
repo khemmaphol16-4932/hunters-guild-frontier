@@ -360,3 +360,15 @@ Save **v11** persists the ledger and migrates old saves without inventing produc
 ## Next
 
 Wire the costs and outputs already computed by refinement, buildings, recruitment, research reset and town jobs through the ledger. Only after every existing price is real should crafting and the market add new transaction paths.
+
+---
+
+# Phase 7b — Prices become decisions
+
+Every price the earlier phases displayed is now enforced. Refinement pays before the roll; buildings and upgrades roll their grid mutation back if payment fails; paid recruitment refreshes preserve the current board when the guild is short of gold; hiring, research resets and repairs debit the same ledger. Item sales and dismantling credit it, and staffed town jobs finally deposit their authored material output.
+
+The content loader cross-validates every externally referenced resource id, preventing a typo from turning a dismantle yield or protection charge into a silently ignored transaction. Repair cost is a content-owned fraction of the building tier rather than a TypeScript balance constant. 498 tests green, typecheck and production build clean.
+
+## Next
+
+Model provisions as a stored flow—production, population consumption and shortage—then connect expedition and town-hunting rewards before crafting and the market add more transaction paths.

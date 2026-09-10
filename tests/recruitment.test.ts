@@ -193,6 +193,7 @@ describe('regional identity (REQ-RCT-002)', () => {
   it('flags an exceptional recruit rather than leaving the player to infer it', () => {
     const harness = guildWithHall('exceptional');
     const threshold = harness.session.content.recruitment.exceptional.potentialAtLeast;
+    harness.session.resources.transact({ credits: { gold: 7500 } });
 
     // Draw enough pools that at least one exceptional candidate appears, then check the
     // flag agrees with the threshold in every case.

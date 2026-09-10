@@ -302,7 +302,7 @@ export interface JobOutput {
   readonly performance: number;
   /** Food capacity added while the job is staffed. Answers REQ-TWN-003's food pressure. */
   readonly food: number;
-  /** Held for the Phase 7 economy; authored now so jobs do not need rewriting then. */
+  /** Material output deposited into the guild ledger each coarse step. */
   readonly materials: number;
 }
 

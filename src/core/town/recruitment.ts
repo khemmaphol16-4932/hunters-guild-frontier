@@ -23,7 +23,7 @@ export interface Candidate {
   readonly originNote: string;
   /** REQ-RCT-002 — must be immediately legible, so it is a flag, not a number to interpret. */
   readonly exceptional: boolean;
-  /** Acquisition cost in gold. Reported, not charged, until the Phase 7 ledger exists. */
+  /** Acquisition cost in gold, charged by the player-intent boundary. */
   readonly cost: number;
 }
 

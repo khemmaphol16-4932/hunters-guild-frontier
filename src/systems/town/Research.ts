@@ -193,8 +193,8 @@ export class Research {
   /**
    * REQ-RES-001 — research can be reset with a rare resource.
    *
-   * The cost is reported, not charged; the ledger is Phase 7, and holding half of one here
-   * is the temporary architecture §126 forbids. What the reset genuinely does is undo the
+   * The cost is reported to the command boundary, which charges the economy ledger. What
+   * the reset genuinely does is undo the
    * *locks*, which is the whole point: it is the only way a guild changes its identity.
    */
   reset(): { readonly cleared: number; readonly cost: ResearchData['resetResource'] } {
