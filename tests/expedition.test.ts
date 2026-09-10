@@ -490,6 +490,17 @@ describe('sending an expedition', () => {
     expect(session.armoury.all().length).toBe(before + outcome.value.loot.length);
   });
 
+  it('deposits the expedition resource haul in the guild ledger', () => {
+    const { session, commands } = guild();
+    const before = session.resources.snapshot().balances;
+    const outcome = commands.sendExpedition('verdant_reach', 'clear');
+    if (!outcome.ok) throw new Error(outcome.error);
+
+    expect(session.resources.amount('gold')).toBe(before['gold']! + outcome.value.resources.gold);
+    expect(session.resources.amount('materials')).toBe(before['materials']! + outcome.value.resources.materials);
+    expect(session.resources.amount('food')).toBe(before['food']! + outcome.value.resources.food);
+  });
+
   it('leaves an audit trail explaining every route decision — v1.0 §14', () => {
     const { session, commands } = guild();
     const outcome = commands.sendExpedition('ashfall_barrows', 'survive');

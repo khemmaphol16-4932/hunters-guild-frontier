@@ -341,6 +341,19 @@ const v10ToV11: Migration = {
   },
 };
 
+const v11ToV12: Migration = {
+  from: 11,
+  to: 12,
+  describe: 'persist the latest provisions fulfilment for hunger and recovery',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) {
+      throw new SaveMigrationError('v11 payload is not an object');
+    }
+    // Food was not consumed before v12, so an old guild was fully fed at its last tick.
+    return { ...(payload as Record<string, unknown>), food: { fedFraction: 1 } };
+  },
+};
+
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -352,6 +365,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v8ToV9,
   v9ToV10,
   v10ToV11,
+  v11ToV12,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

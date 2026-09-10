@@ -18,7 +18,12 @@ export interface ResourceDef {
 export interface EconomyData {
   readonly resources: readonly ResourceDef[];
   readonly repairCostScale: number;
+  readonly foodConsumptionPerResidentPerStep: number;
+  readonly expeditionRewards: Readonly<Record<'blue' | 'yellow' | 'red' | 'black', EconomyReward>>;
+  readonly townHuntRewards: EconomyReward;
 }
+
+export interface EconomyReward { readonly gold: number; readonly food: number; readonly materials: number }
 
 const CATEGORIES = new Set<ResourceCategory>([
   'currency', 'core', 'construction', 'crafting', 'specialized', 'rare',
@@ -33,6 +38,30 @@ export function parseEconomy(value: unknown): EconomyData {
   if (typeof repairCostScale !== 'number' || repairCostScale <= 0 || repairCostScale > 1) {
     throw new ContentValidationError('resources.json.repairCostScale', 'must be above 0 and at most 1');
   }
+  const foodConsumption = (value as Record<string, unknown>)['foodConsumptionPerResidentPerStep'];
+  if (typeof foodConsumption !== 'number' || !Number.isFinite(foodConsumption) || foodConsumption <= 0) {
+    throw new ContentValidationError('resources.json.foodConsumptionPerResidentPerStep', 'must be positive');
+  }
+  const reward = (rawReward: unknown, path: string): EconomyReward => {
+    if (typeof rawReward !== 'object' || rawReward === null) throw new ContentValidationError(path, 'must be an object');
+    const record = rawReward as Record<string, unknown>;
+    const read = (key: keyof EconomyReward): number => {
+      const amount = record[key];
+      if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0) throw new ContentValidationError(`${path}.${key}`, 'must be non-negative');
+      return amount;
+    };
+    return { gold: read('gold'), food: read('food'), materials: read('materials') };
+  };
+  const rewardsRaw = (value as Record<string, unknown>)['expeditionRewards'];
+  if (typeof rewardsRaw !== 'object' || rewardsRaw === null) throw new ContentValidationError('resources.json.expeditionRewards', 'must be an object');
+  const rewardRecord = rewardsRaw as Record<string, unknown>;
+  const expeditionRewards = {
+    blue: reward(rewardRecord['blue'], 'resources.json.expeditionRewards.blue'),
+    yellow: reward(rewardRecord['yellow'], 'resources.json.expeditionRewards.yellow'),
+    red: reward(rewardRecord['red'], 'resources.json.expeditionRewards.red'),
+    black: reward(rewardRecord['black'], 'resources.json.expeditionRewards.black'),
+  };
+  const townHuntRewards = reward((value as Record<string, unknown>)['townHuntRewards'], 'resources.json.townHuntRewards');
   if (!Array.isArray(raw) || raw.length === 0) {
     throw new ContentValidationError('resources.json.resources', 'must be a non-empty array');
   }
@@ -56,5 +85,5 @@ export function parseEconomy(value: unknown): EconomyData {
     return { id, name, category: category as ResourceCategory, starting };
   });
   if (!seen.has('gold')) throw new ContentValidationError('resources.json', 'must define the gold ledger');
-  return { resources, repairCostScale };
+  return { resources, repairCostScale, foodConsumptionPerResidentPerStep: foodConsumption, expeditionRewards, townHuntRewards };
 }

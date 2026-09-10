@@ -28,8 +28,9 @@ import type { ResearchSnapshot } from '../systems/town/Research.js';
 import type { RecruitmentSnapshot } from '../systems/town/Recruitment.js';
 import type { DefenseSnapshot } from '../systems/town/Defense.js';
 import type { ResourcesSnapshot } from '../systems/economy/Resources.js';
+import type { FoodSnapshot } from '../systems/economy/Food.js';
 
-export const CURRENT_SAVE_VERSION = 11;
+export const CURRENT_SAVE_VERSION = 12;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -190,7 +191,12 @@ export interface SavePayloadV11 extends SavePayloadV10 {
   readonly resources: ResourcesSnapshot;
 }
 
-export type CurrentSavePayload = SavePayloadV11;
+/** v12 — persisted food fulfilment, because a shortage affects recovery and population. */
+export interface SavePayloadV12 extends SavePayloadV11 {
+  readonly food: FoodSnapshot;
+}
+
+export type CurrentSavePayload = SavePayloadV12;
 
 export interface Migration {
   readonly from: number;

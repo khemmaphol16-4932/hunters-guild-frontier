@@ -36,6 +36,14 @@ export class Resources {
     return ok(this.snapshot());
   }
 
+  consumeAvailable(id: string, requested: number): Result<{ consumed: number; shortfall: number }, string> {
+    if (!this.validAmount(id, requested)) return err(`invalid amount for resource "${id}"`);
+    const consumed = Math.min(this.amount(id), requested);
+    const result = this.transact({ debits: { [id]: consumed } });
+    if (!result.ok) return result;
+    return ok({ consumed, shortfall: requested - consumed });
+  }
+
   snapshot(): ResourcesSnapshot { return { balances: this.all() }; }
   restore(snapshot: ResourcesSnapshot | undefined): void {
     if (!snapshot) return;

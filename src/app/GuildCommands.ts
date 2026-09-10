@@ -50,6 +50,8 @@ import type { ResearchNodeDef } from '../data/researchSchema.js';
 import type { Candidate, RecruitmentAdvice } from '../core/town/recruitment.js';
 import { analysePool } from '../ai/town/guildFit.js';
 import type { DefenseResult, HuntResult } from '../sim/town/TownCombat.js';
+import type { EconomyReward } from '../data/economySchema.js';
+import type { FoodReport } from '../systems/economy/Food.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -61,6 +63,7 @@ export interface ExpeditionOutcome {
   readonly party: PartyProposal;
   readonly loot: readonly Item[];
   readonly levelledUp: readonly HunterId[];
+  readonly resources: EconomyReward;
 }
 
 /**
@@ -670,7 +673,20 @@ export class GuildCommands {
         : [];
     this.session.armoury.addMany(loot);
 
-    return ok({ result, party: proposal, loot, levelledUp });
+    const baseReward = this.session.content.economy.expeditionRewards[region.zoneTier];
+    const completionScale = result.wiped
+      ? 0
+      : result.completed
+        ? 1
+        : Math.max(0.2, result.reachedNode / Math.max(1, result.routeLength));
+    const resources = {
+      gold: Math.round(baseReward.gold * completionScale),
+      food: Math.round(baseReward.food * completionScale),
+      materials: Math.round(baseReward.materials * completionScale),
+    };
+    this.session.resources.transact({ credits: resources });
+
+    return ok({ result, party: proposal, loot, levelledUp, resources });
   }
 
   // --- The town -------------------------------------------------------------
@@ -1029,6 +1045,7 @@ export class GuildCommands {
     readonly researchCompleted: readonly string[];
     readonly hunts: readonly HuntResult[];
     readonly defense: DefenseResult | undefined;
+    readonly economy: { readonly materialsProduced: number; readonly food: FoodReport };
   } {
     // Advance the simulation clock first, because everything below is timed against it.
     //
@@ -1057,6 +1074,11 @@ export class GuildCommands {
     if (materialsProduced > 0) {
       this.session.resources.transact({ credits: { materials: materialsProduced } });
     }
+    const food = this.session.food.step(
+      this.session.population.size,
+      steps,
+      this.session.departments.foodOutput(),
+    );
 
     const populationChange = this.session.population.step(steps);
     if (populationChange !== 0) {
@@ -1088,6 +1110,7 @@ export class GuildCommands {
       researchCompleted,
       hunts,
       defense,
+      economy: { materialsProduced, food },
     };
   }
 
@@ -1155,6 +1178,12 @@ export class GuildCommands {
             itemLevel: ground.itemLevel,
           }),
         );
+      }
+      if (result.won) {
+        const reward = this.session.content.economy.townHuntRewards;
+        this.session.resources.transact({
+          credits: { gold: reward.gold, food: reward.food, materials: reward.materials },
+        });
       }
     }
 

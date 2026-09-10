@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadContent } from '../src/data/loader.js';
 import { Resources } from '../src/systems/economy/Resources.js';
+import { Food } from '../src/systems/economy/Food.js';
 import { testSession } from './helpers.js';
 
 describe('guild resources (REQ-ECO-001/002)', () => {
@@ -49,5 +50,37 @@ describe('guild resources (REQ-ECO-001/002)', () => {
     const sold = commands.sellItem(String(item.id));
     expect(sold.ok).toBe(true);
     if (sold.ok) expect(session.resources.amount('gold')).toBe(before + sold.value.gold);
+  });
+
+  it('stores production, consumes provisions, and reports shortages without going negative', () => {
+    const resources = new Resources(loadContent().economy.resources);
+    resources.transact({ debits: { food: resources.amount('food') } });
+    const food = new Food(resources, 0.1);
+    const report = food.step(12, 10, 0.5);
+    expect(report.produced).toBe(5);
+    expect(report.consumed).toBe(5);
+    expect(report.shortfall).toBeCloseTo(7);
+    expect(report.fedFraction).toBeCloseTo(5 / 12);
+    expect(resources.amount('food')).toBe(0);
+  });
+
+  it('makes a real provisions shortage visible to town pressure', () => {
+    const { session, commands } = testSession('economy-hunger');
+    commands.foundTown();
+    session.resources.transact({ debits: { food: session.resources.amount('food') } });
+    commands.advanceTown(1);
+    expect(session.town.foodAvailable()).toBe(false);
+    expect(session.population.pressureFor('food').pressure).toBeGreaterThan(0);
+  });
+
+  it('preserves a food shortage across save and reload', () => {
+    const first = testSession('economy-hunger-save');
+    first.commands.foundTown();
+    first.session.resources.transact({ debits: { food: first.session.resources.amount('food') } });
+    first.commands.advanceTown(1);
+    const second = testSession('economy-hunger-load');
+    second.session.restore(first.session.snapshot());
+    expect(second.session.food.fedFraction).toBe(first.session.food.fedFraction);
+    expect(second.session.town.foodAvailable()).toBe(false);
   });
 });

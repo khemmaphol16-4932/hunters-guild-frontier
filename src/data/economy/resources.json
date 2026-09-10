@@ -1,6 +1,14 @@
 {
   "$comment": "REQ-ECO-001/002: the economy starts with one trade currency and a deliberately small resource set. Values and starting balances are content, never TypeScript constants.",
   "repairCostScale": 0.25,
+  "foodConsumptionPerResidentPerStep": 0.1,
+  "expeditionRewards": {
+    "blue": { "gold": 90, "food": 8, "materials": 5 },
+    "yellow": { "gold": 180, "food": 12, "materials": 9 },
+    "red": { "gold": 360, "food": 18, "materials": 16 },
+    "black": { "gold": 720, "food": 25, "materials": 28 }
+  },
+  "townHuntRewards": { "gold": 18, "food": 5, "materials": 2 },
   "resources": [
     { "id": "gold", "name": "Gold", "category": "currency", "starting": 3000 },
     { "id": "food", "name": "Provisions", "category": "core", "starting": 120 },

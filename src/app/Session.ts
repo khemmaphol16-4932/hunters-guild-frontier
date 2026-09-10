@@ -64,6 +64,7 @@ import type { TownDepartmentId } from '../data/townSchema.js';
 import { SaveGame, type SaveStorage } from '../save/SaveGame.js';
 import type { CurrentSavePayload } from '../save/envelope.js';
 import { Resources } from '../systems/economy/Resources.js';
+import { Food } from '../systems/economy/Food.js';
 
 export interface SessionOptions {
   readonly worldSeed: string;
@@ -197,6 +198,7 @@ export class Session {
   /** Town hunting and town defense, fought with the same combat system (REQ-TWN-007/008). */
   readonly townCombat: TownCombat;
   readonly resources: Resources;
+  readonly food: Food;
 
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
@@ -233,6 +235,7 @@ export class Session {
     this.emergency = new EmergencyPolicy();
     this.policy = new PolicyBook();
     this.resources = new Resources(this.content.economy.resources);
+    this.food = new Food(this.resources, this.content.economy.foodConsumptionPerResidentPerStep);
 
     this.registry = new SkillRegistry(this.content);
 
@@ -347,6 +350,7 @@ export class Session {
       balance: this.content.balance.town,
       capacityOf: () => session.town.capacity(),
       reputationOf: () => session.reputation.current,
+      foodSupplyFraction: () => session.food.fedFraction,
     });
 
     this.town = new Town({
@@ -355,6 +359,7 @@ export class Session {
       populationOf: () => session.population.size,
       reputationOf: () => session.reputation.current,
       jobFoodOf: () => session.departments.foodOutput(),
+      foodSupplyFraction: () => session.food.fedFraction,
       researchCapacity: (axis) => session.research.capacityBonus(axis),
       researchQuality: (axis) => session.research.qualityScale(axis),
       researchUnlockedBuilding: (id) => session.research.unlocksBuilding(id),
@@ -656,6 +661,7 @@ export class Session {
       recruitment: this.recruitment.snapshot(),
       defense: this.defense.snapshot(),
       resources: this.resources.snapshot(),
+      food: this.food.snapshot(),
     };
   }
 
@@ -681,6 +687,7 @@ export class Session {
     this.recruitment.restore(payload.recruitment);
     this.defense.restore(payload.defense);
     this.resources.restore(payload.resources);
+    this.food.restore(payload.food);
     this.townJobs.restore(payload.townJobs);
   }
 

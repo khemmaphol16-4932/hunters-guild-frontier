@@ -50,6 +50,7 @@ export interface TownDeps {
   readonly reputationOf: () => number;
   /** Food produced by staffed jobs, which counts toward capacity alongside buildings. */
   readonly jobFoodOf?: () => number;
+  readonly foodSupplyFraction?: () => number;
   /**
    * What research has changed about the town.
    *
@@ -185,7 +186,7 @@ export class Town {
 
   /** Whether the town can feed everyone in it. Recovery reads this as a yes/no (v1.0 §4). */
   foodAvailable(): boolean {
-    return this.capacity().food >= this.demandFor('food');
+    return this.capacity().food >= this.demandFor('food') && (this.deps.foodSupplyFraction?.() ?? 1) >= 1;
   }
 
   private demandFor(key: 'housing' | 'food' | 'services'): number {

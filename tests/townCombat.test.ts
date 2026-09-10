@@ -116,6 +116,17 @@ describe('town hunting (REQ-TWN-007)', () => {
     expect(after.xp > before.xp || after.level > before.level).toBe(true);
   });
 
+  it('deposits successful hunting rewards in the guild ledger', () => {
+    const harness = withHuntingCamp(guildWithHunters('hunt-resources'));
+    const before = harness.session.resources.amount('gold');
+    const result = harness.commands.advanceTown(40);
+    const wins = result.hunts.filter((hunt) => hunt.won).length;
+    expect(wins).toBeGreaterThan(0);
+    expect(harness.session.resources.amount('gold')).toBe(
+      before + wins * harness.session.content.economy.townHuntRewards.gold,
+    );
+  });
+
   it('costs fatigue, measured against a guild that did not hunt', () => {
     // Asserting that fatigue simply *rises* over a span of steps is wrong now that idle
     // hunters rest: across forty steps, resting outweighs five outings and the net change

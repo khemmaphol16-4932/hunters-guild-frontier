@@ -372,3 +372,15 @@ The content loader cross-validates every externally referenced resource id, prev
 ## Next
 
 Model provisions as a stored flow—production, population consumption and shortage—then connect expedition and town-hunting rewards before crafting and the market add more transaction paths.
+
+---
+
+# Phase 7c — What the town eats
+
+Provisions are inventory now, not only a building-capacity number. Staffed food work deposits into the ledger, population consumes an authored per-resident amount, and a shortfall reduces the food pressure reading and the recovery model through the same `fedFraction`. A zero-step observation cannot reset hunger. Save **v12** persists that fraction, closing the obvious reload exploit.
+
+Expeditions and successful town hunts deposit gold, provisions and materials from data-owned reward tables. Withdrawals receive a route-progress fraction, completed expeditions receive the full tier reward, and a wiped party brings no resource haul home. The town headline exposes the three everyday balances and a season report calls out production and shortages. 503 tests green, typecheck and production build clean.
+
+## Next
+
+Crafting: validated recipes, previewed inputs and outcome range, crafter capability, completion time, and deterministic quality—while keeping loot as the jackpot.

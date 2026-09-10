@@ -54,6 +54,7 @@ export interface PopulationDeps {
   readonly balance: TownBalance;
   readonly capacityOf: () => Capacity;
   readonly reputationOf: () => number;
+  readonly foodSupplyFraction?: () => number;
 }
 
 export class Population {
@@ -74,7 +75,9 @@ export class Population {
 
   private capacityFor(key: DemandKey): number {
     const capacity = this.deps.capacityOf();
-    return key === 'services' ? capacity.service : capacity[key];
+    if (key === 'services') return capacity.service;
+    if (key === 'food') return capacity.food * (this.deps.foodSupplyFraction?.() ?? 1);
+    return capacity[key];
   }
 
   /** One axis of pressure. 0 = met, 1 = nothing provided. */

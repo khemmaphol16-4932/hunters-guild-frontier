@@ -101,7 +101,10 @@ export class TownView {
         'subhead',
         `${report.population} residents · ${this.session.town.grid.size} buildings · ` +
           `Guild Hall tier ${this.session.town.guildHallTier()} · ` +
-          `Reputation ${this.session.reputation.current.toFixed(1)}`,
+          `Reputation ${this.session.reputation.current.toFixed(1)} · ` +
+          `${Math.floor(this.session.resources.amount('gold'))}g · ` +
+          `${Math.floor(this.session.resources.amount('food'))} provisions · ` +
+          `${Math.floor(this.session.resources.amount('materials'))} materials`,
       ),
     );
 
@@ -134,6 +137,12 @@ export class TownView {
         parts.push(`${result.recovered.length} back on their feet`);
       }
       if (result.stageReached) parts.push(`the town is now a ${result.stageReached}`);
+      if (result.economy.materialsProduced > 0) {
+        parts.push(`+${result.economy.materialsProduced.toFixed(1)} materials`);
+      }
+      if (result.economy.food.shortfall > 0) {
+        parts.push(`${result.economy.food.shortfall.toFixed(1)} provisions short`);
+      }
       this.say(parts.length > 0 ? parts.join(' · ') : 'Twenty steps pass. Nothing changes.');
     };
     card.append(advance);

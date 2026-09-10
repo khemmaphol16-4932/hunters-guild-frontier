@@ -135,6 +135,8 @@ Gold · resources · food · production · crafting · market · contracts · re
 
 **Foundation delivered.** One authoritative, data-authored resource ledger now owns gold and the deliberately small resource set (REQ-ECO-001/002). Multi-resource transactions are atomic, new guild balances come from content, and save v11 persists the ledger with a v10→v11 migration. Next: route existing computed costs and town-job production through this ledger before adding crafting or the market.
 
+**Transactions and provisions delivered.** Existing costs now debit the ledger and existing yields credit it. Provisions are stored, produced by staffed work, consumed by population, and shortages feed back into food pressure and recovery. Expedition and town-hunting resource hauls scale from authored reward tables. Save v12 preserves supply fulfilment so hunger cannot be cleared by reloading. Next: crafting and dismantling depth, then the bounded market.
+
 Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
 
 ## Phase 8 — Progression ⬜
