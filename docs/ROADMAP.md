@@ -163,6 +163,8 @@ Legacy foundation complete: Monument achievements award bounded, one-time Legacy
 
 Retirement and mentors complete: retirement is an explicit player command gated by the Mentor Hall unlock, level 30 and availability. Retirees leave the active roster and become distinct mentor profiles derived from their level, attributes, mastery, potential and historic Chronicle entries. Their bounded effects improve experience and mastery training; save v20 preserves mentors and Legacy Traits.
 
+New Game+ complete: an explicit player command resets roster, Chronicle, world knowledge, town, economy, reputation, research, Guild Mastery and Monument while retaining Legacy and only the mentors selected for the next generation. Unlocked starting choices, archetypes and world variants are validated before reset. Save v21 preserves cycle state, and restored RNG streams make resets deterministic.
+
 ## Phase 9 — UX / Presentation ⬜
 
 Progressive UI · build dashboard polish · chronicle · combat timeline · AI explain · guild report · notifications · town and world presentation · **isometric pixel-art** · audio hooks · accessibility.

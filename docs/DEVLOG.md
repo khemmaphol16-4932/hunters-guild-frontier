@@ -490,3 +490,13 @@ The player can now retire an available level-30 hunter after unlocking the Mento
 Historic Chronicle entries become named Legacy Traits on the mentor profile. This conversion is explicit and separate from Chronicle itself, preserving the rule that history alone has no mechanical effect.
 
 Save v20 preserves mentors and their traits. The checkpoint closes with 535 tests across 29 suites; typecheck and production build are clean.
+
+---
+
+# Phase 8g — New Game+
+
+New Game+ now has an explicit reset boundary. Ordinary world progression—active hunters, Chronicle, discovery, town, research, resources, reputation, Guild Mastery and Monument—returns to its starting state. Legacy persists, while the player chooses which mentors cross into the next generation.
+
+Prepared Caravan and Frontier Exile openings and the Long Winter variant require their matching Legacy unlock before a cycle can begin. The cycle and selected variant persist in save v21. Session restoration now also restores the named RNG streams already present in save payloads, closing a latent replay gap and making same-seed cycle resets deterministic.
+
+The checkpoint closes with 539 tests across 30 suites. Typecheck and production build are clean.

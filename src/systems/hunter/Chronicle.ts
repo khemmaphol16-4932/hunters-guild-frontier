@@ -124,6 +124,8 @@ export class Chronicle {
 
   /** Restore from a save. Replaces any in-memory record for those hunters. */
   restore(records: readonly HunterChronicle[]): void {
+    this.records.clear();
+    this.masteryPeak.clear();
     for (const record of records) {
       this.records.set(record.hunterId, {
         hunterId: record.hunterId,

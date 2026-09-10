@@ -13,7 +13,7 @@ import { loadContent, type GameContent } from '../data/loader.js';
 import type { Role } from '../data/schema.js';
 import { EventBus } from '../core/events.js';
 import { SimulationClock } from '../core/clock.js';
-import { createStreams, type RngStreams } from '../core/rng.js';
+import { createStreams, rngFromState, RNG_STREAMS, type Rng, type RngStreams } from '../core/rng.js';
 import { AuditLog } from '../core/audit.js';
 import { EmergencyPolicy } from '../ai/policy/emergency.js';
 import { PolicyBook } from '../ai/policy/PolicyBook.js';
@@ -74,6 +74,8 @@ import { Capability } from '../systems/guild/Capability.js';
 import { Monument } from '../systems/progression/Monument.js';
 import { Legacy } from '../systems/progression/Legacy.js';
 import { Mentors } from '../systems/progression/Mentors.js';
+import { NewGamePlus, type NewGamePlusOptions } from '../systems/progression/NewGamePlus.js';
+import type { Result } from '../core/result.js';
 
 export interface SessionOptions {
   readonly worldSeed: string;
@@ -217,6 +219,8 @@ export class Session {
   readonly monument: Monument;
   readonly legacy: Legacy;
   readonly mentors: Mentors;
+  readonly newGamePlus: NewGamePlus;
+  private cycleBaseline: CurrentSavePayload;
 
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
@@ -347,6 +351,7 @@ export class Session {
     this.monument = new Monument({ events: this.events, currentTick: () => this.clock.tick });
     this.legacy = new Legacy(() => this.monument.all());
     this.mentors = new Mentors();
+    this.newGamePlus = new NewGamePlus((id) => this.legacy.has(id));
     this.worldKnowledge = new WorldKnowledge({
       regions: this.content.world.regions,
       // §19: the first time the guild sets foot somewhere is worth remembering, and it is
@@ -600,6 +605,23 @@ export class Session {
       now: options.now,
       worldSeed: options.worldSeed,
     });
+    this.cycleBaseline = this.snapshot();
+  }
+
+  beginNewGamePlus(options: NewGamePlusOptions): Result<number, string> {
+    const legacy = this.legacy.snapshot();
+    const mentors = this.mentors.snapshotSelected(options.mentorIds ?? []);
+    const begun = this.newGamePlus.begin(options);
+    if (!begun.ok) return begun;
+    const newGamePlus = begun.value;
+    this.restore({ ...this.cycleBaseline, legacy, mentors, newGamePlus });
+    if (options.startingChoice === 'prepared_caravan') {
+      this.resources.transact({ credits: { food: 20, materials: 10 } });
+    }
+    if (options.archetype === 'frontier_exile') {
+      this.generateHunter({ archetype: 'adept', preferredDepartment: 'hunter' });
+    }
+    return { ok: true, value: newGamePlus.cycle };
   }
 
   /**
@@ -718,11 +740,17 @@ export class Session {
       monument: this.monument.snapshot(),
       legacy: this.legacy.snapshot(),
       mentors: this.mentors.snapshot(),
+      newGamePlus: this.newGamePlus.snapshot(),
     };
   }
 
   /** Restore a snapshot in place. RNG stream state is restored by the caller if needed. */
   restore(payload: CurrentSavePayload): void {
+    const mutableStreams = this.streams as Record<(typeof RNG_STREAMS)[number], Rng>;
+    for (const name of RNG_STREAMS) {
+      const state = payload.rngStreams[name];
+      if (state !== undefined) mutableStreams[name] = rngFromState(state);
+    }
     this.roster.clear();
     for (const hunter of payload.hunters) this.roster.add(hunter);
     this.chronicle.restore(payload.chronicles);
@@ -752,6 +780,7 @@ export class Session {
     this.monument.restore(payload.monument);
     this.legacy.restore(payload.legacy);
     this.mentors.restore(payload.mentors);
+    this.newGamePlus.restore(payload.newGamePlus);
     this.townJobs.restore(payload.townJobs);
   }
 

@@ -37,8 +37,9 @@ import type { GuildMasterySnapshot } from '../systems/guild/GuildMastery.js';
 import type { MonumentSnapshot } from '../systems/progression/Monument.js';
 import type { LegacySnapshot } from '../systems/progression/Legacy.js';
 import type { MentorsSnapshot } from '../systems/progression/Mentors.js';
+import type { NewGamePlusSnapshot } from '../systems/progression/NewGamePlus.js';
 
-export const CURRENT_SAVE_VERSION = 20;
+export const CURRENT_SAVE_VERSION = 21;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -212,7 +213,8 @@ export interface SavePayloadV17 extends Omit<SavePayloadV16, 'reputation'> { rea
 export interface SavePayloadV18 extends SavePayloadV17 { readonly monument: MonumentSnapshot }
 export interface SavePayloadV19 extends SavePayloadV18 { readonly legacy: LegacySnapshot }
 export interface SavePayloadV20 extends SavePayloadV19 { readonly mentors: MentorsSnapshot }
-export type CurrentSavePayload = SavePayloadV20;
+export interface SavePayloadV21 extends SavePayloadV20 { readonly newGamePlus: NewGamePlusSnapshot }
+export type CurrentSavePayload = SavePayloadV21;
 
 export interface Migration {
   readonly from: number;

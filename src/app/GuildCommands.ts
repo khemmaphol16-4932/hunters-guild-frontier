@@ -57,6 +57,7 @@ import type { MarketQuote } from '../systems/economy/Market.js';
 import type { ContractAnalysis, ContractOffer } from '../systems/economy/Contracts.js';
 import type { LegacyUnlock } from '../systems/progression/Legacy.js';
 import type { MentorProfile } from '../systems/progression/Mentors.js';
+import type { NewGamePlusOptions } from '../systems/progression/NewGamePlus.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -114,6 +115,14 @@ export class GuildCommands {
       inputs: { level: hunter.level, legacyTraits: mentor.legacyTraits },
     });
     return ok(mentor);
+  }
+
+  beginNewGamePlus(options: NewGamePlusOptions = {}): Result<number, string> {
+    const result = this.session.beginNewGamePlus(options);
+    if (result.ok) {
+      this.session.audit.record({ actor: { kind: 'player' }, system: 'legacy', outcome: `began New Game+ cycle ${result.value}`, reasonCodes: ['new_game_plus'], inputs: { ...options } });
+    }
+    return result;
   }
 
   marketQuote(resourceId: string, amount: number, side: 'buy' | 'sell'): Result<MarketQuote, string> {

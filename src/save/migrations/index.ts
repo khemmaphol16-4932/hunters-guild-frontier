@@ -373,6 +373,7 @@ const v16ToV17: Migration = { from:16,to:17,describe:'persist regional reputatio
 const v17ToV18: Migration = { from:17,to:18,describe:'persist Guild Monument achievements',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v17 payload is not an object');return{...(payload as Record<string,unknown>),monument:{entries:[]}}}};
 const v18ToV19: Migration = { from:18,to:19,describe:'persist Legacy points and unlocks',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v18 payload is not an object');return{...(payload as Record<string,unknown>),legacy:{earned:0,spent:0,awardedAchievements:[],unlocked:[]}}}};
 const v19ToV20: Migration = { from:19,to:20,describe:'persist retired Hunter mentors',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v19 payload is not an object');return{...(payload as Record<string,unknown>),mentors:{mentors:[]}}}};
+const v20ToV21: Migration = { from:20,to:21,describe:'persist New Game+ cycle and variant',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v20 payload is not an object');return{...(payload as Record<string,unknown>),newGamePlus:{cycle:0}}}};
 
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
@@ -394,6 +395,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v17ToV18,
   v18ToV19,
   v19ToV20,
+  v20ToV21,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

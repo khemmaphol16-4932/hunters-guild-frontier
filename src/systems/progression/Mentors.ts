@@ -51,6 +51,10 @@ export class Mentors {
   }
 
   snapshot(): MentorsSnapshot { return { mentors: this.all() }; }
+  snapshotSelected(ids: readonly string[]): MentorsSnapshot {
+    const selected = new Set(ids);
+    return { mentors: this.all().filter((mentor) => selected.has(mentor.hunterId)) };
+  }
   restore(snapshot: MentorsSnapshot | undefined): void {
     this.profiles.clear();
     for (const mentor of snapshot?.mentors ?? []) this.profiles.set(mentor.hunterId, mentor);
