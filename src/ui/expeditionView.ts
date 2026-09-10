@@ -68,7 +68,13 @@ export class ExpeditionView {
   render(): void {
     this.host.replaceChildren();
     const grid = el('div', 'grid');
-    grid.append(this.renderPlanner(), this.renderOrders(), this.renderProposal(), this.renderEndless());
+    grid.append(
+      this.renderPlanner(),
+      this.renderOrders(),
+      this.renderProposal(),
+      this.renderWorldBoss(),
+      this.renderEndless(),
+    );
     this.host.append(grid);
 
     if (this.state.message) {
@@ -293,6 +299,38 @@ export class ExpeditionView {
   }
 
   // --- REQ-END-002/003: endless runs and personal records ------------------
+
+  private renderWorldBoss(): HTMLElement {
+    const card = el('div', 'card');
+    card.append(el('h3', undefined, 'World event'));
+    const event = this.commands.worldBossEvent();
+    if (!event) {
+      card.append(el('p', 'empty', 'No world boss is currently active. Scouts are watching the frontier.'));
+      return card;
+    }
+    const boss = this.session.content.monstersById.get(event.bossId);
+    const region = this.session.content.worldRegionsById.get(event.regionId);
+    card.append(
+      el('p', 'headline', `${boss?.name ?? event.bossId} has appeared`),
+      el('p', 'subhead', `${region?.name ?? event.regionId} is under a world event. The boss will remain until defeated.`),
+    );
+    const send = el('button', undefined, 'Challenge world boss') as HTMLButtonElement;
+    send.onclick = () => {
+      const outcome = this.commands.sendWorldBossExpedition();
+      if (!outcome.ok) {
+        this.state.message = outcome.error;
+        this.state.messageIsError = true;
+      } else {
+        this.state.outcome = outcome.value;
+        this.state.message = outcome.value.result.summary;
+        this.state.messageIsError = outcome.value.result.wiped;
+        this.state.expandedNode = undefined;
+      }
+      this.render();
+    };
+    card.append(send);
+    return card;
+  }
 
   private renderEndless(): HTMLElement {
     const card = el('div', 'card');

@@ -54,8 +54,8 @@ All are data values; none require code changes to retune.
 
 | Item | Requirement | Deferred to | Why |
 |---|---|---|---|
-| World boss placement — respawn, appearing as a world event, temporarily changing region danger/markets/contracts | REQ-BOS-003 | Phase 8 | needs a world-event system and the economy it perturbs; the boss itself is authored and fought like any other |
-| Boss card pools do not feed the loot roll | REQ-CRD-* | next loot pass | `cardPool` is parsed and empty; the generator does not consult a defeated boss |
+| ~~World boss placement and respawn~~ | — | **done in Phase 8** | the Drowned Choir appears in Ashfall through `WorldEvents` and respawns deterministically after defeat; broader temporary economy changes remain optional content |
+| ~~Boss card pools feed the world-boss loot roll~~ | — | **done in Phase 8** | the Drowned Choir owns `hollow_choir_card`, rolled at the authored boss-card rate on victory |
 | Reputation and capability unlock axes | REQ-WLD-002 | Phases 6–8 | parsed and carried, reported as unsatisfied rather than silently met (DL-033) |
 | Dungeons as a distinct structure | §49 | Phase 6+ | a dungeon is currently a region with a boss at the end |
 
@@ -66,9 +66,9 @@ All are data values; none require code changes to retune.
 3. **Chronicle records but almost nothing generates entries in play** — mastery milestones and class advancement do; the rest arrive with expeditions and combat.
 4. **Trading has no interface.** REQ-EQP-004 is satisfied structurally — items are guild-owned and unbound, so any hunter can use any item — but guild-to-market trade needs the Market system in Phase 7.
 5. **No crafting.** REQ-ECO-004's "craft = certainty, loot = jackpot" is a pairing; Phase 2 delivers only the jackpot half, so the item economy is deliberately incomplete until Phase 7.
-6. **Boss cards cannot yet drop.** The 0.5% rate, per-boss pools and duplicate-protection counter exist as validated data and tested logic, but the loot roll does not yet consult a defeated boss's card pool.
+6. ~~**Boss cards cannot yet drop.**~~ Closed for the placed world boss in Phase 8; ordinary authored boss pools remain available for expansion.
 7. **Trash encounters are trivial at a region's recommended level.** The boss is the only fight that costs anything, so the continue/retreat decision only bites on an underlevelled party.
-8. **The world boss is authored but unplaced** — no region spawns The Drowned Choir, so it can only be met through the debug console.
+8. ~~**The world boss is authored but unplaced.**~~ Closed in Phase 8 by the Ashfall world event.
 9. **No live combat view.** `CombatEncounter.step` is public precisely so a renderer can drive it a tick at a time, but nothing does — the player reads the fight as a report afterwards rather than watching it, which §7 asks for.
 
 ## Phase 2 lesson worth keeping
@@ -120,4 +120,4 @@ A null object satisfies the compiler but proves nothing about whether the consum
 | Field hunger is never applied | REQ-ECO-003 | next expedition pass | `Condition.exert` exists and nothing calls it, so hunters come home from expeditions exactly as hungry as they left; town food shortage still reaches recovery through `fedFraction` |
 | Boss cards still do not drop | REQ-CRD-* | next loot pass | unchanged from the entry above; the duplicate conversion now at least names a real resource (`essence`, DL-050) |
 | Contract, endless and New Game+ catalogues and numbers are defaults | v1.0 §20 | design approval | every one is labelled pending approval in its data file; v1.0 §20 reserves content catalogues, balance curves and New Game+ rules for the design owner |
-| World boss placement | REQ-BOS-003 | world-event system | unchanged; the Drowned Choir is authored and unplaced, so `worldBossVictory` plaques and Wardenbane are reachable only through the debug console until it lands |
+| ~~World boss placement~~ | REQ-BOS-003 | **done in Phase 8** | the Drowned Choir is an actionable Ashfall world event with persistence and respawn |

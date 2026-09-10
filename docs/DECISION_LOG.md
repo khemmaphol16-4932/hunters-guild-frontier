@@ -600,3 +600,11 @@ Two trait effects gained readers so the Legacy Traits would do what they say: `e
 **Decision.** Not implemented. Every plausible version changes the Hunter aggregate, the attribute budget and the save format, and each embeds a balance philosophy (what carries over, what resets, what a rebirth grants) that REQ-HUN-005 constrains but does not settle. New Game+ was implemented as a labelled default because it was already built and broken; rebirth has no half-built version to repair.
 
 **Needed from the design owner:** what resets (level? attributes? skills?), what is kept, what a rebirth grants, and whether there is a limit.
+
+---
+
+## DL-055 — The Drowned Choir is a persistent Ashfall world event
+
+**Decision.** The Drowned Choir appears in the Ashfall Barrows as an explicit world event rather than becoming the region's permanent boss. The expedition screen exposes the event and a dedicated challenge command replaces the route boss for that run. A victory emits the world-boss form of the combat event, applies world-boss reputation, rolls the Choir's own card pool, removes the event, and schedules its deterministic respawn 500 simulation steps later.
+
+**Why.** Making the Choir Ashfall's ordinary boss would erase the authored Warden of Ash and would not satisfy appearance or respawn. A saved event identity and next-appearance tick make the world state inspectable, replayable and migration-safe. Save v23 carries this state. The respawn interval is a pending-approval balance default.

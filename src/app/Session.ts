@@ -49,6 +49,7 @@ import { hunterCombatant, monsterCombatant } from '../systems/combat/combatants.
 import { HunterAI } from '../ai/hunter/hunterAI.js';
 import { Expedition } from '../sim/expedition/Expedition.js';
 import { WorldKnowledge } from '../systems/world/WorldKnowledge.js';
+import { WorldEvents } from '../systems/world/WorldEvents.js';
 import { Town } from '../systems/town/Town.js';
 import { Population } from '../systems/town/Population.js';
 import { Departments } from '../systems/town/Departments.js';
@@ -197,6 +198,7 @@ export class Session {
 
   /** What the guild knows about the world. Permanent (REQ-WLD-001). */
   readonly worldKnowledge: WorldKnowledge;
+  readonly worldEvents = new WorldEvents();
 
   /** The town, and everything that follows from having one (REQ-TWN-*, REQ-DEP-*). */
   readonly town: Town;
@@ -811,6 +813,7 @@ export class Session {
       mentors: this.mentors.snapshot(),
       newGamePlus: this.newGamePlus.snapshot(),
       endlessRecords: this.endlessRecords.snapshot(),
+      worldEvents: this.worldEvents.snapshot(),
     };
   }
 
@@ -853,6 +856,7 @@ export class Session {
     this.legacy.restore(payload.legacy);
     this.mentors.restore(payload.mentors);
     this.endlessRecords.restore(payload.endlessRecords);
+    this.worldEvents.restore(payload.worldEvents);
     this.townJobs.restore(payload.townJobs);
   }
 

@@ -159,6 +159,7 @@ Every system from spec §115, assigned a layer, an owner module, the data it own
 | Mentors | `systems/progression/Mentors.ts` | retired hunters as NPC mentors |
 | Endless scaling | `systems/progression/Endless.ts` | scaling curves, objectives, personal records |
 | Monument | `systems/progression/Monument.ts` | historic achievements |
+| World events | `systems/world/WorldEvents.ts` | world-boss appearance, defeat and respawn state |
 | Simulation runner | `sim/Runner.ts` | drives clock + systems + AI at any speed |
 | Offline sim | `sim/Offline.ts` | catch-up using the same systems (max 3 days) |
 | Balance harness | `sim/Balance.ts` | batch simulation for §121 checks |

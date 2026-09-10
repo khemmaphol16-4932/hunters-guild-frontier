@@ -396,7 +396,9 @@
         }
       ],
       "xp": 2400,
-      "cardPool": []
+      "cardPool": [
+        "hollow_choir_card"
+      ]
     }
   ]
 }

@@ -63,6 +63,7 @@ import type { NewGamePlusOptions } from '../systems/progression/NewGamePlus.js';
 import type { RecordOutcome } from '../systems/progression/EndlessRecords.js';
 import { traitMultiplier } from '../systems/hunter/traitEffects.js';
 import type { EndlessObjectiveDef } from '../data/endlessSchema.js';
+import type { WorldBossEvent } from '../systems/world/WorldEvents.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -796,7 +797,17 @@ export class GuildCommands {
     objective: ObjectiveId,
     party?: PartyProposal,
   ): Result<ExpeditionOutcome, string> {
-    return this.dispatch(regionId, objective, party, undefined);
+    return this.dispatch(regionId, objective, party, undefined, undefined);
+  }
+
+  worldBossEvent(): WorldBossEvent | undefined {
+    return this.session.worldEvents.currentWorldBoss(this.session.clock.tick);
+  }
+
+  sendWorldBossExpedition(party?: PartyProposal): Result<ExpeditionOutcome, string> {
+    const event = this.worldBossEvent();
+    if (!event) return err('no world boss is currently active');
+    return this.dispatch(event.regionId, 'slay', party, undefined, event);
   }
 
   /** Why endless expeditions are or are not open to the guild yet. */
@@ -822,7 +833,7 @@ export class GuildCommands {
     if (!objective) return err(`unknown endless objective "${endlessObjectiveId}"`);
     const availability = this.endlessAvailability();
     if (!availability.open) return err(availability.reason);
-    return this.dispatch(regionId, objective.baseObjective, party, objective);
+    return this.dispatch(regionId, objective.baseObjective, party, objective, undefined);
   }
 
   private dispatch(
@@ -830,9 +841,11 @@ export class GuildCommands {
     objective: ObjectiveId,
     party: PartyProposal | undefined,
     endless: EndlessObjectiveDef | undefined,
+    worldBoss: WorldBossEvent | undefined,
   ): Result<ExpeditionOutcome, string> {
-    const region = this.session.content.worldRegionsById.get(regionId);
-    if (!region) return err(`unknown region "${regionId}"`);
+    const baseRegion = this.session.content.worldRegionsById.get(regionId);
+    if (!baseRegion) return err(`unknown region "${regionId}"`);
+    const region = worldBoss ? { ...baseRegion, boss: worldBoss.bossId } : baseRegion;
 
     // REQ-WLD-002 is a rule, so it is enforced here rather than only in the UI — the
     // difference between a disabled button and an actual gate is whether the debug console
@@ -992,12 +1005,24 @@ export class GuildCommands {
       // unplaced (TECH_DEBT, deferred to Phase 8's world-event system), so the larger
       // reputation award is reachable only once that lands. Inferring it from tier or level
       // here would put a number on the board that the rest of the game disagrees with.
-      worldBoss: false,
+      worldBoss: worldBoss !== undefined,
       wiped: result.wiped,
       deaths: result.aftermath.filter((a) => a.died).length,
       regionId: region.id,
       regionName: region.name,
     });
+
+    if (worldBoss && result.bossDefeated) {
+      this.session.worldEvents.defeat(worldBoss.id, this.session.clock.tick);
+      const boss = this.session.content.monstersById.get(worldBoss.bossId);
+      for (const survivor of result.aftermath.filter((entry) => !entry.died)) {
+        this.session.events.emit('combat.bossDefeated', { hunterId: survivor.hunterId, bossId: worldBoss.bossId, worldBoss: true });
+      }
+      const card = boss?.cardPool[0];
+      if (card && this.session.streams.loot.bool(this.session.content.balance.loot.bossCards.dropChance)) {
+        this.session.armoury.addCard(card);
+      }
+    }
 
     const contract = endless ? undefined : this.session.contracts.resolve(regionId, proposal.objective.id);
     if (contract) {

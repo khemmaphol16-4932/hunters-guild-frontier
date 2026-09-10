@@ -455,6 +455,7 @@ const v21ToV22: Migration = {
     return { ...asRecord(payload, 21), endlessRecords: { records: [] } };
   },
 };
+const v22ToV23: Migration = { from:22,to:23,describe:'persist world-boss events and respawn',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v22 payload is not an object');return{...(payload as Record<string,unknown>),worldEvents:{nextWorldBossAtTick:0,worldBossDefeats:0}}}};
 
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
@@ -478,6 +479,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v19ToV20,
   v20ToV21,
   v21ToV22,
+  v22ToV23,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

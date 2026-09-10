@@ -105,7 +105,7 @@ The last two both earn their place by having caught live requirement failures ra
 
 ## What is not built yet
 
-Rebirth (waiting on a design decision, DL-054) · world-boss placement · isometric pixel-art presentation (Phase 9).
+Rebirth (waiting on a design decision, DL-054) · isometric pixel-art presentation (Phase 9).
 
 Several catalogues and curves are working defaults **pending design approval**, and each is labelled in its data file: contracts, endless-expedition scaling, apprentices and the New Game+ carry-over rules (v1.0 §20). `TECH_DEBT.md` lists what is still missing, including the nine innate trait effects no system reads yet.
 

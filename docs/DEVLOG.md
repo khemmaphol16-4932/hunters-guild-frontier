@@ -573,3 +573,13 @@ On a fresh dev server: the Endless card is locked with *"open at Guild Mastery 3
 - **Rebirth** needs the design owner's rules (DL-054).
 - **World bosses are still unplaced**, so world-boss Legacy and Wardenbane are reachable only from the debug console.
 - **Every new catalogue and curve is pending approval**: contracts, endless scaling, apprentices, New Game+.
+
+---
+
+# 2026-09-10 — Phase 8 world-boss placement
+
+The Drowned Choir now appears as an actionable world event in the Ashfall Barrows. It temporarily replaces the route boss for its dedicated expedition, produces true world-boss Chronicle, Monument and reputation consequences on victory, then disappears and deterministically respawns after 500 simulation steps.
+
+The Choir now owns the Hollow Choir card pool and a victorious run consults the authored 0.5% boss-card drop rate. The event and respawn schedule persist in save v23 and are visible on the expedition screen.
+
+The checkpoint is green at 599 tests across 34 suites, including placement, card-pool ownership, deduplication, respawn and migration coverage. Rebirth remains the sole Phase 8 blocker because its reset, carry-over, grant and limit rules require the design owner's decision (DL-054).
