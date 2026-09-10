@@ -17,9 +17,10 @@ import type { HunterChronicle } from '../systems/hunter/Chronicle.js';
 import type { RngState } from '../core/rng.js';
 import type { Item } from '../core/items/Item.js';
 import type { AuditRecord } from '../core/audit.js';
+import type { WorldKnowledgeSnapshot } from '../systems/world/WorldKnowledge.js';
 import type { EmergencyAuthorisation } from '../ai/policy/emergency.js';
 
-export const CURRENT_SAVE_VERSION = 5;
+export const CURRENT_SAVE_VERSION = 6;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -110,7 +111,17 @@ export interface SavePayloadV5 extends Omit<SavePayloadV4, 'armoury'> {
   };
 }
 
-export type CurrentSavePayload = SavePayloadV5;
+/**
+ * v6 — the guild remembers the world (REQ-WLD-001).
+ *
+ * Exploration information is permanent, so it has to be saved. It is guild state rather
+ * than hunter state: a roster wipe costs you the hunters, not the map.
+ */
+export interface SavePayloadV6 extends SavePayloadV5 {
+  readonly worldKnowledge: WorldKnowledgeSnapshot;
+}
+
+export type CurrentSavePayload = SavePayloadV6;
 
 export interface Migration {
   readonly from: number;

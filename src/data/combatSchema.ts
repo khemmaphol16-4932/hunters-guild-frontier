@@ -31,6 +31,7 @@ import { ELEMENTS, RANGE_BANDS } from './schema.js';
 export interface CombatBalance {
   readonly tickSeconds: number;
   readonly maxEncounterSeconds: number;
+  readonly maxExpeditionSeconds: number;
   readonly damage: {
     readonly defenceScale: number;
     readonly minimumDamage: number;
@@ -116,6 +117,7 @@ export function parseCombatBalance(raw: unknown, path = 'combat.json'): CombatBa
   return {
     tickSeconds: num(o, 'tickSeconds', path),
     maxEncounterSeconds: num(o, 'maxEncounterSeconds', path),
+    maxExpeditionSeconds: num(o, 'maxExpeditionSeconds', path),
     damage: {
       defenceScale: num(damage, 'defenceScale', `${path}.damage`),
       minimumDamage: num(damage, 'minimumDamage', `${path}.damage`),
@@ -415,6 +417,26 @@ export interface EncounterDef {
   readonly weight: number;
 }
 
+/**
+ * What it takes before the guild may go somewhere (REQ-WLD-002).
+ *
+ * Every axis is optional and they combine with AND, because §50 lists "level, reputation,
+ * story, capability and player choice" as *combinations* rather than alternatives. The
+ * fields the prototype cannot yet evaluate — reputation, story, capability — are parsed and
+ * carried rather than dropped, so authoring a region that needs them is possible now and
+ * enforcing it is a Phase 6/8 wiring job rather than a schema change.
+ */
+export interface RegionUnlockDef {
+  /** Highest-level hunter the guild must have. */
+  readonly guildLevel: number | undefined;
+  /** A region whose warden must be dead first — the ordinary story gate. */
+  readonly afterBoss: string | undefined;
+  /** A region the guild must know at least this well. */
+  readonly afterKnowing: { readonly regionId: string; readonly tier: KnowledgeTier } | undefined;
+  readonly reputation: number | undefined;
+  readonly capability: string | undefined;
+}
+
 export interface RegionDef {
   readonly id: string;
   readonly name: string;
@@ -426,12 +448,54 @@ export interface RegionDef {
   readonly routeLength: { readonly min: number; readonly max: number };
   readonly encounters: readonly EncounterDef[];
   readonly boss: string | undefined;
+  /** Absent means "always available" — the starting region needs no gate. */
+  readonly unlock: RegionUnlockDef | undefined;
+  /**
+   * REQ-ZON-002: zones must differ in environment as well as in monsters and loot. A
+   * hazard is a named, authored property of the place, not a stat modifier.
+   */
+  readonly hazards: readonly string[];
 }
 
 export interface WorldData {
   readonly zoneTiers: Readonly<Record<ZoneTier, ZoneTierDef>>;
   readonly regions: readonly RegionDef[];
   readonly nodeKinds: Readonly<Record<string, { weight: number; [key: string]: number }>>;
+}
+
+function parseUnlock(raw: unknown, path: string): RegionUnlockDef | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  const o = expectObject(raw, path);
+
+  const level = optionalField(o, 'guildLevel');
+  const afterBoss = optionalField(o, 'afterBoss');
+  const afterKnowing = optionalField(o, 'afterKnowing');
+  const reputation = optionalField(o, 'reputation');
+  const capability = optionalField(o, 'capability');
+
+  return {
+    guildLevel: level === undefined ? undefined : expectNumber(level, `${path}.guildLevel`),
+    afterBoss: afterBoss === undefined ? undefined : expectString(afterBoss, `${path}.afterBoss`),
+    afterKnowing:
+      afterKnowing === undefined
+        ? undefined
+        : (() => {
+            const k = expectObject(afterKnowing, `${path}.afterKnowing`);
+            return {
+              regionId: expectString(
+                field(k, 'regionId', `${path}.afterKnowing`),
+                `${path}.afterKnowing.regionId`,
+              ),
+              tier: expectEnum(
+                field(k, 'tier', `${path}.afterKnowing`),
+                `${path}.afterKnowing.tier`,
+                KNOWLEDGE_TIERS,
+              ),
+            };
+          })(),
+    reputation: reputation === undefined ? undefined : expectNumber(reputation, `${path}.reputation`),
+    capability: capability === undefined ? undefined : expectString(capability, `${path}.capability`),
+  };
 }
 
 export function parseWorld(raw: unknown, path = 'regions.json'): WorldData {
@@ -513,6 +577,11 @@ export function parseWorld(raw: unknown, path = 'regions.json'): WorldData {
         };
       }),
       boss: bossRaw === null || bossRaw === undefined ? undefined : expectString(bossRaw, `${p}.boss`),
+      unlock: parseUnlock(optionalField(e, 'unlock'), `${p}.unlock`),
+      hazards:
+        optionalField(e, 'hazards') === undefined
+          ? []
+          : expectStringArray(e['hazards'], `${p}.hazards`),
     };
   });
 
@@ -531,4 +600,117 @@ export function parseWorld(raw: unknown, path = 'regions.json'): WorldData {
   }
 
   return { zoneTiers, regions, nodeKinds };
+}
+
+// ---------------------------------------------------------------------------
+// Expedition events
+// ---------------------------------------------------------------------------
+
+/**
+ * What choosing an event option does.
+ *
+ * Every field is optional and additive. Deliberately a flat record of *named effects*
+ * rather than a script: an event that could run arbitrary logic would let content reach
+ * into the simulation, and REQ-EXP-002 asks for authored events, not authored code.
+ */
+export interface EventEffects {
+  readonly lootRolls: number | undefined;
+  readonly fatigue: number | undefined;
+  readonly morale: number | undefined;
+  /** Fraction of max health restored to the whole party. */
+  readonly heal: number | undefined;
+  readonly reputation: number | undefined;
+  /** Route nodes added or skipped — the branching in REQ-EXP-002. */
+  readonly extraNodes: number | undefined;
+  readonly skipNodes: number | undefined;
+  /** Forces the next fight to start with the party out of position. */
+  readonly ambush: boolean | undefined;
+  /** Ends the run here, successfully. */
+  readonly endsExpedition: boolean | undefined;
+  /** Wall-clock cost against the 10-minute cap (REQ-EXP-003). */
+  readonly seconds: number | undefined;
+}
+
+export interface EventOptionDef {
+  readonly id: string;
+  readonly label: string;
+  /** Player-readable, and quoted verbatim in the route report. */
+  readonly consequence: string;
+  /** 0 = safe, 1 = a gamble. Weighed against the objective's risk preference. */
+  readonly risk: number;
+  readonly effects: EventEffects;
+}
+
+export interface EventDef {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly weight: number;
+  readonly zoneTiers: readonly ZoneTier[];
+  /** Empty means "anywhere"; otherwise the region must have one of these hazards. */
+  readonly hazards: readonly string[];
+  readonly options: readonly EventOptionDef[];
+}
+
+export function parseEvents(raw: unknown, path = 'events.json'): readonly EventDef[] {
+  const o = expectObject(raw, path);
+  const events = expectArray(field(o, 'events', path), `${path}.events`).map((entry, i) => {
+    const p = `${path}.events[${i}]`;
+    const e = expectObject(entry, p);
+
+    const options = expectArray(field(e, 'options', p), `${p}.options`).map((opt, oi) => {
+      const op = `${p}.options[${oi}]`;
+      const option = expectObject(opt, op);
+      const fx = expectObject(field(option, 'effects', op), `${op}.effects`);
+      const num = (key: string): number | undefined =>
+        fx[key] === undefined ? undefined : expectNumber(fx[key], `${op}.effects.${key}`);
+      const bool = (key: string): boolean | undefined =>
+        fx[key] === undefined ? undefined : expectBoolean(fx[key], `${op}.effects.${key}`);
+
+      return {
+        id: expectString(field(option, 'id', op), `${op}.id`),
+        label: expectString(field(option, 'label', op), `${op}.label`),
+        consequence: expectString(field(option, 'consequence', op), `${op}.consequence`),
+        risk: expectNumber(field(option, 'risk', op), `${op}.risk`),
+        effects: {
+          lootRolls: num('lootRolls'),
+          fatigue: num('fatigue'),
+          morale: num('morale'),
+          heal: num('heal'),
+          reputation: num('reputation'),
+          extraNodes: num('extraNodes'),
+          skipNodes: num('skipNodes'),
+          ambush: bool('ambush'),
+          endsExpedition: bool('endsExpedition'),
+          seconds: num('seconds'),
+        },
+      } satisfies EventOptionDef;
+    });
+
+    // An event with one option is not a decision, and REQ-EXP-002 lists decisions as a
+    // thing expeditions contain. A single-option event would present the player's guild AI
+    // with a choice it cannot make.
+    if (options.length < 2) {
+      throw new ContentValidationError(`${p}.options`, 'an event needs at least two options');
+    }
+    assertUniqueIds(options.map((opt) => opt.id), `${p}.options`);
+
+    return {
+      id: expectString(field(e, 'id', p), `${p}.id`),
+      name: expectString(field(e, 'name', p), `${p}.name`),
+      description: expectString(field(e, 'description', p), `${p}.description`),
+      weight: expectNumber(field(e, 'weight', p), `${p}.weight`),
+      zoneTiers: expectArray(field(e, 'zoneTiers', p), `${p}.zoneTiers`).map((tier, ti) =>
+        expectEnum(tier, `${p}.zoneTiers[${ti}]`, ZONE_TIERS),
+      ),
+      hazards:
+        optionalField(e, 'hazards') === undefined
+          ? []
+          : expectStringArray(e['hazards'], `${p}.hazards`),
+      options,
+    } satisfies EventDef;
+  });
+
+  assertUniqueIds(events.map((e) => e.id), `${path}.events`);
+  return events;
 }

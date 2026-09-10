@@ -188,7 +188,28 @@ const v4ToV5: Migration = {
   },
 };
 
-export const MIGRATIONS: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5];
+/**
+ * v5 → v6: the guild remembers the world (REQ-WLD-001).
+ *
+ * Starts empty rather than inventing history. `WorldKnowledge.restore` merges a snapshot
+ * over each region's *authored* starting knowledge, so an empty snapshot resolves to
+ * "whatever the content says the guild starts out knowing" — which for a v5 save is
+ * exactly right. Fabricating visit counts to match a save's apparent progress would
+ * invent expeditions that never happened and put them in the Chronicle's arithmetic.
+ */
+const v5ToV6: Migration = {
+  from: 5,
+  to: 6,
+  describe: 'add persistent world knowledge (REQ-WLD-001)',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) {
+      throw new SaveMigrationError('v5 payload is not an object');
+    }
+    return { ...(payload as Record<string, unknown>), worldKnowledge: { regions: [] } };
+  },
+};
+
+export const MIGRATIONS: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */
 export function migratePayload(

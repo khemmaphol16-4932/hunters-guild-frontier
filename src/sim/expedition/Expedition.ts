@@ -15,7 +15,14 @@
  * with the boss one node away?" must have an answer.
  */
 
-import type { MonsterDef, RegionDef, WorldData, ZoneTierDef } from '../../data/combatSchema.js';
+import type {
+  EventDef,
+  EventOptionDef,
+  MonsterDef,
+  RegionDef,
+  WorldData,
+  ZoneTierDef,
+} from '../../data/combatSchema.js';
 import type { CombatBalance, StatusDef } from '../../data/combatSchema.js';
 import type { SkillDef } from '../../data/schema.js';
 import type { Rng } from '../../core/rng.js';
@@ -36,7 +43,7 @@ import type { EmergencyPolicy } from '../../ai/policy/emergency.js';
 import type { RouteOrders } from '../../ai/policy/orders.js';
 import type { ObjectiveDef, PartyProposal } from '../../systems/party/Party.js';
 
-export type NodeKind = 'combat' | 'rest' | 'discovery' | 'boss';
+export type NodeKind = 'combat' | 'rest' | 'discovery' | 'event' | 'boss';
 
 export interface RouteNode {
   readonly index: number;
@@ -48,7 +55,15 @@ export interface RouteNode {
 
 export interface NodeReport {
   readonly node: RouteNode;
-  readonly outcome: 'cleared' | 'wiped' | 'withdrew' | 'timeout' | 'rested' | 'found' | 'skipped';
+  readonly outcome:
+    | 'cleared'
+    | 'wiped'
+    | 'withdrew'
+    | 'timeout'
+    | 'rested'
+    | 'found'
+    | 'resolved'
+    | 'skipped';
   readonly xp: number;
   readonly highlights: readonly CombatLogEntry[];
   readonly encounterSeconds: number;
@@ -64,6 +79,8 @@ export interface HunterAftermath {
   readonly injured: boolean;
   readonly xp: number;
   readonly fatigueAdded: number;
+  /** Morale swing from events the party lived through, before the run-level swing. */
+  readonly moraleChange: number;
   readonly healthFraction: number;
 }
 
@@ -80,9 +97,28 @@ export interface ExpeditionResult {
   readonly totalXp: number;
   readonly lootRolls: number;
   readonly aftermath: readonly HunterAftermath[];
+  /** Which events fired and what the guild chose (REQ-EXP-002). */
+  readonly events: readonly ResolvedEvent[];
+  /** Total expedition time, against REQ-EXP-003's ten-minute cap. */
+  readonly elapsedSeconds: number;
+  /** True when the run ended because the cap was reached rather than by choice. */
+  readonly outOfTime: boolean;
+  readonly reputation: number;
+  /** What the guild learned, for REQ-WLD-001's permanent record. */
+  readonly learned: {
+    readonly nodeKinds: readonly string[];
+    readonly monsters: readonly string[];
+    readonly deepestNode: number;
+  };
   /** The Guild AI's own account of the run, in order (v1.0 §14/§18). */
   readonly decisions: readonly ExpeditionDecision[];
   readonly summary: string;
+}
+
+export interface ResolvedEvent {
+  readonly eventId: string;
+  readonly optionId: string;
+  readonly atNode: number;
 }
 
 export interface ExpeditionDecision {
@@ -105,9 +141,11 @@ export interface ExpeditionDeps {
   readonly combatantFor: (hunterId: HunterId) => Combatant;
   readonly monsterCombatant: (def: MonsterDef, index: number, position: number) => Combatant;
   /** The guild's memory (§19). Optional so balance runs can stay silent. */
-  readonly events?: CombatEventSink;
+  readonly chronicle?: CombatEventSink;
   /** Route-level force of the player's standing orders (§29). */
   readonly routeOrders?: () => RouteOrders;
+  /** The authored event catalogue (REQ-EXP-002). */
+  readonly events?: readonly EventDef[];
 }
 
 /**
@@ -140,7 +178,7 @@ export class Expedition {
   route(rng: Rng, region: RegionDef): readonly RouteNode[] {
     const length = rng.int(region.routeLength.min, region.routeLength.max + 1);
     const kinds = Object.entries(this.deps.world.nodeKinds).filter(
-      ([name]) => name === 'combat' || name === 'rest' || name === 'discovery',
+      ([name]) => name !== '$comment',
     );
 
     const nodes: RouteNode[] = [];
@@ -148,6 +186,20 @@ export class Expedition {
       // The first node is always combat: a route that opens on a rest node reads as the
       // expedition not having started.
       const kind = i === 0 ? 'combat' : (weightedPick(rng, kinds) as NodeKind);
+
+      if (kind === 'event') {
+        // The event id rides in `monsters[0]`. Not elegant, but a route node is a small
+        // value type and giving it a second optional payload field for one kind would
+        // widen it for every other — the resolver reads it back by name.
+        const event = this.pickEvent(rng, region);
+        nodes.push({
+          index: i,
+          kind: 'event',
+          monsters: event ? [event.id] : [],
+          label: event?.name ?? 'Something happens',
+        });
+        continue;
+      }
 
       if (kind !== 'combat') {
         nodes.push({
@@ -196,6 +248,7 @@ export class Expedition {
     const nodes = this.route(rng, region);
     const reports: NodeReport[] = [];
     const decisions: ExpeditionDecision[] = [];
+    const events: ResolvedEvent[] = [];
 
     const combatants = new Map<HunterId, Combatant>();
     for (const member of party.members) {
@@ -210,10 +263,45 @@ export class Expedition {
     let bossDefeated = false;
     let reached = 0;
 
-    for (const node of nodes) {
+    // A mutable walk rather than a for-of over a fixed array, because REQ-EXP-002's
+    // branching means the route can change while it is being walked: an event that sends
+    // the party the long way round adds nodes, one that pushes them deeper skips some.
+    const walk = [...nodes];
+    let cursor = 0;
+    /** Elapsed expedition time, against REQ-EXP-003's ten-minute cap. */
+    let elapsedSeconds = 0;
+    let outOfTime = false;
+    let endedByEvent = false;
+    let extraLoot = 0;
+    let fatigueFromEvents = 0;
+    let moraleFromEvents = 0;
+    let reputation = 0;
+    let ambushNext = false;
+
+    for (; cursor < walk.length; cursor++) {
+      const node = walk[cursor];
+      if (!node) break;
+
       const living = [...combatants.values()].filter((c) => !c.dead);
       if (living.length === 0) {
         wiped = true;
+        break;
+      }
+
+      // REQ-EXP-003 caps an expedition at ten minutes. Checked before entering a node
+      // rather than after, so the party is never sent into a fight it has no time to
+      // finish — a cap that stops the clock mid-encounter would leave the run's outcome
+      // depending on where the tick landed.
+      if (elapsedSeconds >= this.deps.balance.maxExpeditionSeconds) {
+        outOfTime = true;
+        decisions.push({
+          atNode: node.index,
+          choice: 'retreat',
+          explanation:
+            `The party is out of daylight after ` +
+            `${Math.round(elapsedSeconds / 60)} minutes and turns for home.`,
+          reasonCodes: [`node:${node.kind}`, 'out_of_time'],
+        });
         break;
       }
 
@@ -256,6 +344,7 @@ export class Expedition {
 
       if (node.kind === 'discovery') {
         lootRolls += this.deps.world.nodeKinds['discovery']?.['lootRolls'] ?? 1;
+        elapsedSeconds += 30;
         reports.push({
           node,
           outcome: 'found',
@@ -267,7 +356,69 @@ export class Expedition {
         continue;
       }
 
-      const result = this.fight(rng, node, combatants, region, party.objective);
+      if (node.kind === 'event') {
+        const resolved = this.resolveEvent(rng, node, [...combatants.values()], party.objective);
+        if (!resolved) {
+          reports.push({
+            node,
+            outcome: 'skipped',
+            xp: 0,
+            highlights: [],
+            encounterSeconds: 0,
+            partyHealth: partyHealthFraction([...combatants.values()]),
+          });
+          continue;
+        }
+
+        const { event, option, decision } = resolved;
+        decisions.push(decision);
+
+        const fx = option.effects;
+        extraLoot += fx.lootRolls ?? 0;
+        fatigueFromEvents += fx.fatigue ?? 0;
+        moraleFromEvents += fx.morale ?? 0;
+        reputation += fx.reputation ?? 0;
+        elapsedSeconds += fx.seconds ?? 30;
+        if (fx.ambush === true) ambushNext = true;
+
+        if (fx.heal !== undefined) {
+          for (const c of combatants.values()) {
+            if (c.dead) continue;
+            c.health = Math.min(c.maxHealth, c.health + Math.round(c.maxHealth * fx.heal));
+            c.resource = c.maxResource;
+          }
+        }
+
+        // The branching itself. Extra nodes are drawn from the same region pool, so the
+        // long way round is a real detour rather than a label.
+        if (fx.extraNodes !== undefined && fx.extraNodes > 0) {
+          const inserted = this.extraNodes(rng, region, fx.extraNodes, walk.length);
+          walk.splice(cursor + 1, 0, ...inserted);
+        }
+        if (fx.skipNodes !== undefined && fx.skipNodes > 0) {
+          cursor += fx.skipNodes;
+        }
+
+        events.push({ eventId: event.id, optionId: option.id, atNode: node.index });
+        reports.push({
+          node,
+          outcome: 'resolved',
+          xp: 0,
+          highlights: [],
+          encounterSeconds: 0,
+          partyHealth: partyHealthFraction([...combatants.values()]),
+        });
+
+        if (fx.endsExpedition === true) {
+          endedByEvent = true;
+          break;
+        }
+        continue;
+      }
+
+      const result = this.fight(rng, node, combatants, region, party.objective, ambushNext);
+      ambushNext = false;
+      elapsedSeconds += result.elapsedSeconds + 20;
 
       for (const c of combatants.values()) {
         if (c.downed) downedCounts.set(c.hunterId as HunterId, (downedCounts.get(c.hunterId as HunterId) ?? 0) + 1);
@@ -334,33 +485,55 @@ export class Expedition {
         died,
         injured,
         xp: xpEarned.get(member.hunterId) ?? 0,
-        fatigueAdded: Math.min(1, nodeCount * FATIGUE_PER_NODE * (wiped ? 1.5 : 1)),
+        fatigueAdded: Math.min(
+          1,
+          Math.max(0, nodeCount * FATIGUE_PER_NODE * (wiped ? 1.5 : 1) + fatigueFromEvents),
+        ),
+        moraleChange: moraleFromEvents,
         healthFraction: c ? healthFraction(c) : 1,
       } satisfies HunterAftermath;
     });
 
     const totalXp = reports.reduce((sum, r) => sum + r.xp, 0);
-    const completed = !retreated && !wiped && reached >= nodes.length;
+    // An event that ends the run ends it *successfully* — carrying a stranger out is a
+    // completed expedition, not an abandoned one. Running out of daylight is neither a
+    // completion nor a retreat by choice, so it gets its own flag rather than being
+    // squeezed into one of theirs.
+    const completed =
+      endedByEvent || (!retreated && !wiped && !outOfTime && cursor >= walk.length);
 
     return {
       regionId: region.id,
       objective: party.objective,
       nodes: reports,
       reachedNode: reached,
-      routeLength: nodes.length,
+      routeLength: walk.length,
       completed,
-      retreated,
+      retreated: retreated || outOfTime,
       wiped,
       bossDefeated,
       totalXp,
-      lootRolls: lootRolls + (completed ? Math.round(tier.lootBonus * 2) : 0),
+      lootRolls: lootRolls + extraLoot + (completed ? Math.round(tier.lootBonus * 2) : 0),
       aftermath,
+      events,
+      elapsedSeconds: Math.round(elapsedSeconds),
+      outOfTime,
+      reputation,
+      // REQ-WLD-001: what the guild learned, whatever the outcome. A party wiped at the
+      // first node still learned that the first node is there.
+      learned: {
+        nodeKinds: [...new Set(reports.map((r) => r.node.kind))].sort(),
+        monsters: [...new Set(reports.flatMap((r) => r.node.monsters))].sort(),
+        deepestNode: reached,
+      },
       decisions,
-      summary: this.summarise(region, party.objective, reached, nodes.length, {
+      summary: this.summarise(region, party.objective, reached, walk.length, {
         completed,
         retreated,
         wiped,
         bossDefeated,
+        outOfTime,
+        endedByEvent,
       }),
     };
   }
@@ -373,6 +546,7 @@ export class Expedition {
     combatants: Map<HunterId, Combatant>,
     region: RegionDef,
     objective: ObjectiveDef,
+    ambushed = false,
   ): EncounterResult {
     const guild = [...combatants.values()].filter((c) => !c.dead);
     for (const c of guild) {
@@ -385,7 +559,9 @@ export class Expedition {
       c.rescuingId = undefined;
       c.rescueProgress = 0;
       c.secondsSinceAttacked = 999;
-      c.position = 0;
+      // An ambush starts the party scattered and already in reach, which is what makes
+      // "wade straight across" cost something a fight from a standing start does not.
+      c.position = ambushed ? this.deps.balance.movement.startingSeparation * 0.6 : 0;
     }
 
     const monsters = node.monsters
@@ -416,7 +592,7 @@ export class Expedition {
           canInjure: this.deps.world.zoneTiers[region.zoneTier].canInjure,
         },
         objective: { id: objective.id, riskPreference: objective.riskPreference },
-        ...(this.deps.events ? { events: this.deps.events } : {}),
+        ...(this.deps.chronicle ? { events: this.deps.chronicle } : {}),
       },
       guild,
       monsters,
@@ -515,6 +691,109 @@ export class Expedition {
     };
   }
 
+  /**
+   * Decide an event (REQ-EXP-002).
+   *
+   * The Guild AI chooses, not the player — that is the whole premise (§1). What the player
+   * controls is the objective and the policy, and both are inputs here. The choice is
+   * audited with the option's own authored consequence text, so the route report can say
+   * *"the party forced the cache open, at the cost of a noisy delay"* rather than reporting
+   * a number the player has to interpret.
+   */
+  private resolveEvent(
+    rng: Rng,
+    node: RouteNode,
+    party: readonly Combatant[],
+    objective: ObjectiveDef,
+  ):
+    | { event: EventDef; option: EventOptionDef; decision: ExpeditionDecision }
+    | undefined {
+    const event = this.deps.events?.find((e) => e.id === node.monsters[0]);
+    if (!event) return undefined;
+
+    const health = partyHealthFraction(party);
+
+    // A hurt party is less willing to gamble than the objective alone would suggest —
+    // the objective says what the guild wants, condition says what it can afford.
+    const appetite = objective.riskPreference * (0.4 + 0.6 * health);
+
+    const scored = event.options
+      .map((option) => ({
+        option,
+        // Closest match between the option's risk and what the party will currently accept.
+        // Ties break on option id so a run replays identically (v1.0 §18).
+        distance: Math.abs(option.risk - appetite),
+      }))
+      .sort((a, b) => a.distance - b.distance || a.option.id.localeCompare(b.option.id));
+
+    const chosen = scored[0]?.option;
+    if (!chosen) return undefined;
+
+    // One draw from the stream even though the choice is deterministic, so that adding or
+    // removing an event cannot silently shift every later draw in the run.
+    rng.next();
+
+    return {
+      event,
+      option: chosen,
+      decision: {
+        atNode: node.index,
+        choice: 'continue',
+        explanation:
+          `${event.name}: the party chose to ${chosen.label.toLowerCase()}. ${chosen.consequence}`,
+        reasonCodes: [
+          'node:event',
+          `event:${event.id}`,
+          `option:${chosen.id}`,
+          `risk_appetite:${percent(appetite)}`,
+        ],
+      },
+    };
+  }
+
+  /** An event that can actually happen here — right zone tier, right hazards. */
+  private pickEvent(rng: Rng, region: RegionDef): EventDef | undefined {
+    const eligible = (this.deps.events ?? []).filter(
+      (e) =>
+        e.zoneTiers.includes(region.zoneTier) &&
+        (e.hazards.length === 0 || e.hazards.some((h) => region.hazards.includes(h))),
+    );
+    if (eligible.length === 0) return undefined;
+
+    const total = eligible.reduce((sum, e) => sum + e.weight, 0);
+    let roll = rng.range(0, total);
+    for (const event of eligible) {
+      roll -= event.weight;
+      if (roll <= 0) return event;
+    }
+    return eligible[0];
+  }
+
+  /** Extra route nodes for a detour. Drawn from the region's own pool, so it is a real one. */
+  private extraNodes(
+    rng: Rng,
+    region: RegionDef,
+    count: number,
+    startIndex: number,
+  ): readonly RouteNode[] {
+    const nodes: RouteNode[] = [];
+    for (let i = 0; i < count; i++) {
+      const encounter = weightedPickEncounter(rng, region);
+      const monsterCount = rng.int(encounter.count.min, encounter.count.max + 1);
+      const monsters: string[] = [];
+      for (let m = 0; m < monsterCount; m++) {
+        monsters.push(encounter.monsters[m % encounter.monsters.length] ?? '');
+      }
+      nodes.push({
+        index: startIndex + i,
+        kind: 'combat',
+        monsters: monsters.filter((id) => id !== ''),
+        label: `${this.describeGroup(monsters)}, on the long way round`,
+      });
+    }
+    return nodes;
+  }
+
   private describeGroup(monsters: readonly string[]): string {
     const counts = new Map<string, number>();
     for (const id of monsters) counts.set(id, (counts.get(id) ?? 0) + 1);
@@ -530,11 +809,26 @@ export class Expedition {
     objective: ObjectiveDef,
     reached: number,
     length: number,
-    flags: { completed: boolean; retreated: boolean; wiped: boolean; bossDefeated: boolean },
+    flags: {
+      completed: boolean;
+      retreated: boolean;
+      wiped: boolean;
+      bossDefeated: boolean;
+      outOfTime: boolean;
+      endedByEvent: boolean;
+    },
   ): string {
     const where = `${region.name}, ${reached}/${length} of the route`;
     if (flags.wiped) return `The party was broken in ${where}.`;
-    if (flags.retreated) return `The party turned back in ${where}, short of "${objective.name}".`;
+    if (flags.endedByEvent) return `The party came home early from ${region.name}, and not empty-handed.`;
+    if (flags.outOfTime) return `The light went in ${where}, and the party turned for home.`;
+    if (flags.retreated) {
+      // Reaching the end of the route and *then* breaking off is a different story from
+      // turning back partway, and "turned back, 4/4 of the route" reads as a contradiction.
+      return reached >= length
+        ? `The party broke off from the last fight in ${region.name} and came home.`
+        : `The party turned back in ${where}, short of "${objective.name}".`;
+    }
     if (flags.bossDefeated) return `The party cleared ${region.name} and took the warden with it.`;
     if (flags.completed) return `The party walked ${region.name} end to end and came home.`;
     return `The party returned from ${where}.`;

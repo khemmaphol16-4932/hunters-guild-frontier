@@ -48,6 +48,7 @@ import { PartyPlanner } from '../systems/party/Party.js';
 import { hunterCombatant, monsterCombatant } from '../systems/combat/combatants.js';
 import { HunterAI } from '../ai/hunter/hunterAI.js';
 import { Expedition } from '../sim/expedition/Expedition.js';
+import { WorldKnowledge } from '../systems/world/WorldKnowledge.js';
 import { SaveGame, type SaveStorage } from '../save/SaveGame.js';
 import type { CurrentSavePayload } from '../save/envelope.js';
 
@@ -150,6 +151,8 @@ export class Session {
   readonly refinement: Refinement;
   readonly itemGenerator: ItemGenerator;
 
+  /** What the guild knows about the world. Permanent (REQ-WLD-001). */
+  readonly worldKnowledge: WorldKnowledge;
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
   readonly expedition: Expedition;
@@ -257,6 +260,21 @@ export class Session {
       events: this.events,
       currentTick: () => this.clock.tick,
     });
+    this.worldKnowledge = new WorldKnowledge({
+      regions: this.content.world.regions,
+      // §19: the first time the guild sets foot somewhere is worth remembering, and it is
+      // the guild that remembers it — every hunter on the trip gets the entry.
+      onFirstEntry: (region) => {
+        for (const hunter of this.roster.all()) {
+          this.events.emit('zone.firstEntered', {
+            hunterId: hunter.id,
+            zoneId: region.id,
+            tier: region.zoneTier,
+          });
+        }
+      },
+    });
+
     // Party planning is pre-combat strategy — the last point the player has direct
     // influence (v1.0 §7). Four is the MVP party size.
     this.partyPlanner = new PartyPlanner({
@@ -300,7 +318,8 @@ export class Session {
           equipmentStats: (hunter) => this.equipment.aggregateStats(hunter),
         }),
       monsterCombatant,
-      events: this.events,
+      chronicle: this.events,
+      events: this.content.events,
       routeOrders: () => routeOrders(session.policy.all().map((c) => c.id)),
     });
 
@@ -383,6 +402,7 @@ export class Session {
       lootPity: this.itemGenerator.pity,
       audit: this.audit.snapshot(),
       emergencyAuthorisations: this.emergency.snapshot(),
+      worldKnowledge: this.worldKnowledge.snapshot(),
     };
   }
 
@@ -396,6 +416,7 @@ export class Session {
     this.itemGenerator.restorePity(payload.lootPity);
     this.audit.restore(payload.audit ?? []);
     this.emergency.restore(payload.emergencyAuthorisations ?? []);
+    this.worldKnowledge.restore(payload.worldKnowledge);
   }
 
   dispose(): void {

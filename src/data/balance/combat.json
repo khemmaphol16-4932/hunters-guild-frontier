@@ -75,5 +75,7 @@
     "$weightNote": "Ordered as §28 orders the policy tiers: objective, then identity, then situation. objectiveAlignment and zoneCaution are deliberately large — they are the two stages that make the same party behave differently on different jobs and in different places (§140-M).",
     "retreatUrgencyScale": 0.85,
     "$retreatUrgencyNote": "Scales the squared-injury ramp that decides when a hunter breaks off. Calibrated so an average hunter with nothing left to cast disengages around 40% health in a safe zone, and earlier in a lethal one — the crossing point is what zoneCaution, objectiveAlignment and riskPosture then move (§140-M)."
-  }
+  },
+  "maxExpeditionSeconds": 600,
+  "$maxExpeditionNote": "REQ-EXP-003 caps an expedition at ten minutes. Checked between nodes, never mid-encounter — stopping the clock inside a fight would make the outcome depend on where the tick landed."
 }

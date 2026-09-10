@@ -213,3 +213,50 @@ Ordered "Hold the line", sent a starting-level party into the Ashfall Barrows. T
 ## Open
 
 Two orders (`no_rescues`, `save_ultimates`) are offered in the UI but have no dedicated scenario coverage yet. `zone.firstEntered` still never fires, so `zonesFirstEntered` is always zero — it needs per-hunter discovery state, which is Phase 5's exploration memory and belongs there.
+
+---
+
+# Phase 5 — The world
+
+The phase that turns a region list into a map. §8's framing did most of the design work: *the map is a knowledge interface*, not a level select — so what the guild knows is progression, and what it can see about a place is a function of having been there.
+
+## What was built
+
+`systems/world/WorldKnowledge.ts` — permanent, guild-owned exploration memory · save **v6** and its migration · region unlock gates (`RegionUnlockDef`) and `GuildCommands.regionAvailability` · `data/world/events.json` — six authored events, each a real decision · `parseEvents` · branching routes, an event node kind, and detours that splice new nodes into a walk in progress · the ten-minute cap · two new regions so all four danger tiers exist, with their own populations and hazards · five new monsters including a world boss · the map panel in the UI.
+
+356 tests green, typecheck and production build clean.
+
+## What the schema now refuses to load
+
+A region gated behind a boss or a region that does not exist · a region gated behind knowledge of *itself* (unsatisfiable) · an event with fewer than two options · an event whose zone tiers and hazards match no region, so it could never fire · a world missing any of REQ-ZON-001's four danger tiers.
+
+That last one is the kind of check worth having: the four tiers are a locked design decision, and until this phase only two of them existed anywhere in the content. Nothing was failing — the game simply had no yellow or red.
+
+## The interesting outcome
+
+**Events made the objective legible in a way combat alone had not.** Given identical content, the two objectives diverge completely and readably:
+
+| | survive | slay |
+|---|---|---|
+| abandoned cache | leave it | force it open |
+| collapsed passage | go around | dig through |
+| defensible ground | make camp | push on |
+| still water | edge around | wade straight across |
+
+Nothing in the events is authored per objective. It falls out of matching each option's risk against the objective's appetite, and it is the clearest demonstration so far that the player steering *strategy* actually steers behaviour.
+
+## Bugs and wrong premises
+
+- **The branch was unreachable in practice.** `go_around` — the option that splices in extra nodes — is the *cautious* choice, so a healthy party on a "clear the route" objective always dug through instead. The branching worked; nothing ever took it. Found by a test that asserted route length could exceed the region's authored maximum and failed.
+- **That test was also wrong twice over.** A detour taken on a short route still lands inside the authored band, so "longer than the maximum" was never the right assertion. Comparing the two objectives on the *same seed* is: both draw the same base route, so any difference in length is the branch.
+- **"Well travelled — 0 expeditions."** Caught in the browser. A region's knowledge *tier* and its recorded *visits* are different things — content can start the guild already knowing somewhere it has never mounted an expedition to — and the description conflated them. It also claimed a "deepest point reached: node 0" for a region nobody had entered.
+- **"The party turned back, 4/4 of the route."** Also from the browser. Reaching the end of the route and then breaking off from the last fight is a different story from turning back partway, and the summary read as a contradiction.
+- **Two tests were single-sample again.** The route-order test sat on the one seed out of eleven where the unordered party happened *not* to turn back, and the objective-condition test was measuring an 83% tendency over eight runs. Both are sweeps now. This is the third phase in which a single-seed assertion has passed or failed for reasons unrelated to what it was checking.
+
+## Verified in the browser
+
+A level-1 guild sees all four regions, three marked "— locked", with "needs a hunter of level 15" spelled out. A levelled guild sees them all open. The Sunken Choirhouse reads *"Danger Red · Conditions Standing water, Failing light, The song · Walked once or twice — 1 expedition · Deepest point reached: node 4 · 2 kinds of inhabitant recorded"*, and the route report now opens with *"1m 54s in the field"*.
+
+## Open
+
+The world boss is authored but not yet *placed* — REQ-BOS-003's respawn, world-event appearance and world-changing effects need a world-event system, which is really Phase 8's territory. Boss card pools still do not feed the loot roll. Reputation and capability unlock axes are carried but not evaluable until Phases 6–8 own them.

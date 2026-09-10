@@ -1,10 +1,34 @@
 {
-  "$comment": "v1.0 §16 MVP: one safe region and one high-risk region. REQ-ZON-001 fixes the four danger tiers: BLUE cannot kill, YELLOW injures, RED injures severely, BLACK can kill. Both regions here are procedurally routed within a fixed world (REQ-EXP-001) — the nodes below are the *pool* a route is drawn from, not a fixed path.\n\nv1.0 §8 makes the map a knowledge interface. `knowledgeTier` is the guild's starting knowledge; discovery advances it and is permanent (REQ-WLD-001).",
+  "$comment": "v1.0 §51 fixes four danger tiers and REQ-ZON-002 requires zones to differ in environment, monsters, loot, events and risk — so all four tiers now exist, each with its own population, hazards and event weighting. Routes are procedural within a fixed world (REQ-EXP-001); nodeKinds below are the pool a route draws from, and REQ-EXP-002 branching means a route is a graph rather than a line.\n\n§8 makes the map a knowledge interface: `knowledgeTier` is what the guild starts out knowing, and discovery advances it permanently (REQ-WLD-001). `unlock` is REQ-WLD-002 — regions open on combinations of level, story and knowledge.",
   "zoneTiers": {
-    "blue": { "name": "Blue", "canInjure": false, "canKill": false, "lootBonus": 0, "colour": "#5b8dd6" },
-    "yellow": { "name": "Yellow", "canInjure": true, "canKill": false, "lootBonus": 0.15, "colour": "#d9a441" },
-    "red": { "name": "Red", "canInjure": true, "canKill": false, "lootBonus": 0.4, "colour": "#d4685f" },
-    "black": { "name": "Black", "canInjure": true, "canKill": true, "lootBonus": 0.9, "colour": "#8c5fd6" }
+    "blue": {
+      "name": "Blue",
+      "canInjure": false,
+      "canKill": false,
+      "lootBonus": 0,
+      "colour": "#5b8dd6"
+    },
+    "yellow": {
+      "name": "Yellow",
+      "canInjure": true,
+      "canKill": false,
+      "lootBonus": 0.15,
+      "colour": "#d9a441"
+    },
+    "red": {
+      "name": "Red",
+      "canInjure": true,
+      "canKill": false,
+      "lootBonus": 0.4,
+      "colour": "#d4685f"
+    },
+    "black": {
+      "name": "Black",
+      "canInjure": true,
+      "canKill": true,
+      "lootBonus": 0.9,
+      "colour": "#8c5fd6"
+    }
   },
   "regions": [
     {
@@ -15,11 +39,157 @@
       "knowledgeTier": "experienced",
       "recommendedLevel": 5,
       "itemLevel": 8,
-      "routeLength": { "min": 3, "max": 4 },
+      "routeLength": {
+        "min": 3,
+        "max": 4
+      },
       "encounters": [
-        { "monsters": ["moss_crawler"], "count": { "min": 1, "max": 2 }, "weight": 40 },
-        { "monsters": ["thicket_wasp"], "count": { "min": 2, "max": 3 }, "weight": 35 },
-        { "monsters": ["moss_crawler", "thicket_wasp"], "count": { "min": 2, "max": 3 }, "weight": 25 }
+        {
+          "monsters": [
+            "moss_crawler"
+          ],
+          "count": {
+            "min": 1,
+            "max": 2
+          },
+          "weight": 40
+        },
+        {
+          "monsters": [
+            "thicket_wasp"
+          ],
+          "count": {
+            "min": 2,
+            "max": 3
+          },
+          "weight": 35
+        },
+        {
+          "monsters": [
+            "moss_crawler",
+            "thicket_wasp"
+          ],
+          "count": {
+            "min": 2,
+            "max": 3
+          },
+          "weight": 25
+        }
+      ],
+      "boss": null,
+      "hazards": [],
+      "unlock": null
+    },
+    {
+      "id": "coldwater_quarry",
+      "name": "The Coldwater Quarry",
+      "description": "A flooded cutting the guild works for stone and salvage. Things have moved into the lower galleries.",
+      "zoneTier": "yellow",
+      "knowledgeTier": "discovered",
+      "recommendedLevel": 9,
+      "itemLevel": 14,
+      "routeLength": {
+        "min": 3,
+        "max": 5
+      },
+      "hazards": [
+        "flooded_galleries",
+        "poor_footing"
+      ],
+      "unlock": {
+        "guildLevel": 5
+      },
+      "encounters": [
+        {
+          "monsters": [
+            "quarry_hound"
+          ],
+          "count": {
+            "min": 2,
+            "max": 3
+          },
+          "weight": 40
+        },
+        {
+          "monsters": [
+            "slag_thrower"
+          ],
+          "count": {
+            "min": 1,
+            "max": 2
+          },
+          "weight": 30
+        },
+        {
+          "monsters": [
+            "quarry_hound",
+            "slag_thrower"
+          ],
+          "count": {
+            "min": 2,
+            "max": 3
+          },
+          "weight": 30
+        }
+      ],
+      "boss": null
+    },
+    {
+      "id": "the_sunken_choirhouse",
+      "name": "The Sunken Choirhouse",
+      "description": "A drowned hall under the marsh. Something in it is still singing, and it is not one voice.",
+      "zoneTier": "red",
+      "knowledgeTier": "rumor",
+      "recommendedLevel": 18,
+      "itemLevel": 26,
+      "routeLength": {
+        "min": 4,
+        "max": 5
+      },
+      "hazards": [
+        "standing_water",
+        "failing_light",
+        "the_song"
+      ],
+      "unlock": {
+        "guildLevel": 12,
+        "afterKnowing": {
+          "regionId": "coldwater_quarry",
+          "tier": "experienced"
+        }
+      },
+      "encounters": [
+        {
+          "monsters": [
+            "rot_shambler"
+          ],
+          "count": {
+            "min": 1,
+            "max": 2
+          },
+          "weight": 35
+        },
+        {
+          "monsters": [
+            "mire_weaver"
+          ],
+          "count": {
+            "min": 1,
+            "max": 2
+          },
+          "weight": 30
+        },
+        {
+          "monsters": [
+            "rot_shambler",
+            "mire_weaver"
+          ],
+          "count": {
+            "min": 2,
+            "max": 3
+          },
+          "weight": 35
+        }
       ],
       "boss": null
     },
@@ -31,20 +201,83 @@
       "knowledgeTier": "rumor",
       "recommendedLevel": 20,
       "itemLevel": 30,
-      "routeLength": { "min": 4, "max": 6 },
+      "routeLength": {
+        "min": 4,
+        "max": 6
+      },
       "encounters": [
-        { "monsters": ["bracken_stalker"], "count": { "min": 1, "max": 2 }, "weight": 30 },
-        { "monsters": ["cairn_archer"], "count": { "min": 2, "max": 2 }, "weight": 25 },
-        { "monsters": ["hollow_chanter", "bracken_stalker"], "count": { "min": 2, "max": 3 }, "weight": 25 },
-        { "monsters": ["cairn_archer", "hollow_chanter"], "count": { "min": 2, "max": 3 }, "weight": 20 }
+        {
+          "monsters": [
+            "bracken_stalker"
+          ],
+          "count": {
+            "min": 1,
+            "max": 2
+          },
+          "weight": 30
+        },
+        {
+          "monsters": [
+            "cairn_archer"
+          ],
+          "count": {
+            "min": 2,
+            "max": 2
+          },
+          "weight": 25
+        },
+        {
+          "monsters": [
+            "hollow_chanter",
+            "bracken_stalker"
+          ],
+          "count": {
+            "min": 2,
+            "max": 3
+          },
+          "weight": 25
+        },
+        {
+          "monsters": [
+            "cairn_archer",
+            "hollow_chanter"
+          ],
+          "count": {
+            "min": 2,
+            "max": 3
+          },
+          "weight": 20
+        }
       ],
-      "boss": "warden_of_ash"
+      "boss": "warden_of_ash",
+      "hazards": [
+        "ashfall",
+        "grave_cold"
+      ],
+      "unlock": {
+        "guildLevel": 15,
+        "afterKnowing": {
+          "regionId": "coldwater_quarry",
+          "tier": "discovered"
+        }
+      }
     }
   ],
   "nodeKinds": {
-    "$comment": "REQ-EXP-002: expeditions have branching routes, events, combat, exploration and decisions. The prototype implements combat, rest and discovery nodes plus a boss; the event catalogue is Phase 5 content.",
-    "combat": { "weight": 65 },
-    "rest": { "weight": 15, "fatigueRelief": 0.15 },
-    "discovery": { "weight": 20, "lootRolls": 1 }
+    "$comment": "REQ-EXP-002: expeditions have combat, rest, exploration, events and decisions. Weights are how often a route node is each kind.",
+    "combat": {
+      "weight": 65
+    },
+    "rest": {
+      "weight": 15,
+      "fatigueRelief": 0.15
+    },
+    "discovery": {
+      "weight": 20,
+      "lootRolls": 1
+    },
+    "event": {
+      "weight": 22
+    }
   }
 }

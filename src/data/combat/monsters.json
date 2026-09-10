@@ -6,7 +6,16 @@
       "name": "Moss Crawler",
       "tier": "trash",
       "level": 3,
-      "stats": { "maxHp": 90, "physicalAttack": 14, "physicalDefense": 4, "magicDefense": 2, "accuracy": 80, "evasion": 8, "critChance": 2, "critDamage": 140 },
+      "stats": {
+        "maxHp": 90,
+        "physicalAttack": 14,
+        "physicalDefense": 4,
+        "magicDefense": 2,
+        "accuracy": 80,
+        "evasion": 8,
+        "critChance": 2,
+        "critDamage": 140
+      },
       "rangeBand": "melee",
       "element": null,
       "attackCooldown": 2.2,
@@ -19,7 +28,16 @@
       "name": "Thicket Wasp",
       "tier": "trash",
       "level": 5,
-      "stats": { "maxHp": 55, "physicalAttack": 11, "physicalDefense": 2, "magicDefense": 4, "accuracy": 92, "evasion": 26, "critChance": 8, "critDamage": 150 },
+      "stats": {
+        "maxHp": 55,
+        "physicalAttack": 11,
+        "physicalDefense": 2,
+        "magicDefense": 4,
+        "accuracy": 92,
+        "evasion": 26,
+        "critChance": 8,
+        "critDamage": 150
+      },
       "rangeBand": "melee",
       "element": null,
       "attackCooldown": 1.2,
@@ -32,11 +50,29 @@
       "name": "Bracken Stalker",
       "tier": "elite",
       "level": 12,
-      "stats": { "maxHp": 320, "physicalAttack": 34, "physicalDefense": 12, "magicDefense": 8, "accuracy": 88, "evasion": 14, "critChance": 10, "critDamage": 165 },
+      "stats": {
+        "maxHp": 320,
+        "physicalAttack": 34,
+        "physicalDefense": 12,
+        "magicDefense": 8,
+        "accuracy": 88,
+        "evasion": 14,
+        "critChance": 10,
+        "critDamage": 165
+      },
       "rangeBand": "melee",
       "element": null,
-      "attackCooldown": 2.0,
-      "skills": [{ "id": "rend", "name": "Rend", "power": 1.9, "cooldown": 9, "status": "bleed", "statusChance": 0.6 }],
+      "attackCooldown": 2,
+      "skills": [
+        {
+          "id": "rend",
+          "name": "Rend",
+          "power": 1.9,
+          "cooldown": 9,
+          "status": "bleed",
+          "statusChance": 0.6
+        }
+      ],
       "xp": 60
     },
     {
@@ -44,7 +80,16 @@
       "name": "Cairn Archer",
       "tier": "elite",
       "level": 14,
-      "stats": { "maxHp": 210, "physicalAttack": 40, "physicalDefense": 8, "magicDefense": 10, "accuracy": 96, "evasion": 12, "critChance": 14, "critDamage": 170 },
+      "stats": {
+        "maxHp": 210,
+        "physicalAttack": 40,
+        "physicalDefense": 8,
+        "magicDefense": 10,
+        "accuracy": 96,
+        "evasion": 12,
+        "critChance": 14,
+        "critDamage": 170
+      },
       "rangeBand": "ranged",
       "element": null,
       "attackCooldown": 2.6,
@@ -57,11 +102,29 @@
       "name": "Hollow Chanter",
       "tier": "elite",
       "level": 16,
-      "stats": { "maxHp": 240, "physicalAttack": 18, "magicAttack": 44, "physicalDefense": 9, "magicDefense": 18, "accuracy": 90, "evasion": 10, "critChance": 6, "critDamage": 150 },
+      "stats": {
+        "maxHp": 240,
+        "physicalAttack": 18,
+        "magicAttack": 44,
+        "physicalDefense": 9,
+        "magicDefense": 18,
+        "accuracy": 90,
+        "evasion": 10,
+        "critChance": 6,
+        "critDamage": 150
+      },
       "rangeBand": "mid",
       "element": "frost",
       "attackCooldown": 2.4,
-      "skills": [{ "id": "mend_kin", "name": "Mend Kin", "power": 0, "healPower": 1.6, "cooldown": 8 }],
+      "skills": [
+        {
+          "id": "mend_kin",
+          "name": "Mend Kin",
+          "power": 0,
+          "healPower": 1.6,
+          "cooldown": 8
+        }
+      ],
       "xp": 70,
       "$note": "Heals its allies. A party that ignores it in favour of the biggest target will lose a long fight."
     },
@@ -70,21 +133,270 @@
       "name": "The Warden of Ash",
       "tier": "boss",
       "level": 22,
-      "stats": { "maxHp": 1600, "physicalAttack": 62, "physicalDefense": 22, "magicDefense": 18, "accuracy": 94, "evasion": 8, "critChance": 12, "critDamage": 180, "critResistance": 30, "statusResistance": 0.5 },
+      "stats": {
+        "maxHp": 1600,
+        "physicalAttack": 62,
+        "physicalDefense": 22,
+        "magicDefense": 18,
+        "accuracy": 94,
+        "evasion": 8,
+        "critChance": 12,
+        "critDamage": 180,
+        "critResistance": 30,
+        "statusResistance": 0.5
+      },
       "rangeBand": "melee",
       "element": "fire",
       "attackCooldown": 2.4,
       "skills": [
-        { "id": "cinder_sweep", "name": "Cinder Sweep", "power": 2.4, "cooldown": 11, "aoe": true, "telegraphSeconds": 1.5, "status": "burn", "statusChance": 0.5 },
-        { "id": "ashen_grasp", "name": "Ashen Grasp", "power": 3.2, "cooldown": 16, "telegraphSeconds": 2.0 }
+        {
+          "id": "cinder_sweep",
+          "name": "Cinder Sweep",
+          "power": 2.4,
+          "cooldown": 11,
+          "aoe": true,
+          "telegraphSeconds": 1.5,
+          "status": "burn",
+          "statusChance": 0.5
+        },
+        {
+          "id": "ashen_grasp",
+          "name": "Ashen Grasp",
+          "power": 3.2,
+          "cooldown": 16,
+          "telegraphSeconds": 2
+        }
       ],
       "phases": [
-        { "belowHealthFraction": 0.5, "name": "Kindling", "attackMultiplier": 1.25, "cooldownMultiplier": 0.85 },
-        { "belowHealthFraction": 0.2, "name": "Conflagration", "attackMultiplier": 1.5, "cooldownMultiplier": 0.7 }
+        {
+          "belowHealthFraction": 0.5,
+          "name": "Kindling",
+          "attackMultiplier": 1.25,
+          "cooldownMultiplier": 0.85
+        },
+        {
+          "belowHealthFraction": 0.2,
+          "name": "Conflagration",
+          "attackMultiplier": 1.5,
+          "cooldownMultiplier": 0.7
+        }
       ],
       "xp": 600,
-      "cardPool": ["warden_of_ash_card"],
+      "cardPool": [
+        "warden_of_ash_card"
+      ],
       "$note": "REQ-BOS-001: stat + skill + phase. Every important skill carries a telegraph, so the AI can react to a wind-up rather than to the damage after the fact. Boss-only critResistance and statusResistance (REQ-CBT-010)."
+    },
+    {
+      "id": "quarry_hound",
+      "name": "Quarry Hound",
+      "tier": "trash",
+      "level": 8,
+      "stats": {
+        "maxHp": 140,
+        "physicalAttack": 26,
+        "physicalDefense": 10,
+        "magicDefense": 4,
+        "accuracy": 30,
+        "evasion": 14,
+        "critChance": 5,
+        "critDamage": 150
+      },
+      "rangeBand": "melee",
+      "element": null,
+      "attackCooldown": 1.6,
+      "skills": [
+        {
+          "id": "hamstring",
+          "name": "Hamstring",
+          "power": 1.2,
+          "cooldown": 7,
+          "status": "slow",
+          "statusChance": 0.45
+        }
+      ],
+      "xp": 45,
+      "cardPool": []
+    },
+    {
+      "id": "slag_thrower",
+      "name": "Slag Thrower",
+      "tier": "elite",
+      "level": 10,
+      "stats": {
+        "maxHp": 190,
+        "physicalAttack": 30,
+        "magicAttack": 22,
+        "physicalDefense": 12,
+        "magicDefense": 10,
+        "accuracy": 34,
+        "evasion": 8,
+        "critChance": 6,
+        "critDamage": 155
+      },
+      "rangeBand": "ranged",
+      "element": "fire",
+      "attackCooldown": 2.2,
+      "skills": [
+        {
+          "id": "molten_arc",
+          "name": "Molten Arc",
+          "power": 1.5,
+          "cooldown": 9,
+          "aoe": true,
+          "telegraphSeconds": 1.2,
+          "status": "burn",
+          "statusChance": 0.5
+        }
+      ],
+      "xp": 90,
+      "cardPool": []
+    },
+    {
+      "id": "rot_shambler",
+      "name": "Rot Shambler",
+      "tier": "elite",
+      "level": 17,
+      "stats": {
+        "maxHp": 420,
+        "physicalAttack": 44,
+        "physicalDefense": 22,
+        "magicDefense": 14,
+        "accuracy": 38,
+        "evasion": 4,
+        "critChance": 4,
+        "critDamage": 150
+      },
+      "rangeBand": "melee",
+      "element": null,
+      "attackCooldown": 2.4,
+      "skills": [
+        {
+          "id": "sundering_blow",
+          "name": "Sundering Blow",
+          "power": 1.8,
+          "cooldown": 8,
+          "telegraphSeconds": 0.9,
+          "status": "bleed",
+          "statusChance": 0.6
+        }
+      ],
+      "xp": 150,
+      "cardPool": []
+    },
+    {
+      "id": "mire_weaver",
+      "name": "Mire Weaver",
+      "tier": "elite",
+      "level": 18,
+      "stats": {
+        "maxHp": 300,
+        "physicalAttack": 30,
+        "magicAttack": 40,
+        "physicalDefense": 14,
+        "magicDefense": 24,
+        "accuracy": 40,
+        "evasion": 16,
+        "critChance": 8,
+        "critDamage": 160
+      },
+      "rangeBand": "mid",
+      "element": "frost",
+      "attackCooldown": 2,
+      "skills": [
+        {
+          "id": "binding_silk",
+          "name": "Binding Silk",
+          "power": 0.9,
+          "cooldown": 11,
+          "status": "stun",
+          "statusChance": 0.35,
+          "telegraphSeconds": 1
+        },
+        {
+          "id": "weave_mend",
+          "name": "Weave Mend",
+          "power": 0,
+          "healPower": 1.4,
+          "cooldown": 14
+        }
+      ],
+      "xp": 165,
+      "cardPool": []
+    },
+    {
+      "id": "the_drowned_choir",
+      "name": "The Drowned Choir",
+      "tier": "boss",
+      "level": 30,
+      "stats": {
+        "maxHp": 4200,
+        "physicalAttack": 72,
+        "magicAttack": 88,
+        "physicalDefense": 34,
+        "magicDefense": 40,
+        "accuracy": 52,
+        "evasion": 6,
+        "critChance": 10,
+        "critDamage": 170,
+        "statusResistance": 0.4,
+        "critResistance": 8
+      },
+      "rangeBand": "mid",
+      "element": "frost",
+      "attackCooldown": 2.6,
+      "skills": [
+        {
+          "id": "dirge",
+          "name": "Dirge",
+          "power": 1.4,
+          "cooldown": 10,
+          "aoe": true,
+          "telegraphSeconds": 1.8,
+          "status": "slow",
+          "statusChance": 0.7
+        },
+        {
+          "id": "undertow",
+          "name": "Undertow",
+          "power": 2.2,
+          "cooldown": 15,
+          "telegraphSeconds": 2.2,
+          "status": "stun",
+          "statusChance": 0.5
+        },
+        {
+          "id": "many_voices",
+          "name": "Many Voices",
+          "power": 0,
+          "healPower": 2.2,
+          "cooldown": 22
+        },
+        {
+          "id": "final_verse",
+          "name": "Final Verse",
+          "power": 3.4,
+          "cooldown": 26,
+          "aoe": true,
+          "telegraphSeconds": 3
+        }
+      ],
+      "phases": [
+        {
+          "belowHealthFraction": 0.65,
+          "name": "the Second Voice",
+          "attackMultiplier": 1.2,
+          "cooldownMultiplier": 0.85
+        },
+        {
+          "belowHealthFraction": 0.3,
+          "name": "the Final Verse",
+          "attackMultiplier": 1.5,
+          "cooldownMultiplier": 0.65
+        }
+      ],
+      "xp": 2400,
+      "cardPool": []
     }
   ]
 }

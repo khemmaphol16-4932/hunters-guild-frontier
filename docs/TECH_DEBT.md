@@ -12,7 +12,7 @@ Every entry names what is owed, why it was deferred, and what triggers repayment
 | Rebirth | `core/hunter/leveling` | Phase 8 | a hunter reaches level 100 in play |
 | ~~Policy pipeline weight stages~~ | — | — | **done in Phase 3** — seven build-reading stages in `ai/hunter/hunterAI` |
 | Behavior memory | `systems/hunter/` | Phase 5+ | first behavior-memory-driven decision |
-| `zone.firstEntered` never fires, so `zonesFirstEntered` is always zero — needs per-hunter discovery state | `app/GuildCommands` | Phase 5 exploration memory |
+| ~~`zone.firstEntered` never fires~~ | — | — | **done in Phase 5** — `WorldKnowledge` emits it on a region's first entry |
 | `no_rescues` and `save_ultimates` orders have no dedicated scenario coverage | `tests/scenarios.test.ts` | next AI pass |
 | Friendship | `systems/hunter/` | Phase 6 | recruitment lands (the Recruitment Hall is a Phase 6 building) |
 
@@ -50,7 +50,16 @@ All are data values; none require code changes to retune.
 | **Advancement moves a build profile ~0.08** on the 0–1 distance metric, against ~0.15+ for an attribute rebuild. | Follows from §16 weighting class at 2 of 10 plus the small skill pool. Acceptable now; the expectation is that it rises. Named as `ADVANCEMENT_DIFFERENCE` in `tests/buildIdentity.test.ts` with the reasoning attached. | Re-measure whenever the skill pool grows; if it ever reads ~0, REQ-BLD-002 has been broken. |
 | **One name pool.** REQ-RCT-002 requires regions to produce clearly different hunter pools. | Recruitment identity arrives with the Recruitment Hall, not with the vertical slice. | Phase 6 |
 
-## Known limitations after Phase 4
+## Deferred out of Phase 5
+
+| Item | Requirement | Deferred to | Why |
+|---|---|---|---|
+| World boss placement — respawn, appearing as a world event, temporarily changing region danger/markets/contracts | REQ-BOS-003 | Phase 8 | needs a world-event system and the economy it perturbs; the boss itself is authored and fought like any other |
+| Boss card pools do not feed the loot roll | REQ-CRD-* | next loot pass | `cardPool` is parsed and empty; the generator does not consult a defeated boss |
+| Reputation and capability unlock axes | REQ-WLD-002 | Phases 6–8 | parsed and carried, reported as unsatisfied rather than silently met (DL-033) |
+| Dungeons as a distinct structure | §49 | Phase 6+ | a dungeon is currently a region with a boss at the end |
+
+## Known limitations after Phase 5
 
 1. **The dashboard is functional, not designed** — it exists to make systems observable. Presentation is Phase 9.
 2. ~~**No combat, so "different builds behave differently" is proven only at the profile level.**~~ Settled in Phase 4: the §140 A–M scenarios assert the behavioural half of REQ-BLD-003 directly, and finding a live R2 failure in the process is recorded in RISK_AUDIT.
@@ -59,7 +68,8 @@ All are data values; none require code changes to retune.
 5. **No crafting.** REQ-ECO-004's "craft = certainty, loot = jackpot" is a pairing; Phase 2 delivers only the jackpot half, so the item economy is deliberately incomplete until Phase 7.
 6. **Boss cards cannot yet drop.** The 0.5% rate, per-boss pools and duplicate-protection counter exist as validated data and tested logic, but the loot roll does not yet consult a defeated boss's card pool.
 7. **Trash encounters are trivial at a region's recommended level.** The boss is the only fight that costs anything, so the continue/retreat decision only bites on an underlevelled party.
-8. **No live combat view.** `CombatEncounter.step` is public precisely so a renderer can drive it a tick at a time, but nothing does — the player reads the fight as a report afterwards rather than watching it, which §7 asks for.
+8. **The world boss is authored but unplaced** — no region spawns The Drowned Choir, so it can only be met through the debug console.
+9. **No live combat view.** `CombatEncounter.step` is public precisely so a renderer can drive it a tick at a time, but nothing does — the player reads the fight as a report afterwards rather than watching it, which §7 asks for.
 
 ## Phase 2 lesson worth keeping
 

@@ -1,0 +1,149 @@
+{
+  "$comment": "REQ-EXP-002: expeditions have events and decisions, not only fights. Each event is a *choice the Guild AI makes on the player's behalf* against their objective and policy, and every option states its cost — so the route report can explain the decision (v1.0 §14) rather than announcing an outcome.\n\n`weight` is how often the event is drawn. `zoneTiers` and `hazards` gate it to places it makes sense in (REQ-ZON-002: zones differ in events). `risk` is how much the option resembles a gamble; the Guild AI weighs it against the objective's own risk preference.",
+  "events": [
+    {
+      "id": "abandoned_cache",
+      "name": "An abandoned cache",
+      "description": "Someone else's supplies, left in a hurry. The lid is jammed and prising it open will take time the party does not obviously have.",
+      "weight": 30,
+      "zoneTiers": ["blue", "yellow", "red", "black"],
+      "hazards": [],
+      "options": [
+        {
+          "id": "force_it",
+          "label": "Force it open",
+          "consequence": "Salvage, at the cost of a noisy delay.",
+          "risk": 0.5,
+          "effects": { "lootRolls": 2, "fatigue": 0.04, "seconds": 45 }
+        },
+        {
+          "id": "leave_it",
+          "label": "Leave it",
+          "consequence": "Nothing gained, nothing spent.",
+          "risk": 0,
+          "effects": {}
+        }
+      ]
+    },
+    {
+      "id": "collapsed_passage",
+      "name": "A collapsed passage",
+      "description": "The direct way on is buried. There is a longer way round, or the party can dig.",
+      "weight": 25,
+      "zoneTiers": ["yellow", "red", "black"],
+      "hazards": [],
+      "options": [
+        {
+          "id": "dig_through",
+          "label": "Dig through",
+          "consequence": "Straight on, but the party arrives tired.",
+          "risk": 0.35,
+          "effects": { "fatigue": 0.1, "seconds": 90 }
+        },
+        {
+          "id": "go_around",
+          "label": "Go around",
+          "consequence": "Safe, slow, and the long way passes something else.",
+          "risk": 0.1,
+          "effects": { "extraNodes": 1, "seconds": 60 }
+        }
+      ]
+    },
+    {
+      "id": "wounded_stranger",
+      "name": "A wounded stranger",
+      "description": "Not a guild hunter. They are in a bad way and cannot walk out alone.",
+      "weight": 18,
+      "zoneTiers": ["yellow", "red", "black"],
+      "hazards": [],
+      "options": [
+        {
+          "id": "carry_them",
+          "label": "Carry them out",
+          "consequence": "The expedition ends here, and the guild is owed a favour.",
+          "risk": 0.2,
+          "effects": { "endsExpedition": true, "reputation": 2, "seconds": 30 }
+        },
+        {
+          "id": "patch_and_leave",
+          "label": "Patch them up and press on",
+          "consequence": "Costs supplies and a little conscience.",
+          "risk": 0.4,
+          "effects": { "morale": -0.05, "seconds": 40 }
+        }
+      ]
+    },
+    {
+      "id": "still_water",
+      "name": "Still water",
+      "description": "The flooded stretch is quiet, which is worse than if it were not.",
+      "weight": 28,
+      "zoneTiers": ["yellow", "red"],
+      "hazards": ["standing_water", "flooded_galleries"],
+      "options": [
+        {
+          "id": "wade",
+          "label": "Wade straight across",
+          "consequence": "Fast, and whatever is under there notices.",
+          "risk": 0.7,
+          "effects": { "ambush": true, "seconds": 20 }
+        },
+        {
+          "id": "edge_around",
+          "label": "Edge around the wall",
+          "consequence": "Slow and cold, but nothing wakes up.",
+          "risk": 0.1,
+          "effects": { "fatigue": 0.06, "seconds": 75 }
+        }
+      ]
+    },
+    {
+      "id": "the_singing",
+      "name": "The singing gets louder",
+      "description": "It is coming from further in. Every hunter has now noticed, and pretending otherwise is its own kind of cost.",
+      "weight": 22,
+      "zoneTiers": ["red", "black"],
+      "hazards": ["the_song", "grave_cold"],
+      "options": [
+        {
+          "id": "press_toward_it",
+          "label": "Press toward it",
+          "consequence": "Whatever is making it will be found sooner.",
+          "risk": 0.8,
+          "effects": { "morale": -0.08, "skipNodes": 1, "seconds": 30 }
+        },
+        {
+          "id": "stop_ears",
+          "label": "Stop up their ears and work around",
+          "consequence": "Slower, and nobody sleeps well afterwards.",
+          "risk": 0.25,
+          "effects": { "fatigue": 0.08, "morale": -0.03, "seconds": 70 }
+        }
+      ]
+    },
+    {
+      "id": "defensible_ground",
+      "name": "Defensible ground",
+      "description": "A dry corner with one way in. Worth an hour, if the party has an hour.",
+      "weight": 24,
+      "zoneTiers": ["blue", "yellow", "red", "black"],
+      "hazards": [],
+      "options": [
+        {
+          "id": "make_camp",
+          "label": "Make camp",
+          "consequence": "The party recovers, and the day gets shorter.",
+          "risk": 0.05,
+          "effects": { "heal": 0.3, "fatigue": -0.08, "seconds": 120 }
+        },
+        {
+          "id": "push_on",
+          "label": "Push on",
+          "consequence": "Keeps the light, keeps the wounds.",
+          "risk": 0.3,
+          "effects": { "seconds": 10 }
+        }
+      ]
+    }
+  ]
+}

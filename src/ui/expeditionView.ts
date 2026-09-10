@@ -32,6 +32,10 @@ const el = (tag: string, className?: string, text?: string): HTMLElement => {
 
 const pct = (value: number): string => `${Math.round(value * 100)}%`;
 
+/** Hazard and event ids are slugs in the data; the player should never see one. */
+const prettify = (slug: string): string =>
+  slug.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+
 interface ViewState {
   regionId: string;
   objective: ObjectiveId;
@@ -79,11 +83,21 @@ export class ExpeditionView {
     const card = el('div', 'card');
     card.append(el('h3', undefined, 'Send an expedition'));
 
+    // REQ-WLD-002: locked regions are *shown*, marked, and explained. §8 makes the map a
+    // knowledge interface, so seeing that a place exists and what it will take to go there
+    // is itself progression — hiding it would make the world feel smaller than it is.
+    const availability = this.commands.regionAvailability();
+
     const regionSelect = el('select') as HTMLSelectElement;
-    for (const region of this.session.content.world.regions) {
-      const option = el('option', undefined, region.name) as HTMLOptionElement;
-      option.value = region.id;
-      option.selected = region.id === this.state.regionId;
+    for (const entry of availability) {
+      const option = el(
+        'option',
+        undefined,
+        entry.unlocked ? entry.region.name : `${entry.region.name} — locked`,
+      ) as HTMLOptionElement;
+      option.value = entry.region.id;
+      option.disabled = !entry.unlocked;
+      option.selected = entry.region.id === this.state.regionId;
       regionSelect.append(option);
     }
     regionSelect.onchange = () => {
@@ -119,19 +133,34 @@ export class ExpeditionView {
       const warning = el('p', tier.canKill ? 'err' : 'points', danger);
       card.append(warning);
 
+      const known = this.session.worldKnowledge.of(region.id);
       const facts = el('table', 'kv');
       for (const [label, value] of [
         ['Danger', tier.name],
         ['Recommended level', String(region.recommendedLevel)],
         ['Route length', `${region.routeLength.min}–${region.routeLength.max} nodes`],
         ['Boss', region.boss ? (this.session.content.monstersById.get(region.boss)?.name ?? '—') : 'none'],
-        ['Knowledge', region.knowledgeTier],
+        ['Knowledge', known.tier],
+        ['Expeditions', String(known.visits)],
+        ...(region.hazards.length > 0
+          ? [['Conditions', region.hazards.map(prettify).join(', ')] as const]
+          : []),
       ]) {
         const row = el('tr');
         row.append(el('th', undefined, label), el('td', undefined, value));
         facts.append(row);
       }
       card.append(facts);
+
+      // What the guild actually knows, at the level of detail its knowledge permits.
+      for (const line of this.session.worldKnowledge.describe(region)) {
+        card.append(el('p', 'subhead', line));
+      }
+
+      const locked = availability.find((a) => a.region.id === region.id);
+      if (locked && !locked.unlocked) {
+        card.append(el('p', 'err', `Not open to the guild yet: ${locked.blockedBy.join('; ')}.`));
+      }
     }
 
     const objective = OBJECTIVES.find((o) => o.id === this.state.objective);
@@ -269,6 +298,14 @@ export class ExpeditionView {
 
     const route = el('div', 'card');
     route.append(el('h3', undefined, `Route — ${result.reachedNode}/${result.routeLength}`));
+    route.append(
+      el(
+        'p',
+        'subhead',
+        `${Math.floor(result.elapsedSeconds / 60)}m ${result.elapsedSeconds % 60}s in the field` +
+          (result.outOfTime ? ' — the party ran out of daylight.' : '.'),
+      ),
+    );
 
     for (const [index, report] of result.nodes.entries()) {
       const decision = result.decisions[index];

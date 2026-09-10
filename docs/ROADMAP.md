@@ -107,13 +107,13 @@ Real-time combat · entities · targeting · threat · skills in combat · statu
 
 Key DoD: all §140 A–M scenarios produce the specified behavior; scenarios K and L (identical builds differing only in personality, then only in mastery) produce *different* decisions. This is the phase that proves or disproves R2.
 
-## Phase 5 — World + Expedition ⬜ ← **next**
+## Phase 5 — World + Expedition ✅
 
 World map · regions · zone tiers · expedition generation · branching · events · dungeons · bosses · world bosses · discovery · exploration memory.
 
 Key DoD: an expedition completes end-to-end in ≤10 minutes with continue/retreat honoring hard constraints.
 
-## Phase 6 — Town + Guild ⬜
+## Phase 6 — Town + Guild ⬜ ← **next**
 
 Grid · buildings · guild hall · population · housing · services · departments · policies · town hunting · defense · recruitment hall · research.
 

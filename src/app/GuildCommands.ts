@@ -41,6 +41,13 @@ import type { RefineResult } from '../systems/items/Refinement.js';
 import { REASON } from '../core/audit.js';
 import type { ObjectiveId, PartyProposal } from '../systems/party/Party.js';
 import type { ExpeditionResult } from '../sim/expedition/Expedition.js';
+import type { KnowledgeTier, RegionDef as WorldRegionDef } from '../data/combatSchema.js';
+import { KNOWLEDGE_TIERS } from '../data/combatSchema.js';
+
+/** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
+function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
+  return KNOWLEDGE_TIERS.indexOf(actual) >= KNOWLEDGE_TIERS.indexOf(needed);
+}
 
 export interface ExpeditionOutcome {
   readonly result: ExpeditionResult;
@@ -394,6 +401,68 @@ export class GuildCommands {
    * `party` is optional so the UI can let the player edit the proposal before committing;
    * omitting it accepts the AI's own.
    */
+  /**
+   * Which regions the guild may currently go to (REQ-WLD-002).
+   *
+   * Every unlock axis combines with AND, per §50's "combinations of level, reputation,
+   * story, capability and player choice". A locked region still appears — with the reason
+   * it is locked — because §8 makes the map a knowledge interface: seeing that somewhere
+   * exists and being told what it will take is itself progression, and hiding it entirely
+   * would make the world feel small rather than gated.
+   */
+  regionAvailability(): readonly {
+    readonly region: WorldRegionDef;
+    readonly unlocked: boolean;
+    readonly blockedBy: readonly string[];
+  }[] {
+    const highestLevel = this.session.roster
+      .all()
+      .reduce((best, hunter) => Math.max(best, hunter.level), 0);
+
+    return this.session.content.world.regions.map((region) => {
+      const blockedBy: string[] = [];
+      const unlock = region.unlock;
+
+      if (unlock) {
+        if (unlock.guildLevel !== undefined && highestLevel < unlock.guildLevel) {
+          blockedBy.push(`needs a hunter of level ${unlock.guildLevel} (best is ${highestLevel})`);
+        }
+        if (unlock.afterBoss !== undefined) {
+          const defeated = this.session.worldKnowledge
+            .all()
+            .some((k) => k.bossDefeated && this.bossOf(k.regionId) === unlock.afterBoss);
+          if (!defeated) {
+            const name = this.session.content.monstersById.get(unlock.afterBoss)?.name;
+            blockedBy.push(`needs ${name ?? unlock.afterBoss} dead`);
+          }
+        }
+        if (unlock.afterKnowing !== undefined) {
+          const known = this.session.worldKnowledge.of(unlock.afterKnowing.regionId);
+          const needed = unlock.afterKnowing;
+          if (!knowledgeAtLeast(known.tier, needed.tier)) {
+            const name = this.session.content.worldRegionsById.get(needed.regionId)?.name;
+            blockedBy.push(`needs ${name ?? needed.regionId} known to "${needed.tier}"`);
+          }
+        }
+        // Reputation and capability are parsed and carried but not yet evaluable — the
+        // systems that own them are Phase 6/8. Reported as such rather than silently
+        // treated as satisfied, which would let a region open early and quietly.
+        if (unlock.reputation !== undefined) {
+          blockedBy.push(`needs ${unlock.reputation} reputation (not yet tracked)`);
+        }
+        if (unlock.capability !== undefined) {
+          blockedBy.push(`needs the "${unlock.capability}" capability (not yet tracked)`);
+        }
+      }
+
+      return { region, unlocked: blockedBy.length === 0, blockedBy };
+    });
+  }
+
+  private bossOf(regionId: string): string | undefined {
+    return this.session.content.worldRegionsById.get(regionId)?.boss;
+  }
+
   sendExpedition(
     regionId: string,
     objective: ObjectiveId,
@@ -401,6 +470,14 @@ export class GuildCommands {
   ): Result<ExpeditionOutcome, string> {
     const region = this.session.content.worldRegionsById.get(regionId);
     if (!region) return err(`unknown region "${regionId}"`);
+
+    // REQ-WLD-002 is a rule, so it is enforced here rather than only in the UI — the
+    // difference between a disabled button and an actual gate is whether the debug console
+    // and a future automation path respect it too.
+    const availability = this.regionAvailability().find((a) => a.region.id === regionId);
+    if (availability && !availability.unlocked) {
+      return err(`${region.name} is not open to the guild: ${availability.blockedBy.join('; ')}`);
+    }
 
     const proposal = party ?? this.session.partyPlanner.propose(this.session.roster.all(), objective);
     if (proposal.members.length === 0) return err('no hunter is available to deploy');
@@ -420,6 +497,15 @@ export class GuildCommands {
         inputs: { regionId, objective: proposal.objective.id },
       });
     }
+
+    // REQ-WLD-001: permanent, and recorded whatever the outcome — the first entry also
+    // emits `zone.firstEntered` through WorldKnowledge, so the Chronicle learns of it.
+    this.session.worldKnowledge.record(regionId, {
+      nodeKinds: result.learned.nodeKinds,
+      monsters: result.learned.monsters,
+      deepestNode: result.learned.deepestNode,
+      bossDefeated: result.bossDefeated,
+    });
 
     const levelledUp: HunterId[] = [];
     const balance = this.session.content.balance.attributes;
@@ -449,7 +535,10 @@ export class GuildCommands {
       hunter = this.session.condition.set(hunter, {
         fatigue: hunter.condition.fatigue + after.fatigueAdded,
         // Coming home is worth something; being broken on the way costs more than it gains.
-        morale: hunter.condition.morale + (result.wiped ? -0.2 : result.retreated ? -0.05 : 0.08),
+        morale:
+          hunter.condition.morale +
+          after.moraleChange +
+          (result.wiped ? -0.2 : result.retreated ? -0.05 : 0.08),
       });
 
       // REQ-ZON-001 decided *whether* a hunter could die out there; this decides what the

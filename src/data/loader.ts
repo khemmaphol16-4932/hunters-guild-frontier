@@ -22,6 +22,7 @@ import constellationJson from './constellation/nodes.json';
 import monstersJson from './combat/monsters.json';
 import statusesJson from './combat/statuses.json';
 import worldJson from './world/regions.json';
+import eventsJson from './world/events.json';
 import combatBalanceJson from './balance/combat.json';
 
 import raritiesJson from './items/rarities.json';
@@ -80,13 +81,16 @@ import {
   parseCombatBalance,
   parseMonsters,
   parseStatuses,
+  parseEvents,
   parseWorld,
   type CombatBalance,
+  type EventDef,
   type MonsterDef,
   type StatusDef,
   type WorldData,
   type RegionDef as WorldRegionDef,
 } from './combatSchema.js';
+import { ZONE_TIERS } from './combatSchema.js';
 import {
   parseCards,
   parseItemTypes,
@@ -148,6 +152,8 @@ export interface GameContent {
   /** World regions — distinct from constellation regions, which are skill territory. */
   readonly world: WorldData;
   readonly worldRegionsById: ReadonlyMap<string, WorldRegionDef>;
+  readonly events: readonly EventDef[];
+  readonly eventsById: ReadonlyMap<string, EventDef>;
 
   /** v1.0 §2.1 canonical precedence, as data rather than as source order. */
   readonly policyPrecedence: PolicyPrecedence;
@@ -176,6 +182,7 @@ function crossValidateWorld(content: {
   world: WorldData;
   monsters: readonly MonsterDef[];
   statuses: readonly StatusDef[];
+  events: readonly EventDef[];
 }): void {
   const monsterIds = new Set(content.monsters.map((m) => m.id));
   const statusIds = new Set(content.statuses.map((s) => s.id));
@@ -223,6 +230,62 @@ function crossValidateWorld(content: {
           `boss "${region.boss}" is not authored as tier "boss"`,
         );
       }
+    }
+  }
+
+  // REQ-WLD-002 unlock gates must point at real things, or a region silently becomes
+  // unreachable — the worst kind of content bug, because nothing fails and the player
+  // simply never sees the place.
+  const regionIds = new Set(content.world.regions.map((r) => r.id));
+  for (const region of content.world.regions) {
+    const unlock = region.unlock;
+    if (!unlock) continue;
+
+    if (unlock.afterBoss !== undefined && !monsterIds.has(unlock.afterBoss)) {
+      throw new ContentValidationError(
+        `regions.json:${region.id}.unlock`,
+        `gated behind boss "${unlock.afterBoss}", which does not exist`,
+      );
+    }
+    if (unlock.afterKnowing !== undefined) {
+      if (!regionIds.has(unlock.afterKnowing.regionId)) {
+        throw new ContentValidationError(
+          `regions.json:${region.id}.unlock`,
+          `gated behind knowledge of "${unlock.afterKnowing.regionId}", which does not exist`,
+        );
+      }
+      if (unlock.afterKnowing.regionId === region.id) {
+        throw new ContentValidationError(
+          `regions.json:${region.id}.unlock`,
+          'gated behind knowledge of itself, which can never be satisfied',
+        );
+      }
+    }
+  }
+
+  // Every zone tier should have somewhere to go, or REQ-ZON-001's four tiers are three.
+  const tiersInUse = new Set(content.world.regions.map((r) => r.zoneTier));
+  for (const tier of ZONE_TIERS) {
+    if (!tiersInUse.has(tier)) {
+      throw new ContentValidationError(
+        'regions.json',
+        `no region is authored at danger tier "${tier}" (REQ-ZON-001 fixes four)`,
+      );
+    }
+  }
+
+  // An event that can never be drawn is dead content. Each one must have somewhere to fire.
+  for (const event of content.events) {
+    const eligible = content.world.regions.filter(
+      (r) =>
+        event.zoneTiers.includes(r.zoneTier) &&
+        (event.hazards.length === 0 || event.hazards.some((h) => r.hazards.includes(h))),
+    );
+    if (eligible.length === 0) {
+      throw new ContentValidationError(
+        `events.json:${event.id}`,
+        'no region matches its zone tiers and hazards, so it can never occur',
+      );
     }
   }
 }
@@ -393,10 +456,11 @@ export function loadContent(): GameContent {
   const monsters = parseMonsters(monstersJson);
   const statuses = parseStatuses(statusesJson);
   const world = parseWorld(worldJson);
+  const events = parseEvents(eventsJson);
 
   crossValidateConstellation({ archetypes, regions, constellation, skills, itemTypes });
   crossValidateItems({ rarities, itemTypes, substats, cards, uniqueEffects, skills });
-  crossValidateWorld({ world, monsters, statuses });
+  crossValidateWorld({ world, monsters, statuses, events });
 
   cached = Object.freeze({
     archetypes,
@@ -433,6 +497,8 @@ export function loadContent(): GameContent {
     statusesById: new Map(statuses.map((s) => [s.id, s])),
     world,
     worldRegionsById: new Map(world.regions.map((r) => [r.id, r])),
+    events,
+    eventsById: new Map(events.map((e) => [e.id, e])),
 
     policyPrecedence: parsePolicyPrecedence(policyPrecedenceJson),
 

@@ -331,3 +331,47 @@ Assumptions made under §127 (ambiguity resolved conservatively, documented, wor
 **Decision.** A `StandingOrder` declares an optional `route` force — `forbidsRetreat` or `requiresRetreat` — which the expedition's continue/retreat decision consults *before* any threshold, objective or condition.
 
 **Why.** An order that governed only combat was quietly ignored by the route: a player who ordered "hold the line" watched their party turn back at the next node anyway. From the player's side that is one instruction being disobeyed, and they are right. Making the route meaning part of the order's declaration keeps the two layers from disagreeing about what the player said.
+
+---
+
+## DL-032 — World knowledge belongs to the guild, not to hunters
+
+**Ambiguity.** REQ-WLD-001 says exploration information is permanent and "remembered by the Guild". §19 gives each *hunter* a Chronicle. Nothing says which of the two owns a map.
+
+**Decision.** `WorldKnowledge` is guild state, saved in the envelope (v6). Hunter Chronicles record that a hunter *was there*; the map itself is the guild's.
+
+**Why.** A roster wipe costs you the hunters, not the map. Tying discovery to hunters would let a guild forget a region it had mastered, which REQ-WLD-001 forbids outright — and the case where it matters most is the one where every hunter who went there died. The knowledge type offers `raise` and no way to lower a tier, so permanence is a property of the type rather than a convention callers have to respect.
+
+---
+
+## DL-033 — Locked regions are shown, not hidden
+
+**Ambiguity.** REQ-WLD-002 says regions unlock through combinations of level, reputation, story, capability and player choice. It does not say whether a locked region is visible.
+
+**Decision.** Every region appears in the planner, marked locked, with the specific reasons it is locked spelled out. `sendExpedition` enforces the gate itself, not just the UI.
+
+**Why.** §8 makes the map a knowledge interface: seeing that somewhere exists and being told what it will take is itself progression, and hiding it would make the world feel smaller than it is. Enforcing in the command surface rather than the view is the difference between a gate and a disabled button — the debug console and any future automation path respect it too.
+
+Unlock axes the prototype cannot yet evaluate (reputation, capability) are parsed, carried, and reported as *unsatisfied* rather than silently treated as met. A region that opened early and quietly would be the worse failure.
+
+---
+
+## DL-034 — An event is authored data with named effects, never a script
+
+**Ambiguity.** REQ-EXP-002 lists events and decisions as things expeditions contain, without saying what an event *is*.
+
+**Decision.** An event is a name, a description, a weight, zone/hazard gating, and two or more options. Each option carries a `risk` and a flat record of *named* effects — loot rolls, fatigue, morale, healing, reputation, extra or skipped nodes, ambush, ends-expedition, seconds. The schema rejects an event with fewer than two options.
+
+**Why conservative.** An event that could run arbitrary logic would let content reach into the simulation, and the requirement asks for authored events, not authored code. The two-option minimum is the same principle: REQ-EXP-002 lists *decisions*, and a single-option event presents the Guild AI with a choice it cannot make.
+
+The Guild AI picks by matching the option's risk against the objective's risk preference, scaled by party condition — so a "bring everyone home" guild takes the safe option and a "kill the boss" guild takes the fast one, from identical content. The choice is audited with the option's own authored consequence text, so the report says what happened in words the writer chose.
+
+---
+
+## DL-035 — The ten-minute cap is checked between nodes, never inside a fight
+
+**Ambiguity.** REQ-EXP-003 caps an expedition at ten minutes.
+
+**Decision.** Elapsed expedition time accrues per node and is tested before entering the next one. A run can overshoot by at most the length of the node it was already in.
+
+**Why.** Stopping the clock mid-encounter would make a run's outcome depend on where the tick landed, which breaks the determinism REQ-TEC-005 and §18 rest on. `outOfTime` is its own flag rather than being folded into `retreated`, because running out of daylight is not a decision the party made.
