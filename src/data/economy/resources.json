@@ -9,6 +9,22 @@
     "black": { "gold": 720, "food": 25, "materials": 28 }
   },
   "townHuntRewards": { "gold": 18, "food": 5, "materials": 2 },
+  "market": {
+    "minPriceScale": 0.75,
+    "maxPriceScale": 1.35,
+    "buyMarkup": 1.1,
+    "sellMarkdown": 0.8,
+    "impactPerUnit": 0.004,
+    "reversionPerStep": 0.02,
+    "goods": {
+      "food": { "basePrice": 3, "startingStock": 160 },
+      "materials": { "basePrice": 8, "startingStock": 100 },
+      "iron": { "basePrice": 18, "startingStock": 50 },
+      "salvage": { "basePrice": 10, "startingStock": 30 },
+      "essence": { "basePrice": 35, "startingStock": 15 },
+      "warding_salt": { "basePrice": 90, "startingStock": 5 }
+    }
+  },
   "resources": [
     { "id": "gold", "name": "Gold", "category": "currency", "starting": 3000 },
     { "id": "food", "name": "Provisions", "category": "core", "starting": 120 },

@@ -360,6 +360,13 @@ const v12ToV13: Migration = {
     return { ...(payload as Record<string, unknown>), crafting: { orders: [], nextOrder: 1 } };
   },
 };
+const v13ToV14: Migration = {
+  from: 13, to: 14, describe: 'persist bounded market stock and price state',
+  migrate(payload: unknown): unknown {
+    if (typeof payload !== 'object' || payload === null) throw new SaveMigrationError('v13 payload is not an object');
+    return { ...(payload as Record<string, unknown>), market: { stock: {}, priceScale: {} } };
+  },
+};
 
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
@@ -374,6 +381,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v10ToV11,
   v11ToV12,
   v12ToV13,
+  v13ToV14,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

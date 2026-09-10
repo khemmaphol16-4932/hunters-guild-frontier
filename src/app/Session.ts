@@ -66,6 +66,7 @@ import type { CurrentSavePayload } from '../save/envelope.js';
 import { Resources } from '../systems/economy/Resources.js';
 import { Food } from '../systems/economy/Food.js';
 import { Crafting } from '../systems/economy/Crafting.js';
+import { Market } from '../systems/economy/Market.js';
 
 export interface SessionOptions {
   readonly worldSeed: string;
@@ -201,6 +202,7 @@ export class Session {
   readonly resources: Resources;
   readonly food: Food;
   readonly crafting: Crafting;
+  readonly market: Market;
 
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
@@ -238,6 +240,7 @@ export class Session {
     this.policy = new PolicyBook();
     this.resources = new Resources(this.content.economy.resources);
     this.food = new Food(this.resources, this.content.economy.foodConsumptionPerResidentPerStep);
+    this.market = new Market(this.content.economy.market, this.resources);
 
     this.registry = new SkillRegistry(this.content);
 
@@ -678,6 +681,7 @@ export class Session {
       resources: this.resources.snapshot(),
       food: this.food.snapshot(),
       crafting: this.crafting.snapshot(),
+      market: this.market.snapshot(),
     };
   }
 
@@ -705,6 +709,7 @@ export class Session {
     this.resources.restore(payload.resources);
     this.food.restore(payload.food);
     this.crafting.restore(payload.crafting);
+    this.market.restore(payload.market);
     this.townJobs.restore(payload.townJobs);
   }
 

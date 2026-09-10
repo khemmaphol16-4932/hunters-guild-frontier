@@ -53,6 +53,7 @@ import type { DefenseResult, HuntResult } from '../sim/town/TownCombat.js';
 import type { EconomyReward } from '../data/economySchema.js';
 import type { FoodReport } from '../systems/economy/Food.js';
 import type { CraftOrder, CraftPreview } from '../systems/economy/Crafting.js';
+import type { MarketQuote } from '../systems/economy/Market.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -76,6 +77,19 @@ export interface ExpeditionOutcome {
 
 export class GuildCommands {
   constructor(private readonly session: Session) {}
+
+  marketQuote(resourceId: string, amount: number, side: 'buy' | 'sell'): Result<MarketQuote, string> {
+    if (this.session.town.grid.countOf('market_stall') === 0) return err('the town has no Market Stall');
+    return this.session.market.quote(resourceId, amount, side);
+  }
+  buyFromMarket(resourceId: string, amount: number): Result<MarketQuote, string> {
+    if (this.session.town.grid.countOf('market_stall') === 0) return err('the town has no Market Stall');
+    return this.session.market.buy(resourceId, amount);
+  }
+  sellToMarket(resourceId: string, amount: number): Result<MarketQuote, string> {
+    if (this.session.town.grid.countOf('market_stall') === 0) return err('the town has no Market Stall');
+    return this.session.market.sell(resourceId, amount);
+  }
 
   craftingPreview(recipeId: string, crafterId: HunterId): Result<CraftPreview, string> {
     const crafter = this.session.roster.get(crafterId);
@@ -1080,6 +1094,7 @@ export class GuildCommands {
     // `runSteps` rather than `advance` because there is no frame to keep responsive here —
     // it is the same entry point offline catch-up uses (REQ-OFF-001).
     this.session.clock.runSteps(steps * this.session.clock.coarseStepRatio, () => {});
+    this.session.market.step(steps);
     const completedCrafts: Item[] = [];
     for (const order of this.session.crafting.completeReady()) {
       this.session.armoury.add(order.item);

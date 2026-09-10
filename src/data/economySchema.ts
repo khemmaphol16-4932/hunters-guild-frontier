@@ -21,9 +21,16 @@ export interface EconomyData {
   readonly foodConsumptionPerResidentPerStep: number;
   readonly expeditionRewards: Readonly<Record<'blue' | 'yellow' | 'red' | 'black', EconomyReward>>;
   readonly townHuntRewards: EconomyReward;
+  readonly market: MarketConfig;
 }
 
 export interface EconomyReward { readonly gold: number; readonly food: number; readonly materials: number }
+export interface MarketGood { readonly basePrice: number; readonly startingStock: number }
+export interface MarketConfig {
+  readonly minPriceScale: number; readonly maxPriceScale: number; readonly buyMarkup: number;
+  readonly sellMarkdown: number; readonly impactPerUnit: number; readonly reversionPerStep: number;
+  readonly goods: Readonly<Record<string, MarketGood>>;
+}
 
 const CATEGORIES = new Set<ResourceCategory>([
   'currency', 'core', 'construction', 'crafting', 'specialized', 'rare',
@@ -62,6 +69,21 @@ export function parseEconomy(value: unknown): EconomyData {
     black: reward(rewardRecord['black'], 'resources.json.expeditionRewards.black'),
   };
   const townHuntRewards = reward((value as Record<string, unknown>)['townHuntRewards'], 'resources.json.townHuntRewards');
+  const marketRaw = (value as Record<string, unknown>)['market'];
+  if (typeof marketRaw !== 'object' || marketRaw === null) throw new ContentValidationError('resources.json.market', 'must be an object');
+  const marketRecord = marketRaw as Record<string, unknown>;
+  const marketNumber = (key: string): number => { const n = marketRecord[key]; if (typeof n !== 'number' || !Number.isFinite(n) || n <= 0) throw new ContentValidationError(`resources.json.market.${key}`, 'must be positive'); return n; };
+  const goodsRaw = marketRecord['goods'];
+  if (typeof goodsRaw !== 'object' || goodsRaw === null) throw new ContentValidationError('resources.json.market.goods', 'must be an object');
+  const goods: Record<string, MarketGood> = {};
+  for (const [id, entry] of Object.entries(goodsRaw)) {
+    if (typeof entry !== 'object' || entry === null) throw new ContentValidationError(`resources.json.market.goods.${id}`, 'must be an object');
+    const record = entry as Record<string, unknown>; const basePrice = record['basePrice']; const startingStock = record['startingStock'];
+    if (typeof basePrice !== 'number' || basePrice <= 0 || typeof startingStock !== 'number' || startingStock < 0) throw new ContentValidationError(`resources.json.market.goods.${id}`, 'price must be positive and stock non-negative');
+    goods[id] = { basePrice, startingStock };
+  }
+  const market: MarketConfig = { minPriceScale: marketNumber('minPriceScale'), maxPriceScale: marketNumber('maxPriceScale'), buyMarkup: marketNumber('buyMarkup'), sellMarkdown: marketNumber('sellMarkdown'), impactPerUnit: marketNumber('impactPerUnit'), reversionPerStep: marketNumber('reversionPerStep'), goods };
+  if (market.minPriceScale >= market.maxPriceScale) throw new ContentValidationError('resources.json.market', 'minPriceScale must be below maxPriceScale');
   if (!Array.isArray(raw) || raw.length === 0) {
     throw new ContentValidationError('resources.json.resources', 'must be a non-empty array');
   }
@@ -85,5 +107,5 @@ export function parseEconomy(value: unknown): EconomyData {
     return { id, name, category: category as ResourceCategory, starting };
   });
   if (!seen.has('gold')) throw new ContentValidationError('resources.json', 'must define the gold ledger');
-  return { resources, repairCostScale, foodConsumptionPerResidentPerStep: foodConsumption, expeditionRewards, townHuntRewards };
+  return { resources, repairCostScale, foodConsumptionPerResidentPerStep: foodConsumption, expeditionRewards, townHuntRewards, market };
 }

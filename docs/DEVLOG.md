@@ -398,3 +398,15 @@ The first pass only reported duration while delivering the item immediately. Tha
 ## Next
 
 The bounded market, followed by contracts/factions and the long-run balance harness. Phase 8 begins only when those Phase 7 gates are green.
+
+---
+
+# Phase 7e — A market, not a stock exchange
+
+The Market Stall now buys and sells the resource catalogue against finite stock. Prices move with purchases and sales, but only inside an authored 0.75–1.35 band and they revert toward baseline as town time passes. That is the “dynamic but controlled” part of REQ-ECO-005: player activity is visible without turning the game into a chaotic economic simulation.
+
+The buy/sell spread makes an immediate round trip lossy, trades use the atomic ledger, and content validation rejects a market good that is not a real resource. Save **v14** carries stock and price scales; migrated saves receive the authored starting stock rather than an empty shop. 512 tests green, typecheck and production build clean.
+
+## Next
+
+Contracts and factions: generated offers tied to client identity, region, risk and rewards; analysis before acceptance; completion consequences for the ledger, reputation and Chronicle.

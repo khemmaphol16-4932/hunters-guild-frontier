@@ -76,9 +76,35 @@ export class TownView {
       this.renderRota(),
       this.renderResearch(),
       this.renderRecruitment(),
+      this.renderMarket(),
       this.renderDefense(),
     );
     this.host.append(grid);
+  }
+
+  private renderMarket(): HTMLElement {
+    const card = el('div', 'card');
+    card.append(el('h3', undefined, 'Market'));
+    if (this.session.town.grid.countOf('market_stall') === 0) {
+      card.append(el('p', 'empty', 'Build a Market Stall to trade.'));
+      return card;
+    }
+    for (const [id] of Object.entries(this.session.content.economy.market.goods)) {
+      const name = this.session.content.resourcesById.get(id)?.name ?? id;
+      const buy = this.commands.marketQuote(id, 5, 'buy');
+      const sell = this.commands.marketQuote(id, 5, 'sell');
+      if (!buy.ok || !sell.ok) continue;
+      const row = el('div', 'build-row');
+      const buyButton = el('button', 'small');
+      buyButton.textContent = `Buy 5 ${name} — ${buy.value.total}g`;
+      buyButton.onclick = () => { const result = this.commands.buyFromMarket(id, 5); this.say(result.ok ? `Bought 5 ${name}.` : result.error, !result.ok); };
+      const sellButton = el('button', 'small');
+      sellButton.textContent = `Sell 5 — ${sell.value.total}g`;
+      sellButton.onclick = () => { const result = this.commands.sellToMarket(id, 5); this.say(result.ok ? `Sold 5 ${name}.` : result.error, !result.ok); };
+      row.append(buyButton, sellButton);
+      card.append(row);
+    }
+    return card;
   }
 
   private say(message: string, isError = false): void {

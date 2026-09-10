@@ -30,8 +30,9 @@ import type { DefenseSnapshot } from '../systems/town/Defense.js';
 import type { ResourcesSnapshot } from '../systems/economy/Resources.js';
 import type { FoodSnapshot } from '../systems/economy/Food.js';
 import type { CraftingSnapshot } from '../systems/economy/Crafting.js';
+import type { MarketSnapshot } from '../systems/economy/Market.js';
 
-export const CURRENT_SAVE_VERSION = 13;
+export const CURRENT_SAVE_VERSION = 14;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -198,7 +199,8 @@ export interface SavePayloadV12 extends SavePayloadV11 {
 }
 
 export interface SavePayloadV13 extends SavePayloadV12 { readonly crafting: CraftingSnapshot }
-export type CurrentSavePayload = SavePayloadV13;
+export interface SavePayloadV14 extends SavePayloadV13 { readonly market: MarketSnapshot }
+export type CurrentSavePayload = SavePayloadV14;
 
 export interface Migration {
   readonly from: number;

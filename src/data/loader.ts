@@ -727,6 +727,7 @@ export function loadContent(): GameContent {
     if (!rarities.rarities.some((rarity) => rarity.id === recipe.rarity)) throw new ContentValidationError(`recipes.json:${recipe.id}`, `unknown rarity "${recipe.rarity}"`);
     for (const resource of Object.keys(recipe.cost)) if (!economy.resources.some((entry) => entry.id === resource)) throw new ContentValidationError(`recipes.json:${recipe.id}.cost`, `unknown resource "${resource}"`);
   }
+  for (const resource of Object.keys(economy.market.goods)) if (!economy.resources.some((entry) => entry.id === resource)) throw new ContentValidationError('resources.json.market.goods', `unknown resource "${resource}"`);
 
   cached = Object.freeze({
     archetypes,

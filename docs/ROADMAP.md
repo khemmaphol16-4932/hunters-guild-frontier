@@ -139,6 +139,8 @@ Gold · resources · food · production · crafting · market · contracts · re
 
 **Crafting delivered.** Validated recipes preview every input, the targeted item, duration and quality range. Crafter capability raises a deterministic quality floor; payment is atomic; and crafted output uses the production item generator. Work orders occupy the crafter, complete on the shared simulation clock, and persist in save v13. Recipes stop below Ancient and Legendary, preserving loot as the jackpot. Next: the bounded market.
 
+**Market delivered.** A Market Stall exposes authored goods with finite stock, a buy/sell spread, demand-driven prices clamped to a narrow band, and deterministic reversion toward baseline. Trades are atomic ledger transactions and save v14 preserves stock and price state. Next: contracts, clients and faction standing.
+
 Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
 
 ## Phase 8 — Progression ⬜
