@@ -704,6 +704,7 @@ export class GuildCommands {
       worldBoss: false,
       wiped: result.wiped,
       deaths: result.aftermath.filter((a) => a.died).length,
+      regionId: region.id,
       regionName: region.name,
     });
 
@@ -712,7 +713,10 @@ export class GuildCommands {
       const succeeded = result.completed && !result.wiped;
       if (succeeded) this.session.resources.transact({ credits: { gold: contract.reward.gold, food: contract.reward.food, materials: contract.reward.materials } });
       this.session.factions.change(contract.factionId, succeeded ? 3 : -2);
-      this.session.reputation.change(succeeded ? contract.reputation : -contract.reputation, `${succeeded ? 'completed' : 'failed'} contract ${contract.name}`);
+      const reputationDelta = succeeded ? contract.reputation : -contract.reputation;
+      const reputationReason = `${succeeded ? 'completed' : 'failed'} contract ${contract.name}`;
+      this.session.reputation.change(reputationDelta, reputationReason);
+      this.session.reputation.changeRegional(regionId, reputationDelta, reputationReason);
       for (const member of proposal.members) this.session.events.emit('contract.completed', { hunterId: member.hunterId, contractId: contract.offerId, name: contract.name, succeeded });
       this.session.audit.record({ actor:{kind:'system',name:'guild-ai'},system:'contracts',outcome:`${succeeded ? 'completed' : 'failed'} ${contract.name}`,reasonCodes:[succeeded?'contract_completed':'contract_failed',`faction:${contract.factionId}`],inputs:{reward:succeeded?contract.reward:{}} });
       this.session.guildMastery.record('contract', succeeded ? 4 : 1);

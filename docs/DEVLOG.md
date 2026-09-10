@@ -440,3 +440,13 @@ Guild Mastery now records institutional experience from the actions that create 
 Capability now reads the guild across seven independent axes: combat, expedition, crafting, resource, defense, research and economic. It deliberately exposes no total score, preserving distinct guild identities and giving future unlocks concrete dimensions to query.
 
 The checkpoint closes with 521 tests across 25 suites, including persistence, vector-shape and divergent-investment coverage. Typecheck and production build are clean.
+
+---
+
+# Phase 8b — Reputation depth foundation
+
+Reputation is now both rank and numerical value. The global ledger derives five readable ranks—unknown, recognized, trusted, renowned and legendary—without replacing the transparent underlying number.
+
+Expeditions and contract resolutions now also affect the region where the work happened. Regional values have their own rank reading, share the bounded explanation history, and persist through save v17; older global-only saves migrate with an empty regional ledger.
+
+The checkpoint closes with 524 tests across 26 suites. Typecheck and production build are clean.

@@ -925,7 +925,7 @@ describe('save v7 (REQ-TEC-004)', () => {
     expect(migrated['town']).toMatchObject({ highestStageIndex: 0 });
     expect(migrated['departments']).toEqual({ departments: [] });
     expect(migrated['townJobs']).toEqual({ assignments: [] });
-    expect(migrated['reputation']).toEqual({ value: 0, recent: [] });
+    expect(migrated['reputation']).toEqual({ value: 0, recent: [], regional: {} });
     // Nothing pre-existing is disturbed.
     expect(migrated['clock']).toEqual({ tick: 40, accumulatorMs: 0 });
   });
