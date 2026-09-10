@@ -157,6 +157,8 @@ Reputation depth foundation complete: reputation now retains its numerical value
 
 Research depth complete: three advanced branch nodes extend Combat, Economy and Town research. Advanced technology requires prior research plus Guild Mastery level 2, but mastery is neither spent nor converted into research points. Appointed Research heads continue to improve staffed output, keeping leadership, institutional experience and technology distinct.
 
+Guild Monument complete: a passive event subscriber records world-boss victories, dangerous-frontier discoveries, legendary finds, historic contracts, legendary hunters, town milestones and research breakthroughs. Stable achievement ids deduplicate party-wide events, and save v18 preserves the permanent record.
+
 ## Phase 9 — UX / Presentation ⬜
 
 Progressive UI · build dashboard polish · chronicle · combat timeline · AI explain · guild report · notifications · town and world presentation · **isometric pixel-art** · audio hooks · accessibility.

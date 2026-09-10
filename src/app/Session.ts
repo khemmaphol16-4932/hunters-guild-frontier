@@ -71,6 +71,7 @@ import { Contracts } from '../systems/economy/Contracts.js';
 import { Factions } from '../systems/economy/Factions.js';
 import { GuildMastery } from '../systems/guild/GuildMastery.js';
 import { Capability } from '../systems/guild/Capability.js';
+import { Monument } from '../systems/progression/Monument.js';
 
 export interface SessionOptions {
   readonly worldSeed: string;
@@ -211,6 +212,7 @@ export class Session {
   readonly factions: Factions;
   readonly guildMastery: GuildMastery;
   readonly capability: Capability;
+  readonly monument: Monument;
 
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
@@ -338,6 +340,7 @@ export class Session {
       events: this.events,
       currentTick: () => this.clock.tick,
     });
+    this.monument = new Monument({ events: this.events, currentTick: () => this.clock.tick });
     this.worldKnowledge = new WorldKnowledge({
       regions: this.content.world.regions,
       // §19: the first time the guild sets foot somewhere is worth remembering, and it is
@@ -706,6 +709,7 @@ export class Session {
       contracts: this.contracts.snapshot(),
       factions: this.factions.snapshot(),
       guildMastery: this.guildMastery.snapshot(),
+      monument: this.monument.snapshot(),
     };
   }
 
@@ -737,11 +741,13 @@ export class Session {
     this.contracts.restore(payload.contracts);
     this.factions.restore(payload.factions);
     this.guildMastery.restore(payload.guildMastery);
+    this.monument.restore(payload.monument);
     this.townJobs.restore(payload.townJobs);
   }
 
   dispose(): void {
     this.chronicle.dispose();
+    this.monument.dispose();
     this.events.clear();
   }
 }

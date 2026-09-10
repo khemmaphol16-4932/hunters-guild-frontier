@@ -460,3 +460,13 @@ The research tree now continues into Tactical Doctrine, Frontier Logistics and C
 The two ledgers remain structurally separate. Starting advanced research neither spends mastery nor turns activity into research points; those points still come only from staffed Research Department output. Department leadership already multiplies that output, and an explicit integration test now proves an appointed qualified head improves the work without creating free progress.
 
 The checkpoint closes with 526 tests across 26 suites. Typecheck and production build are clean.
+
+---
+
+# Phase 8d — Guild Monument
+
+The Guild Monument turns verified game events into a permanent institutional record. It recognizes world-boss victories, first entries into Red and Black frontiers, legendary equipment discoveries, successful historic contracts, level-50 hunters, town-stage milestones and research breakthroughs.
+
+The Monument is a passive subscriber and cannot feed effects back into gameplay. Stable ids make achievements idempotent, so an event emitted for every party member creates one plaque rather than four. Save v18 persists the sorted record and older saves migrate to an empty monument.
+
+The checkpoint closes with 529 tests across 27 suites. Typecheck and production build are clean.

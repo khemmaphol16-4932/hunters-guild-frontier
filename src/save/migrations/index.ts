@@ -370,6 +370,7 @@ const v13ToV14: Migration = {
 const v14ToV15: Migration = { from:14,to:15,describe:'persist contract offers, active work and faction standing',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v14 payload is not an object');return{...(payload as Record<string,unknown>),contracts:{offers:[],sequence:1},factions:{standing:{}}}}};
 const v15ToV16: Migration = { from:15,to:16,describe:'persist institutional Guild Mastery',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v15 payload is not an object');return{...(payload as Record<string,unknown>),guildMastery:{points:0,byActivity:{}}}}};
 const v16ToV17: Migration = { from:16,to:17,describe:'persist regional reputation',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v16 payload is not an object');const record=payload as Record<string,unknown>;const reputation=typeof record['reputation']==='object'&&record['reputation']!==null?record['reputation'] as Record<string,unknown>:{};return{...record,reputation:{...reputation,regional:{}}}}};
+const v17ToV18: Migration = { from:17,to:18,describe:'persist Guild Monument achievements',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v17 payload is not an object');return{...(payload as Record<string,unknown>),monument:{entries:[]}}}};
 
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
@@ -388,6 +389,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v14ToV15,
   v15ToV16,
   v16ToV17,
+  v17ToV18,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */
