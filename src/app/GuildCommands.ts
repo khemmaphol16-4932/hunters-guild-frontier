@@ -21,16 +21,18 @@ import {
   applyExperience,
   attributePointBudget,
   respecToBase,
+  respecCost,
 } from '../core/hunter/leveling.js';
 import {
   equippedItemIds,
   withAttributes,
   withAvailability,
+  withTraits,
   withEquipment,
   withLevel,
   type Hunter,
 } from '../core/hunter/Hunter.js';
-import { asItemId, asSkillId, type HunterId, type ItemId } from '../core/ids.js';
+import { asItemId, asSkillId, asTraitId, type HunterId, type ItemId } from '../core/ids.js';
 import { err, isErr, ok, type Result } from '../core/result.js';
 import type { UseSignificance } from '../systems/skills/SkillMastery.js';
 import type { EquipmentSlot } from '../data/itemSchema.js';
@@ -54,10 +56,13 @@ import type { EconomyReward } from '../data/economySchema.js';
 import type { FoodReport } from '../systems/economy/Food.js';
 import type { CraftOrder, CraftPreview } from '../systems/economy/Crafting.js';
 import type { MarketQuote } from '../systems/economy/Market.js';
-import type { ContractAnalysis, ContractOffer } from '../systems/economy/Contracts.js';
+import type { ContractAnalysis, ContractOffer, LockedContract } from '../systems/economy/Contracts.js';
 import type { LegacyUnlock } from '../systems/progression/Legacy.js';
 import type { MentorProfile } from '../systems/progression/Mentors.js';
 import type { NewGamePlusOptions } from '../systems/progression/NewGamePlus.js';
+import type { RecordOutcome } from '../systems/progression/EndlessRecords.js';
+import { traitMultiplier } from '../systems/hunter/traitEffects.js';
+import type { EndlessObjectiveDef } from '../data/endlessSchema.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -70,6 +75,8 @@ export interface ExpeditionOutcome {
   readonly loot: readonly Item[];
   readonly levelledUp: readonly HunterId[];
   readonly resources: EconomyReward;
+  /** Present for an endless run: whether it set a personal record (REQ-END-003). */
+  readonly record?: RecordOutcome;
 }
 
 /**
@@ -81,6 +88,10 @@ export interface ExpeditionOutcome {
 
 export class GuildCommands {
   constructor(private readonly session: Session) {}
+
+  private get masteryPoints() {
+    return this.session.content.progression.guildMastery.activityPoints;
+  }
 
   purchaseLegacyUnlock(unlockId: string): Result<LegacyUnlock, string> {
     const result = this.session.legacy.purchase(unlockId);
@@ -100,12 +111,18 @@ export class GuildCommands {
     if (!this.session.legacy.has('mentor_hall')) return err('the Mentor Hall Legacy unlock is required');
     const hunter = this.session.roster.get(hunterId);
     if (!hunter) return err(`unknown hunter ${hunterId}`);
-    if (hunter.level < 30) return err(`${hunter.name} must reach level 30 before retiring`);
+    const minLevel = this.session.content.progression.retirement.minLevel;
+    if (hunter.level < minLevel) return err(`${hunter.name} must reach level ${minLevel} before retiring`);
     if (hunter.availability.state !== 'available') return err(`${hunter.name} is not available to retire`);
 
     this.session.townJobs.release(hunter.id);
-    const historic = this.session.chronicle.entriesAtLevel(hunter.id, 'historic');
-    const mentor = this.session.mentors.retire(hunter, historic);
+    // REQ-LEG-004: the historic entries in their Chronicle become the Legacy Traits they can
+    // pass on. Resolved against content, so only a trait that exists can be inherited.
+    const historicKinds = new Set(this.session.chronicle.entriesAtLevel(hunter.id, 'historic').map((entry) => entry.kind));
+    const legacyTraits = this.session.content.traits
+      .filter((trait) => trait.origin === 'legacy' && trait.fromChronicle !== undefined && historicKinds.has(trait.fromChronicle))
+      .map((trait) => trait.id);
+    const mentor = this.session.mentors.retire(hunter, legacyTraits);
     this.session.roster.remove(hunter.id);
     this.session.audit.record({
       actor: { kind: 'player' },
@@ -117,9 +134,79 @@ export class GuildCommands {
     return ok(mentor);
   }
 
+  /**
+   * Found a new guild: the starting roster and the starting town.
+   *
+   * Used by a brand-new save and by every New Game+ cycle. It lived in `main.ts` until New
+   * Game+ needed it too, and New Game+ shipped without it, opening on an empty grid with no
+   * Guild Hall and nobody to send anywhere (DL-048).
+   */
+  foundGuild(options: { readonly extraRecruit?: GenerateHunterOptions } = {}): readonly Hunter[] {
+    // Two Vanguards who will be built differently, plus one of each other archetype. Two
+    // same-class hunters are here specifically so REQ-BLD-003 can be inspected on first load.
+    const roster = [
+      this.recruit({ archetype: 'vanguard', personality: 'stoic' }),
+      this.recruit({ archetype: 'vanguard', personality: 'reckless' }),
+      this.recruit({ archetype: 'adept', personality: 'protective' }),
+      this.recruit({ archetype: 'ranger', personality: 'opportunist' }),
+    ];
+    if (options.extraRecruit) roster.push(this.recruit(options.extraRecruit));
+    this.foundTown();
+    this.session.town.refreshStage();
+    this.session.townJobs.refresh();
+    return roster;
+  }
+
+  /**
+   * A mentor takes on an apprentice (v1.0 §11 generational play, REQ-LEG-004).
+   *
+   * The apprentice is a new recruit, developed like any other, who may inherit one of the
+   * mentor's Legacy Traits. That inheritance is the explicit conversion REQ-CHR-003 requires
+   * before history may become mechanical: the player chose this mentor and this trait.
+   */
+  takeApprentice(mentorId: string, legacyTraitId?: string): Result<Hunter, string> {
+    const mentor = this.session.mentors.get(mentorId);
+    if (!mentor) return err('that hunter is not a mentor');
+    const rules = this.session.content.progression.apprentices;
+    if (this.session.mentors.apprenticesOf(mentorId) >= rules.perMentor) {
+      return err(`${mentor.name} has already trained ${rules.perMentor === 1 ? 'an apprentice' : `${rules.perMentor} apprentices`}`);
+    }
+    if (legacyTraitId !== undefined && !mentor.legacyTraits.includes(legacyTraitId)) {
+      return err(`${mentor.name} has no Legacy Trait "${legacyTraitId}" to pass on`);
+    }
+    const trait = legacyTraitId === undefined ? undefined : this.session.content.traitsById.get(legacyTraitId);
+    if (legacyTraitId !== undefined && trait?.origin !== 'legacy') return err(`"${legacyTraitId}" is not a Legacy Trait`);
+
+    const paid = this.session.resources.transact({ debits: { gold: rules.goldCost } });
+    if (isErr(paid)) return err(paid.error);
+
+    let apprentice = this.recruit({});
+    if (trait) {
+      apprentice = withTraits(apprentice, [...apprentice.traitIds, asTraitId(trait.id)]);
+      this.session.roster.update(apprentice);
+    }
+    this.session.mentors.recordApprentice(mentorId);
+    this.session.townJobs.refresh();
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'legacy',
+      outcome: `${apprentice.name} apprenticed to ${mentor.name}` + (trait ? `, inheriting ${trait.name}` : ''),
+      reasonCodes: ['apprentice_taken', `mentor:${mentorId}`, ...(trait ? [`trait:${trait.id}`] : [])],
+    });
+    return ok(apprentice);
+  }
+
   beginNewGamePlus(options: NewGamePlusOptions = {}): Result<number, string> {
     const result = this.session.beginNewGamePlus(options);
     if (result.ok) {
+      const archetype = options.archetype === undefined
+        ? undefined
+        : this.session.content.progression.newGamePlus.archetypes[options.archetype];
+      this.foundGuild(
+        archetype
+          ? { extraRecruit: { archetype: archetype.archetype, preferredDepartment: archetype.preferredDepartment as TownDepartmentId } }
+          : {},
+      );
       this.session.audit.record({ actor: { kind: 'player' }, system: 'legacy', outcome: `began New Game+ cycle ${result.value}`, reasonCodes: ['new_game_plus'], inputs: { ...options } });
     }
     return result;
@@ -138,12 +225,91 @@ export class GuildCommands {
     return this.session.market.sell(resourceId, amount);
   }
   contractBoard(): readonly ContractAnalysis[] {
-    const offers = this.session.contracts.available().length > 0 ? this.session.contracts.available() : this.session.contracts.refresh();
+    // First sight of the board fills it; after that, clients post on the town clock.
+    const offers = this.session.contracts.available().length > 0
+      ? this.session.contracts.available()
+      : this.postContracts();
     return offers.map((offer) => this.session.contracts.analyse(offer));
+  }
+
+  /** Work the guild is not yet trusted with, and what it would take (REQ-CON-001 tiers). */
+  lockedContracts(): readonly LockedContract[] {
+    return this.session.contracts.locked();
+  }
+
+  private postContracts(): readonly ContractOffer[] {
+    const rng = this.session.streams.world.fork(`contracts:${this.session.clock.tick}`);
+    return this.session.contracts.refresh(rng);
+  }
+
+  /**
+   * Fit a party to an active challenge contract (REQ-END-004).
+   *
+   * When the player lets the planner choose, the planner is given only the hunters the
+   * contract allows and the party is trimmed to its size. A party the player chose is
+   * checked, never altered: the contract refuses it with the reasons.
+   */
+  private shapeForChallenge(
+    contract: ContractOffer | undefined,
+    objective: ObjectiveId,
+    party: PartyProposal | undefined,
+  ): Result<PartyProposal, string> {
+    const roster = this.session.roster.all();
+    if (!contract?.challenge) {
+      return ok(party ?? this.session.partyPlanner.propose(roster, objective));
+    }
+    const challenge = contract.challenge;
+    let proposal = party;
+    if (!proposal) {
+      const allowed = challenge.maxMemberLevel === undefined
+        ? roster
+        : roster.filter((hunter) => hunter.level <= challenge.maxMemberLevel!);
+      const planned = this.session.partyPlanner.propose(allowed, objective);
+      const forbidden = new Set(challenge.forbiddenRoles ?? []);
+      const kept = planned.members
+        .filter((member) => !forbidden.has(member.role))
+        .slice(0, challenge.maxPartySize ?? planned.members.length);
+      proposal = kept.length === planned.members.length
+        ? planned
+        : { ...planned, members: kept, summary: `${planned.summary} Shaped to the terms of ${contract.name}.` };
+    }
+    const problems = this.session.contracts.challengeViolations(
+      contract,
+      proposal.members.map((member) => ({
+        name: member.name,
+        role: member.role,
+        level: this.session.roster.get(member.hunterId)?.level ?? 0,
+      })),
+    );
+    if (problems.length > 0) {
+      return err(`${contract.name} refuses this party: ${problems.join('; ')}. Change the party or abandon the contract.`);
+    }
+    return ok(proposal);
   }
   acceptContract(offerId: string): Result<ContractOffer, string> {
     const result = this.session.contracts.accept(offerId);
-    if (result.ok) this.session.audit.record({ actor:{kind:'player'},system:'contracts',outcome:`accepted ${result.value.name} from ${result.value.clientName}`,reasonCodes:['contract_accepted',`faction:${result.value.factionId}`] });
+    if (result.ok) {
+      this.session.audit.record({
+        actor: { kind: 'player' },
+        system: 'contracts',
+        outcome: `accepted ${result.value.name} from ${result.value.clientName}`,
+        reasonCodes: ['contract_accepted', `faction:${result.value.factionId}`],
+      });
+    }
+    return result;
+  }
+
+  /** Walk away from the active contract. The client remembers (REQ-FAC-001). */
+  abandonContract(): Result<ContractOffer, string> {
+    const result = this.session.contracts.abandon();
+    if (!result.ok) return result;
+    const standing = this.session.factions.change(result.value.factionId, this.session.content.contracts.standing.abandon);
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'contracts',
+      outcome: `abandoned ${result.value.name}; ${result.value.clientName} standing now ${standing}`,
+      reasonCodes: ['contract_abandoned', `faction:${result.value.factionId}`],
+    });
     return result;
   }
 
@@ -163,7 +329,7 @@ export class GuildCommands {
     this.session.roster.update(withAvailability(crafter, { state: 'assigned', assignment: order.id, recallCompletesAtTick: undefined, readyAtTick: order.readyAtTick }));
     this.session.townJobs.release(crafter.id);
     this.session.audit.record({ actor: { kind: 'hunter', id: crafter.id }, system: 'crafting', outcome: `${crafter.name} began ${result.value.preview.recipe.name}`, reasonCodes: ['crafting_started', `recipe:${recipeId}`], inputs: { durationSteps: result.value.preview.durationSteps, cost: result.value.preview.recipe.cost } });
-    this.session.guildMastery.record('crafting', 1);
+    this.session.guildMastery.record('crafting', this.masteryPoints.craftStarted);
     return ok(order);
   }
 
@@ -244,13 +410,34 @@ export class GuildCommands {
     return this.allocateAttribute(hunterId, attribute, remaining);
   }
 
-  /** REQ-HUN-003 — respec is cheap and available. Cost accounting arrives with Phase 7. */
-  respec(hunterId: HunterId): Hunter {
+  /** What a respec to base would cost this hunter, in the respec resource. */
+  respecPrice(hunterId: HunterId): { readonly resourceId: string; readonly amount: number } {
     const hunter = this.session.roster.require(hunterId);
+    const balance = this.session.content.balance.attributes;
+    return {
+      resourceId: balance.respec.resourceId,
+      amount: respecCost(hunter.attributes, respecToBase(balance), balance, hunter.level),
+    };
+  }
+
+  /**
+   * REQ-HUN-003 — respec is cheap and available, paid in Insight Crystals.
+   *
+   * The comment here used to say cost accounting arrives with Phase 7, and TECH_DEBT recorded
+   * Phase 7 as having wired every price. This one was missed, and the resource it names had
+   * no source anywhere in the game.
+   */
+  respec(hunterId: HunterId): Result<Hunter, string> {
+    const hunter = this.session.roster.require(hunterId);
+    const price = this.respecPrice(hunterId);
+    if (price.amount > 0) {
+      const paid = this.session.resources.transact({ debits: { [price.resourceId]: price.amount } });
+      if (isErr(paid)) return err(paid.error);
+    }
     const updated = withAttributes(hunter, respecToBase(this.session.content.balance.attributes));
     this.session.roster.update(updated);
     this.session.events.emit('hunter.respec', { hunterId });
-    return updated;
+    return ok(updated);
   }
 
   /**
@@ -328,10 +515,13 @@ export class GuildCommands {
       return err(`${hunter.name} does not know that skill`);
     }
 
+    // Mentors' mastery training and training efficiency both apply here, capped together,
+    // and so does the hunter's own aptitude for learning — innate (Quick Study) or inherited
+    // (Wardenbane).
     const aptitude =
       (hunter.potential.facets['masteryAptitude'] ?? 1) *
-      this.session.mentors.masteryScale() *
-      this.session.mentors.trainingEfficiency();
+      this.session.mentors.practiceScale() *
+      traitMultiplier(hunter, this.session.content.traitsById, 'masteryGainMultiplier');
     for (let i = 0; i < uses; i++) {
       hunter = this.session.mastery.gainFromUse(hunter, id, significance, aptitude).hunter;
     }
@@ -606,6 +796,41 @@ export class GuildCommands {
     objective: ObjectiveId,
     party?: PartyProposal,
   ): Result<ExpeditionOutcome, string> {
+    return this.dispatch(regionId, objective, party, undefined);
+  }
+
+  /** Why endless expeditions are or are not open to the guild yet. */
+  endlessAvailability(): { readonly open: boolean; readonly reason: string } {
+    const needed = this.session.content.endless.unlock.guildMasteryLevel;
+    const level = this.session.guildMastery.level();
+    return level >= needed
+      ? { open: true, reason: `Guild Mastery ${level}` }
+      : { open: false, reason: `Endless expeditions open at Guild Mastery ${needed} (the guild is at ${level}).` };
+  }
+
+  /**
+   * An endless expedition (REQ-END-002): the chosen objective decides how the party plays
+   * and what the run pays; the run continues, route after deeper route, until the Guild AI
+   * turns back, the party breaks, or the light goes. Depth is a personal record (REQ-END-003).
+   */
+  sendEndlessExpedition(
+    regionId: string,
+    endlessObjectiveId: string,
+    party?: PartyProposal,
+  ): Result<ExpeditionOutcome, string> {
+    const objective = this.session.content.endless.objectives.find((o) => o.id === endlessObjectiveId);
+    if (!objective) return err(`unknown endless objective "${endlessObjectiveId}"`);
+    const availability = this.endlessAvailability();
+    if (!availability.open) return err(availability.reason);
+    return this.dispatch(regionId, objective.baseObjective, party, objective);
+  }
+
+  private dispatch(
+    regionId: string,
+    objective: ObjectiveId,
+    party: PartyProposal | undefined,
+    endless: EndlessObjectiveDef | undefined,
+  ): Result<ExpeditionOutcome, string> {
     const region = this.session.content.worldRegionsById.get(regionId);
     if (!region) return err(`unknown region "${regionId}"`);
 
@@ -617,14 +842,25 @@ export class GuildCommands {
       return err(`${region.name} is not open to the guild: ${availability.blockedBy.join('; ')}`);
     }
 
-    const proposal = party ?? this.session.partyPlanner.propose(this.session.roster.all(), objective);
+    // Contracts are ordinary expeditions; an endless run neither satisfies nor is bound by one.
+    const active = endless ? undefined : this.session.contracts.active();
+    const matching = active && active.regionId === regionId && active.objective === objective ? active : undefined;
+    const shaped = this.shapeForChallenge(matching, objective, party);
+    if (isErr(shaped)) return shaped;
+    const proposal = shaped.value;
     if (proposal.members.length === 0) return err('no hunter is available to deploy');
 
     // A fresh fork per expedition, labelled by region and tick, so two expeditions in the
     // same session never share a draw sequence and each one replays on its own.
     const rng = this.session.streams.expedition.fork(`${regionId}:${this.session.clock.tick}`);
-    const result = this.session.expedition.run(rng, region, proposal);
-    this.session.guildMastery.record('expedition', Math.max(1, result.reachedNode));
+    const endlessConfig = this.session.content.endless;
+    const result = this.session.expedition.run(
+      rng,
+      region,
+      proposal,
+      endless ? { endless: { maxDepth: endlessConfig.maxDepth, statsPerDepth: endlessConfig.statsPerDepth } } : {},
+    );
+    this.session.guildMastery.record('expedition', Math.max(1, result.reachedNode) * this.masteryPoints.expeditionPerNode);
 
     for (const decision of result.decisions) {
       this.session.audit.record({
@@ -664,7 +900,13 @@ export class GuildCommands {
     for (const after of result.aftermath) {
       let hunter = this.session.roster.require(after.hunterId);
 
-      const progress = applyExperience(hunter.level, hunter.xp, after.xp, balance);
+      // REQ-LEG-004: mentors' EXP bonus applies to all combat experience, not only town hunts.
+      const xp = Math.round(
+        after.xp *
+          this.session.mentors.experienceScale() *
+          traitMultiplier(hunter, this.session.content.traitsById, 'experienceGainMultiplier'),
+      );
+      const progress = applyExperience(hunter.level, hunter.xp, xp, balance);
       hunter = withLevel(hunter, progress.level, progress.xp);
       if (progress.levelsGained > 0) {
         levelledUp.push(hunter.id);
@@ -757,27 +999,59 @@ export class GuildCommands {
       regionName: region.name,
     });
 
-    const contract = this.session.contracts.resolve(regionId, proposal.objective.id);
+    const contract = endless ? undefined : this.session.contracts.resolve(regionId, proposal.objective.id);
     if (contract) {
       const succeeded = result.completed && !result.wiped;
-      if (succeeded) this.session.resources.transact({ credits: { gold: contract.reward.gold, food: contract.reward.food, materials: contract.reward.materials } });
-      this.session.factions.change(contract.factionId, succeeded ? 3 : -2);
+      if (succeeded) {
+        this.session.resources.transact({
+          credits: {
+            gold: contract.reward.gold,
+            food: contract.reward.food,
+            materials: contract.reward.materials,
+            ...(contract.reward.extras ?? {}),
+          },
+        });
+      }
+      const standing = this.session.content.contracts.standing;
+      this.session.factions.change(contract.factionId, succeeded ? standing.success : standing.failure);
       const reputationDelta = succeeded ? contract.reputation : -contract.reputation;
       const reputationReason = `${succeeded ? 'completed' : 'failed'} contract ${contract.name}`;
       this.session.reputation.change(reputationDelta, reputationReason);
       this.session.reputation.changeRegional(regionId, reputationDelta, reputationReason);
-      for (const member of proposal.members) this.session.events.emit('contract.completed', { hunterId: member.hunterId, contractId: contract.offerId, name: contract.name, succeeded });
-      this.session.audit.record({ actor:{kind:'system',name:'guild-ai'},system:'contracts',outcome:`${succeeded ? 'completed' : 'failed'} ${contract.name}`,reasonCodes:[succeeded?'contract_completed':'contract_failed',`faction:${contract.factionId}`],inputs:{reward:succeeded?contract.reward:{}} });
-      this.session.guildMastery.record('contract', succeeded ? 4 : 1);
+      for (const member of proposal.members) {
+        this.session.events.emit('contract.completed', {
+          hunterId: member.hunterId,
+          contractId: contract.offerId,
+          templateId: contract.id,
+          name: contract.name,
+          succeeded,
+        });
+      }
+      this.session.audit.record({
+        actor: { kind: 'system', name: 'guild-ai' },
+        system: 'contracts',
+        outcome: `${succeeded ? 'completed' : 'failed'} ${contract.name}`,
+        reasonCodes: [succeeded ? 'contract_completed' : 'contract_failed', `faction:${contract.factionId}`],
+        inputs: { reward: succeeded ? contract.reward : {} },
+      });
+      this.session.guildMastery.record(
+        'contract',
+        succeeded ? this.masteryPoints.contractCompleted : this.masteryPoints.contractFailed,
+      );
     }
 
     // Loot is rolled once, for the guild, at the region's item level — a shared haul rather
     // than per-hunter drops, because the guild owns the armoury (§16).
+    // Endless depth adds loot rolls, never item level (v1.0 §12: no infinitely rising item level).
+    const depthsCleared = result.endless?.depthsCleared ?? 0;
+    const lootRolls = endless
+      ? Math.round((result.lootRolls + endlessConfig.lootRollsPerDepth * depthsCleared) * endless.rewardScale.loot)
+      : result.lootRolls;
     const loot =
-      result.lootRolls > 0
+      lootRolls > 0
         ? this.session.itemGenerator.generateMany(
             this.session.streams.loot,
-            result.lootRolls,
+            lootRolls,
             { itemLevel: region.itemLevel },
           )
         : [];
@@ -786,17 +1060,76 @@ export class GuildCommands {
     const baseReward = this.session.content.economy.expeditionRewards[region.zoneTier];
     const completionScale = result.wiped
       ? 0
-      : result.completed
-        ? 1
-        : Math.max(0.2, result.reachedNode / Math.max(1, result.routeLength));
-    const resources = {
-      gold: Math.round(baseReward.gold * completionScale),
-      food: Math.round(baseReward.food * completionScale),
-      materials: Math.round(baseReward.materials * completionScale),
+      : endless
+        ? 1 + endlessConfig.rewardPerDepth * depthsCleared
+        : result.completed
+          ? 1
+          : Math.max(0.2, result.reachedNode / Math.max(1, result.routeLength));
+    const emphasis = endless?.rewardScale ?? { gold: 1, food: 1, materials: 1, loot: 1 };
+    const extras: Record<string, number> = {};
+    for (const [id, amount] of Object.entries(baseReward.extras ?? {})) {
+      // Rare resources come home whole or not at all: half a crystal is not a haul.
+      const scaled = Math.floor(amount * completionScale);
+      if (scaled > 0) extras[id] = scaled;
+    }
+    if (endless && !result.wiped) {
+      for (const [id, perDepth] of Object.entries(endless.extrasPerDepth)) {
+        const earned = Math.floor(perDepth * depthsCleared);
+        if (earned > 0) extras[id] = (extras[id] ?? 0) + earned;
+      }
+    }
+    const resources: EconomyReward = {
+      gold: Math.round(baseReward.gold * completionScale * emphasis.gold),
+      food: Math.round(baseReward.food * completionScale * emphasis.food),
+      materials: Math.round(baseReward.materials * completionScale * emphasis.materials),
+      ...(Object.keys(extras).length > 0 ? { extras } : {}),
     };
-    this.session.resources.transact({ credits: resources });
+    this.session.resources.transact({
+      credits: { gold: resources.gold, food: resources.food, materials: resources.materials, ...extras },
+    });
 
-    return ok({ result, party: proposal, loot, levelledUp, resources });
+    const record = endless && result.endless ? this.recordEndless(region, endless, result.endless.deepestDepth, depthsCleared, proposal) : undefined;
+
+    return ok({ result, party: proposal, loot, levelledUp, resources, ...(record ? { record } : {}) });
+  }
+
+  private recordEndless(
+    region: { readonly id: string; readonly name: string },
+    objective: EndlessObjectiveDef,
+    deepestDepth: number,
+    routesCleared: number,
+    party: PartyProposal,
+  ): RecordOutcome {
+    const outcome = this.session.endlessRecords.submit({
+      regionId: region.id,
+      objectiveId: objective.id,
+      depth: deepestDepth,
+      routesCleared,
+      tick: this.session.clock.tick,
+      cycle: this.session.newGamePlus.cycle,
+      party: party.members.map((member) => member.name),
+    });
+    if (outcome.improved) {
+      const milestone = this.session.content.endless.recordMilestone;
+      const previousDepth = outcome.previous?.depth ?? 0;
+      // A milestone is crossed when the new record reaches a multiple the old one had not.
+      const crossed = Math.floor(deepestDepth / milestone) > Math.floor(previousDepth / milestone);
+      this.session.events.emit('endless.recordSet', {
+        regionId: region.id,
+        regionName: region.name,
+        objectiveName: objective.name,
+        depth: crossed ? Math.floor(deepestDepth / milestone) * milestone : deepestDepth,
+        milestone: crossed,
+      });
+      this.session.audit.record({
+        actor: { kind: 'system', name: 'guild-ai' },
+        system: 'endless',
+        outcome: `new ${objective.name.toLowerCase()} record in ${region.name}: depth ${deepestDepth}` +
+          (outcome.previous ? ` (was ${outcome.previous.depth})` : ''),
+        reasonCodes: ['endless_record', `region:${region.id}`, `objective:${objective.id}`],
+      });
+    }
+    return outcome;
   }
 
   // --- The town -------------------------------------------------------------
@@ -958,6 +1291,30 @@ export class GuildCommands {
    * roster: hiring somebody changes what the guild is missing, so an advice snapshot taken
    * before a hire would be wrong immediately after one.
    */
+  /**
+   * Fuller candidate histories, unlocked by the Veteran Records Legacy option.
+   *
+   * The unlock shipped with no consumer: paid for and read by nothing. What a recruiter's
+   * records can honestly add is what the board already knows and does not say — where the
+   * candidate is from and why that matters, their temperament in the game's own words, and
+   * what each of their traits actually means. Nothing here is invented or hidden elsewhere;
+   * this is a convenience unlock, as its category says.
+   */
+  recruitmentHistories(): readonly { readonly hunterId: HunterId; readonly name: string; readonly lines: readonly string[] }[] {
+    if (!this.session.legacy.has('veteran_records')) return [];
+    return this.session.recruitment.available().map((candidate) => {
+      const hunter = candidate.hunter;
+      const personality = this.session.content.personalitiesById.get(hunter.personalityId);
+      const lines = [`${candidate.originName}: ${candidate.originNote}`];
+      if (personality) lines.push(`${personality.name} — ${personality.description}`);
+      for (const traitId of hunter.traitIds) {
+        const trait = this.session.content.traitsById.get(traitId);
+        if (trait) lines.push(`${trait.name} — ${trait.description}`);
+      }
+      return { hunterId: hunter.id, name: hunter.name, lines };
+    });
+  }
+
   recruitmentBoard(): {
     readonly candidates: readonly Candidate[];
     readonly advice: RecruitmentAdvice;
@@ -1036,7 +1393,7 @@ export class GuildCommands {
     });
 
     this.session.townJobs.refresh();
-    this.session.guildMastery.record('recruitment', 2);
+    this.session.guildMastery.record('recruitment', this.masteryPoints.recruitHired);
     return ok(developed);
   }
 
@@ -1172,6 +1529,7 @@ export class GuildCommands {
     // it is the same entry point offline catch-up uses (REQ-OFF-001).
     this.session.clock.runSteps(steps * this.session.clock.coarseStepRatio, () => {});
     this.session.market.step(steps);
+    if (this.session.contracts.due()) this.postContracts();
     const completedCrafts: Item[] = [];
     for (const order of this.session.crafting.completeReady()) {
       this.session.armoury.add(order.item);
@@ -1191,7 +1549,7 @@ export class GuildCommands {
       const done = this.session.research.contribute(researchOutput);
       if (done) {
         researchCompleted.push(done.name);
-        this.session.guildMastery.record('research', 3);
+        this.session.guildMastery.record('research', this.masteryPoints.researchCompleted);
       }
     }
 
@@ -1224,7 +1582,12 @@ export class GuildCommands {
     // back tired from the orchard should be considered for tomorrow's rota in that state.
     const hunts = this.runTownHunts(steps);
     const defense = this.runDefense();
-    if (defense) this.session.guildMastery.record('defense', defense.held ? 3 : 1);
+    if (defense) {
+      this.session.guildMastery.record(
+        'defense',
+        defense.held ? this.masteryPoints.defenseHeld : this.masteryPoints.defenseBreached,
+      );
+    }
 
     this.restIdleHunters(steps);
     this.session.townJobs.refresh();
@@ -1281,7 +1644,11 @@ export class GuildCommands {
         const progress = applyExperience(
           hunter.level,
           hunter.xp,
-          Math.round(result.xp / hunters.length * this.session.mentors.experienceScale()),
+          Math.round(
+            (result.xp / hunters.length) *
+              this.session.mentors.experienceScale() *
+              traitMultiplier(hunter, this.session.content.traitsById, 'experienceGainMultiplier'),
+          ),
           this.session.content.balance.attributes,
         );
         let updated = withLevel(hunter, progress.level, progress.xp);

@@ -136,6 +136,10 @@ export function createHunter(
 // Each returns a new Hunter. Rule enforcement lives in the systems layer; these are
 // the mechanical writes those rules perform once they have approved a change.
 
+export function withTraits(hunter: Hunter, traitIds: readonly TraitId[]): Hunter {
+  return { ...hunter, traitIds: [...new Set(traitIds)] };
+}
+
 export function withAttributes(hunter: Hunter, attributes: Attributes): Hunter {
   return { ...hunter, attributes };
 }

@@ -335,8 +335,11 @@ const v10ToV11: Migration = {
     if (typeof payload !== 'object' || payload === null) {
       throw new SaveMigrationError('v10 payload is not an object');
     }
-    // A pre-economy guild receives no invented accumulated production. The configured
-    // founding grant is applied only to new sessions; migrated saves start from zero.
+    // An empty ledger, deliberately: `Resources.restore` gives any resource the save does not
+    // mention its authored founding balance. A pre-economy guild never earned or spent
+    // anything, which is exactly a new guild. The first version restored missing balances as
+    // zero, and a Phase 6 save opened with no gold and no food — starving from the first
+    // step and unable to build (DL-045).
     return { ...(payload as Record<string, unknown>), resources: { balances: {} } };
   },
 };
@@ -367,13 +370,91 @@ const v13ToV14: Migration = {
     return { ...(payload as Record<string, unknown>), market: { stock: {}, priceScale: {} } };
   },
 };
-const v14ToV15: Migration = { from:14,to:15,describe:'persist contract offers, active work and faction standing',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v14 payload is not an object');return{...(payload as Record<string,unknown>),contracts:{offers:[],sequence:1},factions:{standing:{}}}}};
-const v15ToV16: Migration = { from:15,to:16,describe:'persist institutional Guild Mastery',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v15 payload is not an object');return{...(payload as Record<string,unknown>),guildMastery:{points:0,byActivity:{}}}}};
-const v16ToV17: Migration = { from:16,to:17,describe:'persist regional reputation',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v16 payload is not an object');const record=payload as Record<string,unknown>;const reputation=typeof record['reputation']==='object'&&record['reputation']!==null?record['reputation'] as Record<string,unknown>:{};return{...record,reputation:{...reputation,regional:{}}}}};
-const v17ToV18: Migration = { from:17,to:18,describe:'persist Guild Monument achievements',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v17 payload is not an object');return{...(payload as Record<string,unknown>),monument:{entries:[]}}}};
-const v18ToV19: Migration = { from:18,to:19,describe:'persist Legacy points and unlocks',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v18 payload is not an object');return{...(payload as Record<string,unknown>),legacy:{earned:0,spent:0,awardedAchievements:[],unlocked:[]}}}};
-const v19ToV20: Migration = { from:19,to:20,describe:'persist retired Hunter mentors',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v19 payload is not an object');return{...(payload as Record<string,unknown>),mentors:{mentors:[]}}}};
-const v20ToV21: Migration = { from:20,to:21,describe:'persist New Game+ cycle and variant',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v20 payload is not an object');return{...(payload as Record<string,unknown>),newGamePlus:{cycle:0}}}};
+/** Shared shape for the additive Phase 7–8 migrations: add one or more empty sections. */
+function asRecord(payload: unknown, from: number): Record<string, unknown> {
+  if (typeof payload !== 'object' || payload === null) {
+    throw new SaveMigrationError(`v${from} payload is not an object`);
+  }
+  return payload as Record<string, unknown>;
+}
+
+const v14ToV15: Migration = {
+  from: 14,
+  to: 15,
+  describe: 'persist contract offers, active work and faction standing',
+  migrate(payload: unknown): unknown {
+    return { ...asRecord(payload, 14), contracts: { offers: [], sequence: 1 }, factions: { standing: {} } };
+  },
+};
+
+const v15ToV16: Migration = {
+  from: 15,
+  to: 16,
+  describe: 'persist institutional Guild Mastery',
+  migrate(payload: unknown): unknown {
+    return { ...asRecord(payload, 15), guildMastery: { points: 0, byActivity: {} } };
+  },
+};
+
+const v16ToV17: Migration = {
+  from: 16,
+  to: 17,
+  describe: 'persist regional reputation',
+  migrate(payload: unknown): unknown {
+    const record = asRecord(payload, 16);
+    const reputation =
+      typeof record['reputation'] === 'object' && record['reputation'] !== null
+        ? (record['reputation'] as Record<string, unknown>)
+        : {};
+    return { ...record, reputation: { ...reputation, regional: {} } };
+  },
+};
+
+const v17ToV18: Migration = {
+  from: 17,
+  to: 18,
+  describe: 'persist Guild Monument achievements',
+  migrate(payload: unknown): unknown {
+    return { ...asRecord(payload, 17), monument: { entries: [] } };
+  },
+};
+
+const v18ToV19: Migration = {
+  from: 18,
+  to: 19,
+  describe: 'persist Legacy points and unlocks',
+  migrate(payload: unknown): unknown {
+    return { ...asRecord(payload, 18), legacy: { earned: 0, spent: 0, awardedAchievements: [], unlocked: [] } };
+  },
+};
+
+const v19ToV20: Migration = {
+  from: 19,
+  to: 20,
+  describe: 'persist retired Hunter mentors',
+  migrate(payload: unknown): unknown {
+    return { ...asRecord(payload, 19), mentors: { mentors: [] } };
+  },
+};
+
+const v20ToV21: Migration = {
+  from: 20,
+  to: 21,
+  describe: 'persist New Game+ cycle and variant',
+  migrate(payload: unknown): unknown {
+    return { ...asRecord(payload, 20), newGamePlus: { cycle: 0 } };
+  },
+};
+
+const v21ToV22: Migration = {
+  from: 21,
+  to: 22,
+  describe: 'persist endless-expedition personal records',
+  migrate(payload: unknown): unknown {
+    // Endless expeditions did not exist before v22, so no guild has a record to keep.
+    return { ...asRecord(payload, 21), endlessRecords: { records: [] } };
+  },
+};
 
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
@@ -396,6 +477,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v18ToV19,
   v19ToV20,
   v20ToV21,
+  v21ToV22,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

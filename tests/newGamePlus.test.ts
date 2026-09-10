@@ -18,15 +18,17 @@ describe('New Game+ (REQ-LEG-002/003)', () => {
   });
 
   it('resets world progression while retaining Legacy and applying an unlocked opening', () => {
-    const { session, commands } = earnWorldBossLegacy('ng-reset');
+    const { session, commands, hunter } = earnWorldBossLegacy('ng-reset');
     expect(commands.purchaseLegacyUnlock('prepared_caravan').ok).toBe(true);
     session.reputation.change(40, 'old-cycle fame');
     session.guildMastery.record('expedition', 40);
     const baselineFood = testSession('ng-reset').session.resources.amount('food');
 
     expect(commands.beginNewGamePlus({ startingChoice: 'prepared_caravan' })).toEqual({ ok: true, value: 1 });
-    expect(session.roster.size).toBe(0);
-    expect(session.chronicle.all()).toEqual([]);
+    // The old guild is gone and a new one is founded in its place (DL-048).
+    expect(session.roster.all().map((hunter) => hunter.id)).not.toContain(hunter.id);
+    expect(session.roster.size).toBe(4);
+    expect(session.town.grid.countOf('guild_hall')).toBe(1);
     expect(session.reputation.current).toBe(0);
     expect(session.guildMastery.points).toBe(0);
     expect(session.monument.all()).toEqual([]);

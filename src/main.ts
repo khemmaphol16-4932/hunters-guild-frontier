@@ -30,21 +30,13 @@ const session = new Session({
 const commands = new GuildCommands(session);
 const debug = new DebugConsole(session);
 
-// Seed a starting roster: two Vanguards who will be built differently, plus one of each
-// other archetype. Two same-class hunters are here specifically so REQ-BLD-003 can be
-// inspected on first load without any setup.
+// A new guild gets its starting roster and town (REQ-TWN-001). Only a *new* guild: placing
+// buildings for a restored save would put them somewhere the player did not choose.
 const restored = session.save.load('autosave');
 if (restored.ok && restored.value.hunters.length > 0) {
   session.restore(restored.value);
 } else {
-  commands.recruit({ archetype: 'vanguard', personality: 'stoic' });
-  commands.recruit({ archetype: 'vanguard', personality: 'reckless' });
-  commands.recruit({ archetype: 'adept', personality: 'protective' });
-  commands.recruit({ archetype: 'ranger', personality: 'opportunist' });
-
-  // A new guild has somewhere to live (REQ-TWN-001). Only for a *new* guild: placing
-  // buildings for a restored save would put them somewhere the player did not choose.
-  commands.foundTown();
+  commands.foundGuild();
 }
 
 // Whatever the town looks like, the rota reflects it and the stage is up to date. Cheap,

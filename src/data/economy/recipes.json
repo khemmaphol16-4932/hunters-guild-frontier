@@ -1,9 +1,17 @@
 {
-  "$comment": "REQ-ECO-004: crafting targets a known item type and rarity. It stops at epic so loot retains the ancient/legendary jackpot.",
+  "$comment": "REQ-ECO-004: crafting targets a known item type and rarity. It stops at epic so loot retains the ancient/legendary jackpot. Each recipe names the workshop it needs; the crafter block turns a hunter's hands and experience into speed and a quality floor (DL-047).",
+  "crafter": {
+    "$comment": "capability = min(1, (dex + int + level * levelWeight) / attributeDivisor). Duration shrinks by up to speedGain; the quality floor rises from qualityFloorBase by up to qualityFloorGain.",
+    "levelWeight": 2,
+    "attributeDivisor": 220,
+    "speedGain": 0.35,
+    "qualityFloorBase": 0.2,
+    "qualityFloorGain": 0.35
+  },
   "recipes": [
-    { "id": "forge_blade", "name": "Forge a Blade", "typeId": "blade", "rarity": "refined", "itemLevel": 10, "durationSteps": 4, "cost": { "gold": 140, "iron": 5, "salvage": 2 } },
-    { "id": "forge_shield", "name": "Forge a Shield", "typeId": "shield", "rarity": "refined", "itemLevel": 10, "durationSteps": 4, "cost": { "gold": 150, "iron": 6, "salvage": 2 } },
-    { "id": "tailor_robes", "name": "Tailor Robes", "typeId": "robes", "rarity": "rare", "itemLevel": 20, "durationSteps": 7, "cost": { "gold": 320, "materials": 12, "salvage": 8 } },
-    { "id": "craft_focus", "name": "Craft a Focus", "typeId": "focus", "rarity": "rare", "itemLevel": 20, "durationSteps": 8, "cost": { "gold": 360, "iron": 10, "essence": 4 } }
+    { "id": "forge_blade", "name": "Forge a Blade", "typeId": "blade", "rarity": "refined", "itemLevel": 10, "durationSteps": 4, "building": "smithy", "cost": { "gold": 140, "iron": 5, "salvage": 2 } },
+    { "id": "forge_shield", "name": "Forge a Shield", "typeId": "shield", "rarity": "refined", "itemLevel": 10, "durationSteps": 4, "building": "smithy", "cost": { "gold": 150, "iron": 6, "salvage": 2 } },
+    { "id": "tailor_robes", "name": "Tailor Robes", "typeId": "robes", "rarity": "rare", "itemLevel": 20, "durationSteps": 7, "building": "tannery", "cost": { "gold": 320, "materials": 12, "salvage": 8 } },
+    { "id": "craft_focus", "name": "Craft a Focus", "typeId": "focus", "rarity": "rare", "itemLevel": 20, "durationSteps": 8, "building": "smithy", "cost": { "gold": 360, "iron": 10, "essence": 4 } }
   ]
 }

@@ -500,3 +500,76 @@ New Game+ now has an explicit reset boundary. Ordinary world progression—activ
 Prepared Caravan and Frontier Exile openings and the Long Winter variant require their matching Legacy unlock before a cycle can begin. The cycle and selected variant persist in save v21. Session restoration now also restores the named RNG streams already present in save payloads, closing a latent replay gap and making same-seed cycle resets deterministic.
 
 The checkpoint closes with 539 tests across 30 suites. Typecheck and production build are clean.
+
+---
+
+# 2026-09-10 — Phase 7–8 review and repair
+
+**Goal.** A review of everything since Phase 6, from a fresh clone of GitHub. The suite was green at 539 tests, typecheck and build clean — and the game had an infinite-money loop, a New Game+ that opened on an empty map, and a Legacy system that could be farmed without end. None of it was visible to the tests, because each test checked the path at the scale its author imagined. Every bug below was reproduced with a throwaway script before it was fixed, and each now has a regression test in `tests/reviewRegressions.test.ts` that goes to the scale where the bug lived.
+
+### Bugs reproduced and fixed
+
+1. **Infinite gold from the market (DL-046).** Buy 150 materials, sell 150 back: +300 gold, every time, no time passing. The whole order was priced before its own impact. Orders now walk the price one unit at a time, and the loader refuses a spread too thin to cover one unit of impact. The Phase 7 gate claimed to reject free-profit round trips; it traded one unit.
+2. **New Game+ opened on nothing (DL-048).** No Guild Hall, no hunters, twelve residents. The reset restored a snapshot taken before any guild is founded. `foundGuild()` now founds the starting roster and town for a new save and for every new cycle.
+3. **Legacy could be farmed (DL-047).** Every routine contract became a Monument plaque worth 2 points; thirty loops earned 42 against a catalogue costing 16. Awards are now capped per kind per cycle, and a contract is historic once per contract, not once per offer.
+4. **Paying for goods that vanished (DL-044).** A purchase into a full store charged 495 gold and delivered nothing. Paid-for credits now reject; unpaid income reports what it discards.
+5. **Old saves opened with nothing (DL-045).** A Phase 6 save migrated forward had zero gold and zero food. Missing balances now restore to their founding values.
+6. **Every New Game+ cycle was the same world (DL-048).** Same recruits, same names, same order. Streams are now reseeded per cycle, still deterministically.
+
+### Found by reading, also fixed
+
+- **Three of six Legacy unlocks did nothing** — Veteran Records, Long Winter and Carved Founders were paid for and read by nothing. All three have effects now, and the loader refuses a starting choice, archetype or world variant with no effect table (DL-047).
+- **Phase 8's balance lived in TypeScript**, against DL-002: Legacy costs and points, the mastery curve, capability weights, mentor effects, the retirement level, faction standing, crafter formulae. All of it is in `balance/progression.json`, `recipes.json` and `contracts.json` now.
+- **Contracts could not be abandoned**, so one accepted contract for a region the guild never visited blocked the board forever (DL-049).
+- **Crafting needed no workshop** (DL-049).
+- **The mentor bonus was counted twice** in practice, and **did not reach expedition XP at all** (DL-049).
+- **The balance gate could not fail.** Fixed production just above consumption, and a capacity check made after the ledger had already clamped. It now probes round trips at every size and price, alternates real famines with recovery, and checks prices stay in their band.
+- **Most of Phase 7–8 had no screen.** The new **Hall** tab exposes contracts, crafting, capability, the Monument, Legacy, mentors and New Game+.
+- **Unreadable code.** `Contracts.ts`, `Factions.ts`, `contractSchema.ts`, migrations v14–v21 and three test files were written as single-line blocks. All reformatted to the house style.
+
+### Verified in the browser
+
+On a live dev server: accepting and abandoning a contract (*"Walked away from Patrol the Reach. Frontier Settlers will remember."*); the smithy requirement showing on every recipe until one was built, then a blade going on the bench with its step count; buying Prepared Caravan and Long Winter, then beginning cycle 1 through the two-click confirm, which produced a founded guild with a Guild Hall, four new hunters with different names, 140 provisions (120 + the caravan's 20) and the Long Winter notice. No console errors.
+
+### The lesson
+
+The six reproduced bugs have one thing in common: each lived just past the edge of what the tests exercised. One unit instead of 150. One contract instead of thirty. A fresh save instead of a migrated one. Cycle 0 instead of cycle 1. Green tests at the author's scale are not evidence about the player's scale, and a gate that cannot fail, however long it runs, only shows that the loop ran.
+
+**565 tests across 31 files. Typecheck and production build clean.**
+
+---
+
+# 2026-09-10 — Phase 8 continued: the board, the deep, and the next generation
+
+**Goal.** With the review's fixes in, continue Phase 8 through the requirements that were specified and not yet built: capability-driven contracts and Challenge Contracts (REQ-CON-001, REQ-CAP-001, REQ-END-004), endless expeditions with personal records (REQ-END-002/003), and Legacy Traits with generational apprentices (REQ-LEG-004, REQ-CHR-003). Rebirth was deliberately left alone (DL-054).
+
+### Phase 7 leftovers, found on the way (DL-050)
+
+Reading for this work turned up three more Phase 7 gaps. **Respec was still free**, though TECH_DEBT recorded every price as wired. **Insight Crystals had no source anywhere**, and they pay for both respecs and research resets, so both actions were impossible in play. And the boss-card duplicate conversion named `boss_essence`, **a resource that does not exist**. Respec now charges crystals; crystals come from the market (which now restocks), deep expeditions, contracts and exploration runs; and the loader checks the conversion's resource.
+
+### Delivered
+
+- **A contract board that follows the guild (DL-051).** Ten authored contracts in four tiers, gated by reputation, capability readings and client standing, drawn weighted by tier and reposted on the town clock. The Hall shows the next tier's locked work and exactly what each contract needs. This is the first consumer of the capability vector beyond a readout.
+- **Challenge Contracts (DL-051).** A party-size cap, a level cap and a no-healers vigil. The planner shapes its own party to the terms; a player-chosen party is refused with reasons, never quietly altered. Each pays in rare resources.
+- **Endless expeditions (DL-052).** One run that keeps laying down deeper routes until the Guild AI turns back, the party breaks, or the ten-minute cap ends it. Six objectives, monster stats scaled per depth, rewards per route cleared, item level never. Personal records per region and objective survive New Game+, and milestone depths are carved on the Monument. Save **v22**.
+- **Legacy Traits and apprentices (DL-053).** Three traits grow from the three historic Chronicle kinds. A retiring hunter carries the ones their history earned, and a mentor can pass one to an apprentice the player chooses — the explicit conversion REQ-CHR-003 requires.
+- **UI.** The Field gains an Endless card with objective, description and the standing record. The Hall gains locked contracts and apprenticeships.
+
+### What the work caught
+
+1. **Seven of the eight innate traits did nothing.** Only Tireless had an effect anything read. Quick Study, Glass Nerves, Battle-Born and the rest were rolled, shown and valued by the recruiter, and inert. Two effects now have readers (XP and mastery gain, which fixes Quick Study); the other nine are listed in TECH_DEBT and pinned by a test that fails on any new unread effect.
+2. **The first endless tuning measured patience, not strength.** At 15% HP per depth, a level-8 party matched a level-60 one: the time cap ended every run before the monsters could. At 40% HP and 30% attack per depth, depth separates parties — a level-6 party reaches depth 1 in the Coldwater Quarry, and a level-60 party reaches depth 6.
+3. **Chaining ordinary expeditions could not work.** Every expedition sends its party home to recover. Extending one walk reuses the whole engine instead, including the decision about when to turn back.
+4. **The regression test for Legacy farming broke when the board grew**, because it assumed three templates and a party that could take any contract. It now counts repeat completions per contract, and walks away from challenges the veteran roster cannot meet.
+
+### Verified in the browser
+
+On a fresh dev server: the Endless card is locked with *"open at Guild Mastery 3 (the guild is at 1)"*, then after unlocking, a Maximum Loot run in the Verdant Reach cleared five routes and set *"Record: depth 6"* with the party's names. Retiring a level-45 veteran who had lost a companion produced a mentor carrying *Keeper of the Fallen*; *"Take an apprentice — inherits Keeper of the Fallen (400g)"* produced a recruit with `keeper_of_the_fallen` among their traits. The contract card listed three locked Tier 2 contracts with their exact gaps (*"reputation 12 (the guild has 0.5); expedition capability 12 (the guild reads 8.5); standing 3 with Scholars' Conclave (currently 0)"*).
+
+**596 tests across 33 files. Typecheck and production build clean.**
+
+### Open
+
+- **Rebirth** needs the design owner's rules (DL-054).
+- **World bosses are still unplaced**, so world-boss Legacy and Wardenbane are reachable only from the debug console.
+- **Every new catalogue and curve is pending approval**: contracts, endless scaling, apprentices, New Game+.

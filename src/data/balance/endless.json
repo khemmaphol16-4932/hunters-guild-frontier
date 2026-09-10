@@ -1,0 +1,49 @@
+{
+  "$comment": "REQ-END-002/003. Endless expeditions: a run that continues into deeper, scaled routes until the Guild AI turns back, the party breaks, or the ten-minute cap ends it. Every value is a data-driven default PENDING APPROVAL (v1.0 §20 lists numerical balance curves among the design owner's decisions). Monster stats scale per depth; item level never does (v1.0 §12). Rewards scale with routes cleared and with the objective's emphasis.",
+  "unlock": { "guildMasteryLevel": 3 },
+  "maxDepth": 25,
+  "statsPerDepth": {
+    "maxHp": 0.4,
+    "physicalAttack": 0.3,
+    "magicAttack": 0.3,
+    "physicalDefense": 0.15,
+    "magicDefense": 0.15
+  },
+  "rewardPerDepth": 0.35,
+  "lootRollsPerDepth": 1,
+  "recordMilestone": 5,
+  "objectives": [
+    {
+      "id": "max_loot", "name": "Maximum loot", "baseObjective": "loot",
+      "description": "Go deep for the haul. Resources matter less than what drops.",
+      "rewardScale": { "gold": 0.8, "food": 0.8, "materials": 0.8, "loot": 1.6 }
+    },
+    {
+      "id": "survival", "name": "Survival", "baseObjective": "survive",
+      "description": "Stay alive as long as possible. The Guild AI turns back earlier and nobody is spent for a number.",
+      "rewardScale": { "gold": 1, "food": 1, "materials": 1, "loot": 1 }
+    },
+    {
+      "id": "boss_hunting", "name": "Boss hunting", "baseObjective": "slay",
+      "description": "Every depth ends on the region's warden. Pays in essence.",
+      "rewardScale": { "gold": 1, "food": 0.6, "materials": 0.6, "loot": 1.2 },
+      "extrasPerDepth": { "essence": 1 }
+    },
+    {
+      "id": "resource_gathering", "name": "Resource gathering", "baseObjective": "clear",
+      "description": "Bring back provisions and materials. Loot is incidental.",
+      "rewardScale": { "gold": 0.8, "food": 2, "materials": 2, "loot": 0.5 }
+    },
+    {
+      "id": "exploration", "name": "Exploration", "baseObjective": "scout",
+      "description": "Map what lies deeper. Occasionally turns up an Insight Crystal.",
+      "rewardScale": { "gold": 1.2, "food": 0.8, "materials": 0.8, "loot": 0.8 },
+      "extrasPerDepth": { "insight_crystal": 0.25 }
+    },
+    {
+      "id": "record_attempt", "name": "Record attempt", "baseObjective": "clear",
+      "description": "Depth is the point. Rewards are halved; the record is not.",
+      "rewardScale": { "gold": 0.5, "food": 0.5, "materials": 0.5, "loot": 0.5 }
+    }
+  ]
+}

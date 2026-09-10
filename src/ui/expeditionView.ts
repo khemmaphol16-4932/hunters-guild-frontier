@@ -43,6 +43,7 @@ interface ViewState {
   message: string | undefined;
   messageIsError: boolean;
   expandedNode: number | undefined;
+  endlessObjective: string;
 }
 
 export class ExpeditionView {
@@ -60,13 +61,14 @@ export class ExpeditionView {
       message: undefined,
       messageIsError: false,
       expandedNode: undefined,
+      endlessObjective: session.content.endless.objectives[0]?.id ?? '',
     };
   }
 
   render(): void {
     this.host.replaceChildren();
     const grid = el('div', 'grid');
-    grid.append(this.renderPlanner(), this.renderOrders(), this.renderProposal());
+    grid.append(this.renderPlanner(), this.renderOrders(), this.renderProposal(), this.renderEndless());
     this.host.append(grid);
 
     if (this.state.message) {
@@ -287,6 +289,70 @@ export class ExpeditionView {
     };
     card.append(send);
 
+    return card;
+  }
+
+  // --- REQ-END-002/003: endless runs and personal records ------------------
+
+  private renderEndless(): HTMLElement {
+    const card = el('div', 'card');
+    card.append(el('h3', undefined, 'Endless expedition'));
+    const availability = this.commands.endlessAvailability();
+    if (!availability.open) {
+      card.append(el('p', 'empty', availability.reason));
+      return card;
+    }
+    card.append(
+      el('p', 'subhead', 'The run continues into deeper, harder routes until the Guild AI turns back, the party breaks, or the light goes. Uses the region chosen above.'),
+    );
+
+    const select = el('select') as HTMLSelectElement;
+    for (const objective of this.session.content.endless.objectives) {
+      const option = el('option', undefined, objective.name) as HTMLOptionElement;
+      option.value = objective.id;
+      option.selected = objective.id === this.state.endlessObjective;
+      select.append(option);
+    }
+    select.onchange = () => {
+      this.state.endlessObjective = select.value;
+      this.render();
+    };
+    card.append(this.field('Objective', select));
+
+    const objective = this.session.content.endless.objectives.find((o) => o.id === this.state.endlessObjective);
+    if (objective) card.append(el('p', 'subhead', objective.description));
+
+    const record = this.session.endlessRecords.get(this.state.regionId, this.state.endlessObjective);
+    card.append(
+      el(
+        'p',
+        record ? 'points' : 'subhead',
+        record
+          ? `Record: depth ${record.depth} — ${record.party.join(', ')}${record.cycle > 0 ? ` (cycle ${record.cycle})` : ''}`
+          : 'No record here yet.',
+      ),
+    );
+
+    const go = el('button', undefined, 'Go endless') as HTMLButtonElement;
+    go.onclick = () => {
+      const outcome = this.commands.sendEndlessExpedition(this.state.regionId, this.state.endlessObjective);
+      if (!outcome.ok) {
+        this.state.message = outcome.error;
+        this.state.messageIsError = true;
+      } else {
+        this.state.outcome = outcome.value;
+        const recordLine = outcome.value.record?.improved
+          ? ` New record: depth ${outcome.value.record.current.depth}.`
+          : outcome.value.record
+            ? ` The record stands at depth ${outcome.value.record.current.depth}.`
+            : '';
+        this.state.message = outcome.value.result.summary + recordLine;
+        this.state.messageIsError = outcome.value.result.wiped;
+        this.state.expandedNode = undefined;
+      }
+      this.render();
+    };
+    card.append(go);
     return card;
   }
 

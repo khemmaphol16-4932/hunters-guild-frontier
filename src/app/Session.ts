@@ -75,7 +75,9 @@ import { Monument } from '../systems/progression/Monument.js';
 import { Legacy } from '../systems/progression/Legacy.js';
 import { Mentors } from '../systems/progression/Mentors.js';
 import { NewGamePlus, type NewGamePlusOptions } from '../systems/progression/NewGamePlus.js';
+import { EndlessRecords } from '../systems/progression/EndlessRecords.js';
 import type { Result } from '../core/result.js';
+import type { WorldVariantDef } from '../data/progressionSchema.js';
 
 export interface SessionOptions {
   readonly worldSeed: string;
@@ -220,6 +222,7 @@ export class Session {
   readonly legacy: Legacy;
   readonly mentors: Mentors;
   readonly newGamePlus: NewGamePlus;
+  readonly endlessRecords = new EndlessRecords();
   private cycleBaseline: CurrentSavePayload;
 
   readonly partyPlanner: PartyPlanner;
@@ -257,11 +260,24 @@ export class Session {
     this.emergency = new EmergencyPolicy();
     this.policy = new PolicyBook();
     this.resources = new Resources(this.content.economy.resources);
-    this.food = new Food(this.resources, this.content.economy.foodConsumptionPerResidentPerStep);
+    this.food = new Food(
+      this.resources,
+      this.content.economy.foodConsumptionPerResidentPerStep,
+      () => this.worldVariant()?.foodConsumptionScale ?? 1,
+    );
     this.market = new Market(this.content.economy.market, this.resources);
-    this.factions = new Factions(this.content.contracts.factions);
-    this.contracts = new Contracts(this.content.contracts, (id) => this.content.worldRegionsById.get(id)?.recommendedLevel, () => this.roster.all().map((hunter) => hunter.level));
-    this.guildMastery = new GuildMastery();
+    this.factions = new Factions(this.content.contracts.factions, this.content.contracts.standing);
+    this.contracts = new Contracts({
+      data: this.content.contracts,
+      regionLevel: (id) => this.content.worldRegionsById.get(id)?.recommendedLevel,
+      rosterLevels: () => this.roster.all().map((hunter) => hunter.level),
+      capability: () => this.capability.read(),
+      reputation: () => this.reputation.current,
+      standing: (factionId) => this.factions.value(factionId),
+      currentTick: () => this.clock.tick,
+      ticksPerStep: () => this.clock.coarseStepRatio,
+    });
+    this.guildMastery = new GuildMastery(this.content.progression.guildMastery.pointsPerLevelCurve);
 
     this.registry = new SkillRegistry(this.content);
 
@@ -278,19 +294,21 @@ export class Session {
     });
     this.refinement = new Refinement(this.content.balance.refinement);
     this.itemGenerator = new ItemGenerator(this.content);
-    this.crafting = new Crafting(
-      this.content.crafting,
-      this.resources,
-      (rng, recipe, qualityFloor) => this.itemGenerator.generate(rng, {
+    this.crafting = new Crafting({
+      data: this.content.crafting,
+      resources: this.resources,
+      generate: (rng, recipe, qualityFloor) => this.itemGenerator.generate(rng, {
         itemLevel: recipe.itemLevel,
         typeId: recipe.typeId,
         rarity: recipe.rarity,
         qualityFloor,
         setChance: 0,
       }),
-      () => this.clock.tick,
-      () => this.clock.coarseStepRatio,
-    );
+      currentTick: () => this.clock.tick,
+      ticksPerStep: () => this.clock.coarseStepRatio,
+      hasBuilding: (buildingId) =>
+        this.town.grid.all().some((placement) => placement.buildingId === buildingId && placement.damaged !== true),
+    });
 
     this.constellation = new Constellation({
       content: this.content,
@@ -348,10 +366,21 @@ export class Session {
       events: this.events,
       currentTick: () => this.clock.tick,
     });
-    this.monument = new Monument({ events: this.events, currentTick: () => this.clock.tick });
-    this.legacy = new Legacy(() => this.monument.all());
-    this.mentors = new Mentors();
-    this.newGamePlus = new NewGamePlus((id) => this.legacy.has(id));
+    this.monument = new Monument({
+      events: this.events,
+      currentTick: () => this.clock.tick,
+      legendaryHunterLevel: this.content.progression.monument.legendaryHunterLevel,
+    });
+    this.legacy = new Legacy({
+      balance: this.content.progression.legacy,
+      achievements: () => this.monument.all(),
+      cycle: () => this.newGamePlus.cycle,
+    });
+    this.mentors = new Mentors(this.content.progression.mentors);
+    this.newGamePlus = new NewGamePlus({
+      hasUnlock: (id) => this.legacy.has(id),
+      findUnlock: (id) => this.legacy.find(id),
+    });
     this.worldKnowledge = new WorldKnowledge({
       regions: this.content.world.regions,
       // §19: the first time the guild sets foot somewhere is worth remembering, and it is
@@ -543,6 +572,7 @@ export class Session {
       defenceCapacityOf: () => session.town.capacity().defence,
     });
     this.capability = new Capability({
+      balance: this.content.progression.capability,
       hunterLevels: () => this.roster.all().map((hunter) => hunter.level),
       armouryValue: () => this.armoury.all().reduce((sum, item) => sum + this.armoury.sellValue(item), 0),
       departmentOutput: (id) => this.departments.report(id).output,
@@ -608,18 +638,57 @@ export class Session {
     this.cycleBaseline = this.snapshot();
   }
 
+  /** The world variant this cycle runs under, if the player chose one (REQ-LEG-002). */
+  worldVariant(): WorldVariantDef | undefined {
+    const id = this.newGamePlus.worldVariant;
+    return id === undefined ? undefined : this.content.progression.newGamePlus.worldVariants[id];
+  }
+
+  /**
+   * Reset the world for a new cycle, keeping Legacy and the chosen mentors (REQ-LEG-002).
+   *
+   * This wipes the world back to the state a Session is constructed in — which is *before* a
+   * guild is founded. Founding the new guild (starting roster, town) is the caller's job:
+   * `GuildCommands.beginNewGamePlus` does both halves. The first version stopped here, and a
+   * New Game+ opened on an empty grid with no Guild Hall and no hunters (DL-048).
+   *
+   * Each cycle also draws from fresh RNG streams, seeded from the world seed and the cycle
+   * number. Restoring the constructor's stream state made every cycle a replay of the first:
+   * the same recruits, in the same order, with the same names. Still fully deterministic —
+   * the same save and the same cycle always produce the same world.
+   *
+   * The carry-over rules are a pending-approval default (v1.0 §12, §20).
+   */
   beginNewGamePlus(options: NewGamePlusOptions): Result<number, string> {
+    const valid = this.newGamePlus.validate(options);
+    if (!valid.ok) return valid;
+
+    const founders = this.roster.all().map((hunter) => hunter.name);
     const legacy = this.legacy.snapshot();
     const mentors = this.mentors.snapshotSelected(options.mentorIds ?? []);
+    // Personal records are the player's history, not the world's (REQ-END-003).
+    const endlessRecords = this.endlessRecords.snapshot();
     const begun = this.newGamePlus.begin(options);
     if (!begun.ok) return begun;
     const newGamePlus = begun.value;
-    this.restore({ ...this.cycleBaseline, legacy, mentors, newGamePlus });
-    if (options.startingChoice === 'prepared_caravan') {
-      this.resources.transact({ credits: { food: 20, materials: 10 } });
-    }
-    if (options.archetype === 'frontier_exile') {
-      this.generateHunter({ archetype: 'adept', preferredDepartment: 'hunter' });
+    this.restore({ ...this.cycleBaseline, legacy, mentors, newGamePlus, endlessRecords });
+
+    const fresh = createStreams(`${this.worldSeed}#cycle-${newGamePlus.cycle}`);
+    const mutableStreams = this.streams as Record<(typeof RNG_STREAMS)[number], Rng>;
+    for (const name of RNG_STREAMS) mutableStreams[name] = fresh[name];
+
+    const opening = options.startingChoice === undefined
+      ? undefined
+      : this.content.progression.newGamePlus.openings[options.startingChoice];
+    if (opening) this.resources.transact({ credits: opening });
+
+    if (this.legacy.has('carved_founders') && founders.length > 0) {
+      this.monument.inscribe({
+        id: `founders:cycle-${newGamePlus.cycle - 1}`,
+        kind: 'foundersFacade',
+        title: 'The Founders',
+        detail: `Carved into the facade from the last generation: ${founders.join(', ')}.`,
+      });
     }
     return { ok: true, value: newGamePlus.cycle };
   }
@@ -741,6 +810,7 @@ export class Session {
       legacy: this.legacy.snapshot(),
       mentors: this.mentors.snapshot(),
       newGamePlus: this.newGamePlus.snapshot(),
+      endlessRecords: this.endlessRecords.snapshot(),
     };
   }
 
@@ -778,9 +848,11 @@ export class Session {
     this.factions.restore(payload.factions);
     this.guildMastery.restore(payload.guildMastery);
     this.monument.restore(payload.monument);
+    // Before Legacy: Legacy keys its awards by cycle, and reconciles as it restores.
+    this.newGamePlus.restore(payload.newGamePlus);
     this.legacy.restore(payload.legacy);
     this.mentors.restore(payload.mentors);
-    this.newGamePlus.restore(payload.newGamePlus);
+    this.endlessRecords.restore(payload.endlessRecords);
     this.townJobs.restore(payload.townJobs);
   }
 

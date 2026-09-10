@@ -6,7 +6,7 @@ An autonomous Hunter Guild management RPG. The player is the Guild Master: they 
 
 The design goal is that a Hunter does not merely *have* a build — they **become** one, through what they actually do. Mastery grows from use, and build identity is what the AI reads when it decides how to act.
 
-**Status:** Phases 0–7 complete; Phase 8 is in progress. The loop runs end to end — town, departments, research, recruitment, expeditions, deterministic combat, a bounded resource economy, crafting, market, contracts and factions. Institutional Guild Mastery and the seven-axis Capability vector now form the progression foundation; legacy and NG+ remain ahead.
+**Status:** Phases 0–7 complete, Phase 8 nearly so. The loop runs end to end — a town you build on a grid, departments and a work rota, research, recruitment, an economy with a market, crafting and a contract board that follows your reputation and capability, expeditions (including endless ones with personal records), deterministic combat, and a Legacy layer with mentors, apprentices and New Game+. Rebirth awaits a design decision; presentation (Phase 9) is next.
 
 ---
 
@@ -88,7 +88,7 @@ If you change its interface, you are changing the thing every later phase depend
 npm test
 ```
 
-493 tests across 19 suites. Beyond ordinary unit coverage, some tests exist to protect design decisions and will fail if a decision is quietly reversed:
+596 tests across 33 suites. Beyond ordinary unit coverage, some tests exist to protect design decisions and will fail if a decision is quietly reversed:
 
 - `tests/architecture.test.ts` — layer violations, unseeded randomness, wall-clock reads, and the absence of both a reaction-skill category and a department budget system
 - `tests/buildIdentity.test.ts` — two hunters of the same class built differently must be *measurably* different
@@ -96,6 +96,8 @@ npm test
 - `tests/items.test.ts` — set and card effects must be behavioural rather than flat stats
 - `tests/town.test.ts` — a town's stage never falls, the stability summary never arrives without the three indicators it summarises, and a hunter's stated preference loses to competence under *every* department policy preset
 - `tests/townCombat.test.ts` — a town hunt must produce real combat log entries, because a dice roll that returns loot passes any test that only checks outputs
+- `tests/reviewRegressions.test.ts` — each bug the Phase 7–8 review reproduced, tested at the scale where it lived: 150-unit market round trips, thirty contracts, a migrated save, a second New Game+ cycle
+- `tests/legacyTraits.test.ts` — every trait effect must be read by some system, or be on a tracked list of known gaps
 
 The last two both earn their place by having caught live requirement failures rather than regressions — a hunter's preference beating competence (DL-039), and a research deadlock that no existing content check noticed (DL-040). See DEVLOG's Phase 6 entries.
 
@@ -103,8 +105,10 @@ The last two both earn their place by having caught live requirement failures ra
 
 ## What is not built yet
 
-Progression depth, legacy and NG+ (Phase 8) · isometric pixel-art presentation (Phase 9).
+Rebirth (waiting on a design decision, DL-054) · world-boss placement · isometric pixel-art presentation (Phase 9).
 
-The Phase 7 ledger now charges refinement, construction, repairs, recruitment and research resets; item sales, dismantling and staffed town work feed their proceeds back into the same ledger. Crafting and the market are the next consumers.
+Several catalogues and curves are working defaults **pending design approval**, and each is labelled in its data file: contracts, endless-expedition scaling, apprentices and the New Game+ carry-over rules (v1.0 §20). `TECH_DEBT.md` lists what is still missing, including the nine innate trait effects no system reads yet.
+
+The **Hall** tab is where the institution lives: contracts, crafting, capability, the Monument, Legacy, mentors and apprentices, and New Game+. Endless expeditions are on **The Field**.
 
 Risk R2 — the claim that different builds produce different AI **decisions** and not merely different profiles — was settled in Phase 4 by the §140 A–M scenarios, which caught a live failure in the process. `RISK_AUDIT.md` has the write-up.

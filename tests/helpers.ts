@@ -24,3 +24,14 @@ export function testSession(seed = 'test-seed'): {
     debug: new DebugConsole(session),
   };
 }
+
+/**
+ * A test session whose town already has a smithy and a tannery, so crafting tests exercise
+ * crafting rather than the workshop requirement (which tests/crafting.test.ts pins on its own).
+ */
+export function workshopSession(seed = 'test-seed'): ReturnType<typeof testSession> {
+  const harness = testSession(seed);
+  harness.session.town.grid.place('smithy', 0, 0, 0);
+  harness.session.town.grid.place('tannery', 4, 0, 0);
+  return harness;
+}

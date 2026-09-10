@@ -11,8 +11,9 @@
     "exponent": 1.55
   },
   "respec": {
+    "$comment": "REQ-HUN-003: respeccable relatively cheaply with an obtainable resource. A full respec at level 30 moves 92 points and costs 10 Insight Crystals, about 450 gold at the market. Pending balance approval.",
     "resourceId": "insight_crystal",
-    "costPerPointMoved": 1,
+    "costPerPointMoved": 0.1,
     "freeMovesPerLevel": 0
   },
   "derived": {

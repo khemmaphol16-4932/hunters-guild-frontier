@@ -31,7 +31,7 @@ describe('retirement and mentors (REQ-LEG-004)', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(harness.session.roster.get(veteran.id)).toBeUndefined();
-    expect(result.value.legacyTraits).toContain('companionLost');
+    expect(result.value.legacyTraits).toContain('keeper_of_the_fallen');
     expect(result.value.experienceScale).toBeGreaterThan(1);
   });
 

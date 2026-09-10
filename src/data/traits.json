@@ -2,6 +2,30 @@
   "$comment": "Innate traits granted at generation (REQ-HUN-009). Legacy traits earned from chronicle events (REQ-LEG-004) use the same schema with origin: 'legacy' and arrive in Phase 8.",
   "traits": [
     {
+      "id": "keeper_of_the_fallen",
+      "name": "Keeper of the Fallen",
+      "origin": "legacy",
+      "fromChronicle": "companionLost",
+      "description": "Taught by someone who lost a companion in the field, and learned what it costs. Takes more from every fight.",
+      "effects": { "experienceGainMultiplier": 1.1 }
+    },
+    {
+      "id": "wardenbane",
+      "name": "Wardenbane",
+      "origin": "legacy",
+      "fromChronicle": "worldBossDefeated",
+      "description": "Trained by a hunter who stood against a world boss. Practises with purpose.",
+      "effects": { "masteryGainMultiplier": 1.15 }
+    },
+    {
+      "id": "black_zone_walker",
+      "name": "Black-Zone Walker",
+      "origin": "legacy",
+      "fromChronicle": "firstBlackZone",
+      "description": "Raised on stories from the Black Zone. Knows how to rest where others cannot.",
+      "effects": { "fatigueRecoveryMultiplier": 1.2 }
+    },
+    {
       "id": "quick_study",
       "name": "Quick Study",
       "origin": "innate",

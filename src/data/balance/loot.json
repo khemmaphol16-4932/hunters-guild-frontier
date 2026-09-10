@@ -17,7 +17,7 @@
   "conversion": {
     "$comment": "REQ-CRD-003 / REQ-LOT-002: a duplicate must have a useful outcome. Dismantling yields crafting material; a duplicate boss card converts to a currency that buys a card of the player's choosing, which is what stops a 0.5% drop from ever being a dead end.",
     "dismantleResourceId": "salvage",
-    "duplicateCardResourceId": "boss_essence",
+    "duplicateCardResourceId": "essence",
     "duplicateCardValue": 1,
     "cardPurchaseCost": 8
   }

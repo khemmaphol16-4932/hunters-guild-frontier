@@ -46,7 +46,8 @@ export interface DomainEventMap {
 
   'loot.rareFound': { hunterId: HunterId; itemId: ItemId; rarity: string };
   'expedition.completed': { hunterId: HunterId; expeditionId: string; durationSeconds: number };
-  'contract.completed': { hunterId: HunterId; contractId: string; name: string; succeeded: boolean };
+  /** `contractId` is the individual offer; `templateId` is which contract it was (DL-047). */
+  'contract.completed': { hunterId: HunterId; contractId: string; templateId: string; name: string; succeeded: boolean };
 
   /**
    * The town grew into a new stage (REQ-TWN-002).
@@ -61,6 +62,11 @@ export interface DomainEventMap {
   'town.populationChanged': { population: number; delta: number };
   /** Guild technology, not hunter experience — REQ-RES-002 keeps the two ledgers apart. */
   'research.completed': { nodeId: string; name: string };
+  /**
+   * A new personal best in an endless expedition (REQ-END-003). `milestone` is true when the
+   * depth crosses an authored milestone — the Monument carves those, not every record.
+   */
+  'endless.recordSet': { regionId: string; regionName: string; objectiveName: string; depth: number; milestone: boolean };
 }
 
 export type DomainEventName = keyof DomainEventMap;

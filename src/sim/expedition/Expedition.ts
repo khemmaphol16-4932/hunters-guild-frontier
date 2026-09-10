@@ -51,6 +51,22 @@ export interface RouteNode {
   /** Monster ids and counts, for combat and boss nodes. */
   readonly monsters: readonly string[];
   readonly label: string;
+  /** How deep into an endless expedition this node lies. Absent (0) on an ordinary route. */
+  readonly depth?: number;
+}
+
+/**
+ * How an endless expedition scales (REQ-END-002). Monster stats grow per depth by the given
+ * fractions; item level never does, because v1.0 §12 forbids endgame collapsing into an
+ * infinitely rising item level.
+ */
+export interface EndlessRunConfig {
+  readonly maxDepth: number;
+  readonly statsPerDepth: Readonly<Record<string, number>>;
+}
+
+export interface RunOptions {
+  readonly endless?: EndlessRunConfig;
 }
 
 export interface NodeReport {
@@ -113,6 +129,8 @@ export interface ExpeditionResult {
   /** The Guild AI's own account of the run, in order (v1.0 §14/§18). */
   readonly decisions: readonly ExpeditionDecision[];
   readonly summary: string;
+  /** Present only for an endless run: how many full routes the party walked. */
+  readonly endless?: { readonly depthsCleared: number; readonly deepestDepth: number };
 }
 
 export interface ResolvedEvent {
@@ -243,9 +261,12 @@ export class Expedition {
    * Party state carries between nodes — health does not reset — which is what makes the
    * continue-or-retreat decision real rather than cosmetic.
    */
-  run(rng: Rng, region: RegionDef, party: PartyProposal): ExpeditionResult {
+  run(rng: Rng, region: RegionDef, party: PartyProposal, options: RunOptions = {}): ExpeditionResult {
     const tier = this.deps.world.zoneTiers[region.zoneTier];
     const nodes = this.route(rng, region);
+    const endless = options.endless;
+    let depth = 0;
+    let depthsCleared = 0;
     const reports: NodeReport[] = [];
     const decisions: ExpeditionDecision[] = [];
     const events: ResolvedEvent[] = [];
@@ -278,7 +299,26 @@ export class Expedition {
     let reputation = 0;
     let ambushNext = false;
 
-    for (; cursor < walk.length; cursor++) {
+    for (; ; cursor++) {
+      // REQ-END-002: an endless run does not end with its route. Each time the party walks a
+      // route to the end, the next one is laid down one depth deeper, and the same
+      // continue-or-retreat decision that governs every node decides whether they take it.
+      // The ten-minute cap (REQ-EXP-003) still applies, which is what makes depth a record.
+      if (cursor >= walk.length) {
+        if (!endless || depth + 1 >= endless.maxDepth) {
+          if (endless) depthsCleared = depth + 1;
+          break;
+        }
+        depth += 1;
+        depthsCleared = depth;
+        const deeper = this.route(rng, region).map((next, i) => ({
+          ...next,
+          index: walk.length + i,
+          depth,
+          label: `Depth ${depth + 1}: ${next.label}`,
+        }));
+        walk.push(...deeper);
+      }
       const node = walk[cursor];
       if (!node) break;
 
@@ -416,7 +456,7 @@ export class Expedition {
         continue;
       }
 
-      const result = this.fight(rng, node, combatants, region, party.objective, ambushNext);
+      const result = this.fight(rng, node, combatants, region, party.objective, ambushNext, endless);
       ambushNext = false;
       elapsedSeconds += result.elapsedSeconds + 20;
 
@@ -499,8 +539,11 @@ export class Expedition {
     // completed expedition, not an abandoned one. Running out of daylight is neither a
     // completion nor a retreat by choice, so it gets its own flag rather than being
     // squeezed into one of theirs.
-    const completed =
-      endedByEvent || (!retreated && !wiped && !outOfTime && cursor >= walk.length);
+    // An endless run has no end to reach; it counts as completed once a full route is behind
+    // the party and they came home.
+    const completed = endless
+      ? depthsCleared >= 1 && !wiped
+      : endedByEvent || (!retreated && !wiped && !outOfTime && cursor >= walk.length);
 
     return {
       regionId: region.id,
@@ -527,14 +570,16 @@ export class Expedition {
         deepestNode: reached,
       },
       decisions,
-      summary: this.summarise(region, party.objective, reached, walk.length, {
-        completed,
-        retreated,
-        wiped,
-        bossDefeated,
-        outOfTime,
-        endedByEvent,
-      }),
+      summary:
+        this.summarise(region, party.objective, reached, walk.length, {
+          completed,
+          retreated,
+          wiped,
+          bossDefeated,
+          outOfTime,
+          endedByEvent,
+        }) + (endless ? ` Deepest depth reached: ${depth + 1}; routes cleared: ${depthsCleared}.` : ''),
+      ...(endless ? { endless: { depthsCleared, deepestDepth: depth + 1 } } : {}),
     };
   }
 
@@ -547,6 +592,7 @@ export class Expedition {
     region: RegionDef,
     objective: ObjectiveDef,
     ambushed = false,
+    endless?: EndlessRunConfig,
   ): EncounterResult {
     const guild = [...combatants.values()].filter((c) => !c.dead);
     for (const c of guild) {
@@ -564,9 +610,11 @@ export class Expedition {
       c.position = ambushed ? this.deps.balance.movement.startingSeparation * 0.6 : 0;
     }
 
+    const depth = node.depth ?? 0;
     const monsters = node.monsters
       .map((id, index) => {
-        const def = this.deps.monsterOf(id);
+        const base = this.deps.monsterOf(id);
+        const def = base && endless && depth > 0 ? scaleMonster(base, depth, endless.statsPerDepth) : base;
         return def
           ? this.deps.monsterCombatant(
               def,
@@ -836,6 +884,16 @@ export class Expedition {
 }
 
 // ---------------------------------------------------------------------------
+
+/** A monster as it stands at a given endless depth: every scaled stat grows linearly. */
+function scaleMonster(def: MonsterDef, depth: number, perDepth: Readonly<Record<string, number>>): MonsterDef {
+  const stats: Record<string, number> = { ...def.stats };
+  for (const [stat, growth] of Object.entries(perDepth)) {
+    const value = stats[stat];
+    if (value !== undefined) stats[stat] = value * (1 + growth * depth);
+  }
+  return { ...def, stats };
+}
 
 function partyHealthFraction(party: readonly Combatant[]): number {
   const total = party.reduce((sum, c) => sum + c.maxHealth, 0);

@@ -135,14 +135,17 @@ export function respecCost(
   from: Attributes,
   to: Attributes,
   balance: AttributeBalance,
+  level = 0,
 ): number {
   let removed = 0;
   for (const key of ATTRIBUTE_KEYS) {
     const delta = from[key] - to[key];
     if (delta > 0) removed += delta;
   }
-  const chargeable = Math.max(0, removed - balance.respec.freeMovesPerLevel);
-  return chargeable * balance.respec.costPerPointMoved;
+  // The allowance is per level, as the field's name says; it used to be applied once, flat.
+  const chargeable = Math.max(0, removed - balance.respec.freeMovesPerLevel * level);
+  // Whole units: the ledger holds fractions, but a player should never owe 9.2 crystals.
+  return Math.ceil(chargeable * balance.respec.costPerPointMoved - 1e-9);
 }
 
 /** Reset every attribute to its starting value, freeing the whole budget. */

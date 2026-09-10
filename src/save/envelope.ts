@@ -38,8 +38,9 @@ import type { MonumentSnapshot } from '../systems/progression/Monument.js';
 import type { LegacySnapshot } from '../systems/progression/Legacy.js';
 import type { MentorsSnapshot } from '../systems/progression/Mentors.js';
 import type { NewGamePlusSnapshot } from '../systems/progression/NewGamePlus.js';
+import type { EndlessRecordsSnapshot } from '../systems/progression/EndlessRecords.js';
 
-export const CURRENT_SAVE_VERSION = 21;
+export const CURRENT_SAVE_VERSION = 22;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -214,7 +215,9 @@ export interface SavePayloadV18 extends SavePayloadV17 { readonly monument: Monu
 export interface SavePayloadV19 extends SavePayloadV18 { readonly legacy: LegacySnapshot }
 export interface SavePayloadV20 extends SavePayloadV19 { readonly mentors: MentorsSnapshot }
 export interface SavePayloadV21 extends SavePayloadV20 { readonly newGamePlus: NewGamePlusSnapshot }
-export type CurrentSavePayload = SavePayloadV21;
+/** v22 — personal records for endless expeditions (REQ-END-003). */
+export interface SavePayloadV22 extends SavePayloadV21 { readonly endlessRecords: EndlessRecordsSnapshot }
+export type CurrentSavePayload = SavePayloadV22;
 
 export interface Migration {
   readonly from: number;

@@ -27,10 +27,10 @@ describe('Guild Monument (REQ-MON-001)', () => {
     const first = debug.spawnHunter();
     const second = debug.spawnHunter();
     for (const hunter of [first, second]) {
-      session.events.emit('contract.completed', { hunterId: hunter.id, contractId: 'contract_7', name: 'The Last Watch', succeeded: true });
+      session.events.emit('contract.completed', { hunterId: hunter.id, contractId: 'contract_7', templateId: 'last_watch', name: 'The Last Watch', succeeded: true });
     }
     expect(session.monument.all()).toHaveLength(1);
-    expect(session.monument.has('contract:contract_7')).toBe(true);
+    expect(session.monument.has('contract:last_watch')).toBe(true);
   });
 
   it('round-trips achievements and gives older saves an empty monument', () => {

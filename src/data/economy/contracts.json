@@ -1,13 +1,72 @@
 {
-  "$comment": "REQ-CON-001/REQ-FAC-001. Names and numbers are data-driven launch defaults.",
+  "$comment": "REQ-CON-001/REQ-FAC-001/REQ-CAP-001/REQ-END-004. The catalogue (names, clients, numbers) is a data-driven default PENDING APPROVAL — v1.0 §20 lists contracts among the content catalogues the design owner decides. Tiers open as the guild's reputation, capability readings and standing with the client grow. A challenge contract constrains the party that may take it and pays in rare resources.",
+  "standing": { "success": 3, "failure": -2, "abandon": -3, "min": -100, "max": 100 },
+  "board": { "size": 3, "refreshSteps": 30 },
   "factions": [
     { "id": "frontier_settlers", "name": "Frontier Settlers" },
     { "id": "caravan_compact", "name": "Caravan Compact" },
     { "id": "scholars_conclave", "name": "Scholars' Conclave" }
   ],
   "templates": [
-    { "id": "reach_patrol", "name": "Patrol the Reach", "factionId": "frontier_settlers", "regionId": "verdant_reach", "objective": "clear", "reward": { "gold": 180, "food": 18, "materials": 8 }, "reputation": 1.5 },
-    { "id": "quarry_recovery", "name": "Recover the Quarry Route", "factionId": "caravan_compact", "regionId": "coldwater_quarry", "objective": "clear", "reward": { "gold": 360, "food": 10, "materials": 18 }, "reputation": 2.5 },
-    { "id": "barrow_survey", "name": "Survey the Barrows", "factionId": "scholars_conclave", "regionId": "ashfall_barrows", "objective": "survive", "reward": { "gold": 620, "food": 12, "materials": 28 }, "reputation": 4 }
+    {
+      "id": "reach_patrol", "name": "Patrol the Reach", "factionId": "frontier_settlers",
+      "regionId": "verdant_reach", "objective": "clear", "tier": 1,
+      "reward": { "gold": 180, "food": 18, "materials": 8 }, "reputation": 1.5
+    },
+    {
+      "id": "quarry_recovery", "name": "Recover the Quarry Route", "factionId": "caravan_compact",
+      "regionId": "coldwater_quarry", "objective": "clear", "tier": 1,
+      "reward": { "gold": 360, "food": 10, "materials": 18 }, "reputation": 2.5
+    },
+    {
+      "id": "barrow_survey", "name": "Survey the Barrows", "factionId": "scholars_conclave",
+      "regionId": "ashfall_barrows", "objective": "survive", "tier": 1,
+      "reward": { "gold": 620, "food": 12, "materials": 28 }, "reputation": 4
+    },
+    {
+      "id": "quarry_cull", "name": "Cull the Quarry Nests", "factionId": "caravan_compact",
+      "regionId": "coldwater_quarry", "objective": "slay", "tier": 2,
+      "requires": { "reputation": 8, "capability": { "combat": 10 } },
+      "reward": { "gold": 520, "food": 14, "materials": 24, "extras": { "iron": 12 } }, "reputation": 3
+    },
+    {
+      "id": "choir_vigil", "name": "Keep Vigil at the Choirhouse", "factionId": "scholars_conclave",
+      "regionId": "the_sunken_choirhouse", "objective": "survive", "tier": 2,
+      "requires": { "reputation": 12, "capability": { "expedition": 12 }, "standing": 3 },
+      "reward": { "gold": 780, "food": 16, "materials": 30, "extras": { "essence": 3 } }, "reputation": 4
+    },
+    {
+      "id": "reach_warden", "name": "Break the Reach Warden", "factionId": "frontier_settlers",
+      "regionId": "verdant_reach", "objective": "slay", "tier": 2,
+      "requires": { "reputation": 10, "capability": { "defense": 4 } },
+      "reward": { "gold": 420, "food": 30, "materials": 20 }, "reputation": 3
+    },
+    {
+      "id": "ashfall_purge", "name": "Purge the Ashfall Barrows", "factionId": "frontier_settlers",
+      "regionId": "ashfall_barrows", "objective": "slay", "tier": 3,
+      "requires": { "reputation": 25, "capability": { "combat": 18, "expedition": 16 }, "standing": 6 },
+      "reward": { "gold": 1400, "food": 24, "materials": 48, "extras": { "essence": 5, "insight_crystal": 1 } }, "reputation": 6
+    },
+    {
+      "id": "lean_patrol", "name": "Two Blades on the Reach", "factionId": "frontier_settlers",
+      "regionId": "verdant_reach", "objective": "clear", "tier": 4,
+      "requires": { "reputation": 15 },
+      "challenge": { "summary": "Two hunters, no more. The settlers want to know what a pair can hold.", "maxPartySize": 2 },
+      "reward": { "gold": 600, "food": 10, "materials": 10, "extras": { "insight_crystal": 2 } }, "reputation": 5
+    },
+    {
+      "id": "untested_blades", "name": "Untested Blades", "factionId": "caravan_compact",
+      "regionId": "coldwater_quarry", "objective": "clear", "tier": 4,
+      "requires": { "reputation": 20, "capability": { "combat": 14 } },
+      "challenge": { "summary": "No hunter above level 12. The Compact is hiring for the next generation.", "maxMemberLevel": 12 },
+      "reward": { "gold": 700, "food": 12, "materials": 16, "extras": { "insight_crystal": 3, "essence": 2 } }, "reputation": 5
+    },
+    {
+      "id": "unmended", "name": "The Unmended Vigil", "factionId": "scholars_conclave",
+      "regionId": "the_sunken_choirhouse", "objective": "survive", "tier": 4,
+      "requires": { "reputation": 35, "capability": { "combat": 18 }, "standing": 9 },
+      "challenge": { "summary": "No healers. The Conclave is studying what hunters do when nobody will save them.", "forbiddenRoles": ["healer"] },
+      "reward": { "gold": 1600, "food": 20, "materials": 30, "extras": { "insight_crystal": 4, "warding_salt": 2 } }, "reputation": 8
+    }
   ]
 }

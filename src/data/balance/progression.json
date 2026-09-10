@@ -1,0 +1,150 @@
+{
+  "$comment": "Phase 8 progression values. These were TypeScript constants when Phase 8 landed; the project's rule is that balance lives in data (DL-047). Everything under newGamePlus and legacy.unlocks is a data-driven default PENDING APPROVAL — v1.0 §12 and §20 name New Game+ carry-over and cycle rules as decisions the design owner makes, not the implementation.",
+  "guildMastery": {
+    "$comment": "level = floor(sqrt(points / pointsPerLevelCurve)) + 1. Activity points are what each kind of real work contributes.",
+    "pointsPerLevelCurve": 25,
+    "activityPoints": {
+      "expeditionPerNode": 1,
+      "craftStarted": 1,
+      "recruitHired": 2,
+      "defenseHeld": 3,
+      "defenseBreached": 1,
+      "researchCompleted": 3,
+      "contractCompleted": 4,
+      "contractFailed": 1
+    }
+  },
+  "capability": {
+    "$comment": "REQ-CAP-001 readings. Each axis is read on its own; these only say how raw inputs become a reading.",
+    "expeditionFromCombat": 0.6,
+    "expeditionFromReputation": 0.4,
+    "armouryGoldPerPoint": 1000,
+    "researchPerCompletedNode": 2,
+    "economicLogScale": 10
+  },
+  "monument": {
+    "legendaryHunterLevel": 50
+  },
+  "legacy": {
+    "$comment": "Points per Monument achievement kind, and how many of that kind can award points in one cycle. The cap is what keeps Legacy bounded: routine contracts and repeat legendary finds still go on the Monument, but they cannot be farmed into unlimited Legacy (DL-047).",
+    "awards": {
+      "worldBossVictory": {
+        "points": 5,
+        "maxPerCycle": 6
+      },
+      "frontierDiscovery": {
+        "points": 2,
+        "maxPerCycle": 6
+      },
+      "legendaryFind": {
+        "points": 2,
+        "maxPerCycle": 3
+      },
+      "historicContract": {
+        "points": 2,
+        "maxPerCycle": 3
+      },
+      "legendaryHunter": {
+        "points": 4,
+        "maxPerCycle": 3
+      },
+      "townMilestone": {
+        "points": 2,
+        "maxPerCycle": 5
+      },
+      "endlessRecord": {
+        "points": 2,
+        "maxPerCycle": 4
+      },
+      "researchBreakthrough": {
+        "points": 1,
+        "maxPerCycle": 6
+      }
+    },
+    "unlocks": [
+      {
+        "id": "prepared_caravan",
+        "name": "Prepared Caravan",
+        "category": "startingChoice",
+        "cost": 2,
+        "description": "Offers an extra-provisions opening in a future cycle."
+      },
+      {
+        "id": "veteran_records",
+        "name": "Veteran Records",
+        "category": "convenience",
+        "cost": 2,
+        "description": "Reveals fuller candidate histories during recruitment."
+      },
+      {
+        "id": "mentor_hall",
+        "name": "Mentor Hall",
+        "category": "system",
+        "cost": 3,
+        "description": "Allows retired hunters to serve as mentors."
+      },
+      {
+        "id": "frontier_exile",
+        "name": "Frontier Exile",
+        "category": "archetype",
+        "cost": 4,
+        "description": "Offers a lean, expedition-focused starting archetype."
+      },
+      {
+        "id": "long_winter",
+        "name": "Long Winter",
+        "category": "worldVariant",
+        "cost": 4,
+        "description": "Unlocks a harsher food-economy world variant."
+      },
+      {
+        "id": "carved_founders",
+        "name": "Carved Founders",
+        "category": "prestige",
+        "cost": 1,
+        "description": "Adds the founding roster to the Monument facade."
+      }
+    ]
+  },
+  "apprentices": {
+    "$comment": "Generational play (v1.0 §11, REQ-LEG-004): a mentor can take on an apprentice, who may inherit one of the mentor's Legacy Traits. PENDING APPROVAL — a data-driven default.",
+    "perMentor": 1,
+    "goldCost": 400
+  },
+  "retirement": {
+    "minLevel": 30
+  },
+  "mentors": {
+    "$comment": "Per-mentor bonuses, each capped, then the guild-wide total capped. practiceCap bounds mastery training and training efficiency together, because both apply to the same practice session.",
+    "experiencePerLevel": 0.002,
+    "experienceCap": 0.2,
+    "masteryPerPeakPoint": 0.0005,
+    "masteryCap": 0.25,
+    "trainingPerGrowthRate": 0.1,
+    "trainingCap": 0.2,
+    "guildWideCap": 0.5,
+    "practiceCap": 1.6
+  },
+  "newGamePlus": {
+    "$comment": "PENDING APPROVAL (v1.0 §12, §20). Openings and archetypes are what the matching Legacy unlocks do when a cycle begins.",
+    "openings": {
+      "prepared_caravan": {
+        "food": 20,
+        "materials": 10
+      }
+    },
+    "archetypes": {
+      "frontier_exile": {
+        "archetype": "adept",
+        "preferredDepartment": "hunter"
+      }
+    },
+    "worldVariants": {
+      "long_winter": {
+        "name": "Long Winter",
+        "foodConsumptionScale": 1.5,
+        "description": "Every resident eats half again as much. Granaries and hunting matter from the first season."
+      }
+    }
+  }
+}

@@ -1,32 +1,89 @@
-import { ContentValidationError } from './schema.js';
+import {
+  ContentValidationError,
+  assertUniqueIds,
+  expectArray,
+  expectNumber,
+  expectObject,
+  expectString,
+  field,
+} from './schema.js';
 
 export interface RecipeDef {
-  readonly id: string; readonly name: string; readonly typeId: string; readonly rarity: string;
-  readonly itemLevel: number; readonly durationSteps: number; readonly cost: Readonly<Record<string, number>>;
+  readonly id: string;
+  readonly name: string;
+  readonly typeId: string;
+  readonly rarity: string;
+  readonly itemLevel: number;
+  readonly durationSteps: number;
+  /** The workshop that must stand in the town for this recipe to be started. */
+  readonly building: string;
+  readonly cost: Readonly<Record<string, number>>;
 }
-export interface CraftingData { readonly recipes: readonly RecipeDef[] }
+
+/** How a crafter's hands and experience become speed and a quality floor. */
+export interface CrafterBalance {
+  readonly levelWeight: number;
+  readonly attributeDivisor: number;
+  readonly speedGain: number;
+  readonly qualityFloorBase: number;
+  readonly qualityFloorGain: number;
+}
+
+export interface CraftingData {
+  readonly crafter: CrafterBalance;
+  readonly recipes: readonly RecipeDef[];
+}
+
+const FILE = 'recipes.json';
+
+function positive(value: unknown, path: string): number {
+  const n = expectNumber(value, path);
+  if (n <= 0) throw new ContentValidationError(path, 'must be positive');
+  return n;
+}
 
 export function parseCrafting(raw: unknown): CraftingData {
-  if (typeof raw !== 'object' || raw === null) throw new ContentValidationError('recipes.json', 'must be an object');
-  const entries = (raw as Record<string, unknown>)['recipes'];
-  if (!Array.isArray(entries)) throw new ContentValidationError('recipes.json.recipes', 'must be an array');
-  const seen = new Set<string>();
-  const recipes = entries.map((entry, index): RecipeDef => {
-    const path = `recipes.json.recipes[${index}]`;
-    if (typeof entry !== 'object' || entry === null) throw new ContentValidationError(path, 'must be an object');
-    const value = entry as Record<string, unknown>;
-    const string = (key: string): string => { const v = value[key]; if (typeof v !== 'string' || !v) throw new ContentValidationError(`${path}.${key}`, 'must be a non-empty string'); return v; };
-    const number = (key: string): number => { const v = value[key]; if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) throw new ContentValidationError(`${path}.${key}`, 'must be positive'); return v; };
-    const id = string('id');
-    if (seen.has(id)) throw new ContentValidationError(`${path}.id`, `duplicate recipe "${id}"`); seen.add(id);
-    const costRaw = value['cost'];
-    if (typeof costRaw !== 'object' || costRaw === null) throw new ContentValidationError(`${path}.cost`, 'must be an object');
+  const root = expectObject(raw, FILE);
+
+  const crafterPath = `${FILE}.crafter`;
+  const c = expectObject(field(root, 'crafter', FILE), crafterPath);
+  const fraction = (key: keyof CrafterBalance): number => {
+    const n = expectNumber(field(c, key, crafterPath), `${crafterPath}.${key}`);
+    if (n < 0 || n > 1) throw new ContentValidationError(`${crafterPath}.${key}`, 'must be between 0 and 1');
+    return n;
+  };
+  const crafter: CrafterBalance = {
+    levelWeight: expectNumber(field(c, 'levelWeight', crafterPath), `${crafterPath}.levelWeight`),
+    attributeDivisor: positive(field(c, 'attributeDivisor', crafterPath), `${crafterPath}.attributeDivisor`),
+    speedGain: fraction('speedGain'),
+    qualityFloorBase: fraction('qualityFloorBase'),
+    qualityFloorGain: fraction('qualityFloorGain'),
+  };
+  if (crafter.qualityFloorBase + crafter.qualityFloorGain > 1) {
+    throw new ContentValidationError(crafterPath, 'the best crafter\u2019s quality floor would exceed the ceiling of 1');
+  }
+
+  const recipesPath = `${FILE}.recipes`;
+  const recipes = expectArray(field(root, 'recipes', FILE), recipesPath).map((entry, index): RecipeDef => {
+    const path = `${recipesPath}[${index}]`;
+    const value = expectObject(entry, path);
+    const costPath = `${path}.cost`;
     const cost: Record<string, number> = {};
-    for (const [resource, amount] of Object.entries(costRaw)) {
-      if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) throw new ContentValidationError(`${path}.cost.${resource}`, 'must be positive');
-      cost[resource] = amount;
+    for (const [resource, amount] of Object.entries(expectObject(field(value, 'cost', path), costPath))) {
+      cost[resource] = positive(amount, `${costPath}.${resource}`);
     }
-    return { id, name: string('name'), typeId: string('typeId'), rarity: string('rarity'), itemLevel: number('itemLevel'), durationSteps: number('durationSteps'), cost };
+    return {
+      id: expectString(field(value, 'id', path), `${path}.id`),
+      name: expectString(field(value, 'name', path), `${path}.name`),
+      typeId: expectString(field(value, 'typeId', path), `${path}.typeId`),
+      rarity: expectString(field(value, 'rarity', path), `${path}.rarity`),
+      itemLevel: positive(field(value, 'itemLevel', path), `${path}.itemLevel`),
+      durationSteps: positive(field(value, 'durationSteps', path), `${path}.durationSteps`),
+      building: expectString(field(value, 'building', path), `${path}.building`),
+      cost,
+    };
   });
-  return { recipes };
+  assertUniqueIds(recipes.map((recipe) => recipe.id), recipesPath);
+
+  return { crafter, recipes };
 }

@@ -355,11 +355,13 @@ export class BuildDashboard {
     }
     card.append(maxOut);
 
-    const respec = el('button', 'small', 'Respec to base') as HTMLButtonElement;
+    const price = this.commands.respecPrice(hunter.id);
+    const priceName = this.session.content.resourcesById.get(price.resourceId)?.name ?? price.resourceId;
+    const respec = el('button', 'small', `Respec to base — ${price.amount} ${priceName}`) as HTMLButtonElement;
     respec.style.marginTop = '8px';
     respec.onclick = () => {
-      this.commands.respec(hunter.id);
-      this.notify(`${hunter.name} reallocated everything.`);
+      const result = this.commands.respec(hunter.id);
+      this.notify(result.ok ? `${hunter.name} reallocated everything.` : result.error, !result.ok);
     };
     card.append(respec);
 

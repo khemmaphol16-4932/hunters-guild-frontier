@@ -14,9 +14,17 @@ export interface GuildMasterySnapshot {
   readonly byActivity: Readonly<Record<string, number>>;
 }
 
+/**
+ * Institutional experience, kept apart from research (REQ-RES-002).
+ *
+ * The level curve comes from `balance/progression.json`; how many points each activity is
+ * worth is read by the caller from the same file.
+ */
 export class GuildMastery {
   private total = 0;
   private readonly activity = new Map<GuildActivity, number>();
+
+  constructor(private readonly pointsPerLevelCurve: number) {}
 
   record(kind: GuildActivity, points: number): number {
     const gain = Math.max(0, points);
@@ -27,7 +35,7 @@ export class GuildMastery {
 
   get points(): number { return this.total; }
   pointsFrom(kind: GuildActivity): number { return this.activity.get(kind) ?? 0; }
-  level(): number { return Math.floor(Math.sqrt(this.total / 25)) + 1; }
+  level(): number { return Math.floor(Math.sqrt(this.total / this.pointsPerLevelCurve)) + 1; }
 
   snapshot(): GuildMasterySnapshot {
     return {

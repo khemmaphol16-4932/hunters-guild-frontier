@@ -1,14 +1,9 @@
-export interface CapabilityVector {
-  readonly combat: number;
-  readonly expedition: number;
-  readonly crafting: number;
-  readonly resource: number;
-  readonly defense: number;
-  readonly research: number;
-  readonly economic: number;
-}
+import type { CapabilityAxis, CapabilityBalance } from '../../data/progressionSchema.js';
+
+export type CapabilityVector = Readonly<Record<CapabilityAxis, number>>;
 
 export interface CapabilityDeps {
+  readonly balance: CapabilityBalance;
   readonly hunterLevels: () => readonly number[];
   readonly armouryValue: () => number;
   readonly departmentOutput: (id: 'crafting' | 'resource' | 'defense' | 'research') => number;
@@ -23,16 +18,17 @@ export class Capability {
   constructor(private readonly deps: CapabilityDeps) {}
 
   read(): CapabilityVector {
+    const b = this.deps.balance;
     const levels = this.deps.hunterLevels();
     const combat = levels.length === 0 ? 0 : levels.reduce((sum, level) => sum + level, 0) / levels.length;
     return {
       combat,
-      expedition: combat * 0.6 + this.deps.reputation() * 0.4,
-      crafting: this.deps.departmentOutput('crafting') + this.deps.armouryValue() / 1_000,
+      expedition: combat * b.expeditionFromCombat + this.deps.reputation() * b.expeditionFromReputation,
+      crafting: this.deps.departmentOutput('crafting') + this.deps.armouryValue() / b.armouryGoldPerPoint,
       resource: this.deps.departmentOutput('resource'),
       defense: this.deps.departmentOutput('defense') + this.deps.defenseCapacity(),
-      research: this.deps.departmentOutput('research') + this.deps.researchCompleted() * 2,
-      economic: Math.log10(1 + this.deps.gold()) * 10,
+      research: this.deps.departmentOutput('research') + this.deps.researchCompleted() * b.researchPerCompletedNode,
+      economic: Math.log10(1 + this.deps.gold()) * b.economicLogScale,
     };
   }
 }

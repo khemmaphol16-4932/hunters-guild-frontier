@@ -4,9 +4,9 @@
   "foodConsumptionPerResidentPerStep": 0.1,
   "expeditionRewards": {
     "blue": { "gold": 90, "food": 8, "materials": 5 },
-    "yellow": { "gold": 180, "food": 12, "materials": 9 },
-    "red": { "gold": 360, "food": 18, "materials": 16 },
-    "black": { "gold": 720, "food": 25, "materials": 28 }
+    "yellow": { "gold": 180, "food": 12, "materials": 9, "extras": { "essence": 1 } },
+    "red": { "gold": 360, "food": 18, "materials": 16, "extras": { "essence": 2, "insight_crystal": 1 } },
+    "black": { "gold": 720, "food": 25, "materials": 28, "extras": { "essence": 4, "insight_crystal": 2 } }
   },
   "townHuntRewards": { "gold": 18, "food": 5, "materials": 2 },
   "market": {
@@ -16,13 +16,15 @@
     "sellMarkdown": 0.8,
     "impactPerUnit": 0.004,
     "reversionPerStep": 0.02,
+    "restockPerStep": 0.02,
     "goods": {
       "food": { "basePrice": 3, "startingStock": 160 },
       "materials": { "basePrice": 8, "startingStock": 100 },
       "iron": { "basePrice": 18, "startingStock": 50 },
       "salvage": { "basePrice": 10, "startingStock": 30 },
       "essence": { "basePrice": 35, "startingStock": 15 },
-      "warding_salt": { "basePrice": 90, "startingStock": 5 }
+      "warding_salt": { "basePrice": 90, "startingStock": 5 },
+      "insight_crystal": { "basePrice": 45, "startingStock": 8 }
     }
   },
   "resources": [

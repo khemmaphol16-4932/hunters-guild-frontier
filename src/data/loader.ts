@@ -35,9 +35,13 @@ import townBalanceJson from './balance/town.json';
 import resourcesJson from './economy/resources.json';
 import recipesJson from './economy/recipes.json';
 import contractsJson from './economy/contracts.json';
+import progressionJson from './balance/progression.json';
+import endlessJson from './balance/endless.json';
 import { parseEconomy, type EconomyData, type ResourceDef } from './economySchema.js';
 import { parseCrafting, type CraftingData } from './craftingSchema.js';
 import { parseContracts, type ContractData } from './contractSchema.js';
+import { parseProgression, type ProgressionData } from './progressionSchema.js';
+import { parseEndless, type EndlessData } from './endlessSchema.js';
 
 import raritiesJson from './items/rarities.json';
 import itemTypesJson from './items/item-types.json';
@@ -213,6 +217,10 @@ export interface GameContent {
   readonly resourcesById: ReadonlyMap<string, ResourceDef>;
   readonly crafting: CraftingData;
   readonly contracts: ContractData;
+  /** Guild Mastery, capability, Monument, Legacy, mentors and New Game+ (Phase 8). */
+  readonly progression: ProgressionData;
+  /** Endless expeditions: scaling, objectives and records (REQ-END-002/003). */
+  readonly endless: EndlessData;
 
   readonly balance: {
     readonly attributes: AttributeBalance;
@@ -328,6 +336,10 @@ function crossValidateEconomy(content: {
     content.research.resetResource.id,
     content.refinement.protection.resourceId,
     content.loot.conversion.dismantleResourceId,
+    // Named by the duplicate-card conversion. It was "boss_essence", which no resource file
+    // defined, and nothing checked — the conversion would have credited a resource that
+    // does not exist the day boss cards start dropping.
+    content.loot.conversion.duplicateCardResourceId,
   ];
   for (const id of required) {
     if (!ids.has(id)) {
@@ -679,6 +691,7 @@ export function loadContent(): GameContent {
   const skills = parseSkills(skillsJson);
   const personalities = parsePersonalities(personalitiesJson);
   const traits = parseTraits(traitsJson);
+  const chronicleBalance = parseChronicleBalance(chronicleBalanceJson);
   const namePools = parseNamePools(namesJson);
 
   const rarities = parseRarities(raritiesJson);
@@ -705,6 +718,13 @@ export function loadContent(): GameContent {
   const economy = parseEconomy(resourcesJson);
   const crafting = parseCrafting(recipesJson);
   const contracts = parseContracts(contractsJson);
+  const progression = parseProgression(progressionJson);
+  const endless = parseEndless(endlessJson, new Set(monsters.flatMap((monster) => Object.keys(monster.stats))));
+  for (const objective of endless.objectives) {
+    for (const resource of Object.keys(objective.extrasPerDepth)) {
+      if (!economy.resources.some((entry) => entry.id === resource)) throw new ContentValidationError(`balance/endless.json:${objective.id}.extrasPerDepth`, `unknown resource "${resource}"`);
+    }
+  }
   const refinementBalance = parseRefinementBalance(refinementBalanceJson);
   const lootBalance = parseLootBalance(lootBalanceJson);
 
@@ -732,9 +752,31 @@ export function loadContent(): GameContent {
     for (const resource of Object.keys(recipe.cost)) if (!economy.resources.some((entry) => entry.id === resource)) throw new ContentValidationError(`recipes.json:${recipe.id}.cost`, `unknown resource "${resource}"`);
   }
   for (const resource of Object.keys(economy.market.goods)) if (!economy.resources.some((entry) => entry.id === resource)) throw new ContentValidationError('resources.json.market.goods', `unknown resource "${resource}"`);
+  for (const recipe of crafting.recipes) {
+    if (!town.buildings.some((building) => building.id === recipe.building)) throw new ContentValidationError(`recipes.json:${recipe.id}.building`, `unknown building "${recipe.building}"`);
+  }
+  // REQ-LEG-004: "some chronicle events become Legacy Traits". A legacy trait naming a
+  // chronicle kind that never reaches the historic level could never be earned.
+  for (const trait of traits) {
+    if (trait.origin !== 'legacy') continue;
+    const significance = trait.fromChronicle === undefined ? undefined : chronicleBalance.significance[trait.fromChronicle];
+    if (significance === undefined || significance < 5) {
+      throw new ContentValidationError(`traits.json:${trait.id}.fromChronicle`, 'a legacy trait must grow from a historic (significance 5) Chronicle entry');
+    }
+  }
+  for (const [id, grant] of Object.entries(progression.newGamePlus.openings)) {
+    for (const resource of Object.keys(grant)) if (!economy.resources.some((entry) => entry.id === resource)) throw new ContentValidationError(`balance/progression.json.newGamePlus.openings.${id}`, `unknown resource "${resource}"`);
+  }
+  for (const [id, entry] of Object.entries(progression.newGamePlus.archetypes)) {
+    if (!archetypes.some((archetype) => archetype.id === entry.archetype)) throw new ContentValidationError(`balance/progression.json.newGamePlus.archetypes.${id}`, `unknown archetype "${entry.archetype}"`);
+    if (!departments.departments.some((department) => department.id === entry.preferredDepartment)) throw new ContentValidationError(`balance/progression.json.newGamePlus.archetypes.${id}`, `unknown department "${entry.preferredDepartment}"`);
+  }
   for (const template of contracts.templates) {
     if (!contracts.factions.some((faction) => faction.id === template.factionId)) throw new ContentValidationError(`contracts.json:${template.id}`, `unknown faction "${template.factionId}"`);
     if (!world.regions.some((region) => region.id === template.regionId)) throw new ContentValidationError(`contracts.json:${template.id}`, `unknown region "${template.regionId}"`);
+    for (const resource of Object.keys(template.reward.extras ?? {})) {
+      if (!economy.resources.some((entry) => entry.id === resource)) throw new ContentValidationError(`contracts.json:${template.id}.reward.extras`, `unknown resource "${resource}"`);
+    }
   }
 
   cached = Object.freeze({
@@ -791,6 +833,8 @@ export function loadContent(): GameContent {
     resourcesById: new Map(economy.resources.map((resource) => [resource.id, resource])),
     crafting,
     contracts,
+    progression,
+    endless,
 
     balance: {
       attributes: parseAttributeBalance(attributeBalanceJson),
@@ -798,7 +842,7 @@ export function loadContent(): GameContent {
       buildIdentity: parseBuildIdentityBalance(buildIdentityBalanceJson),
       potential: parsePotentialBalance(potentialBalanceJson),
       personality: parsePersonalityBalance(personalityBalanceJson),
-      chronicle: parseChronicleBalance(chronicleBalanceJson),
+      chronicle: chronicleBalance,
       refinement: refinementBalance,
       loot: lootBalance,
       combat: parseCombatBalance(combatBalanceJson),

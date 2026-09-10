@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { itemQuality } from '../src/core/items/Item.js';
-import { testSession } from './helpers.js';
+import { workshopSession } from './helpers.js';
 
 describe('crafting (REQ-ECO-004)', () => {
   it('previews recipe, cost, time and outcome range before committing', () => {
-    const { commands, debug } = testSession('craft-preview');
+    const { commands, debug } = workshopSession('craft-preview');
     const hunter = debug.spawnHunter({ level: 20 });
     const preview = commands.craftingPreview('forge_blade', hunter.id);
     expect(preview.ok).toBe(true);
@@ -15,7 +15,7 @@ describe('crafting (REQ-ECO-004)', () => {
   });
 
   it('produces the targeted type and charges every input atomically', () => {
-    const { session, commands, debug } = testSession('craft-target');
+    const { session, commands, debug } = workshopSession('craft-target');
     const hunter = debug.spawnHunter({ level: 30 });
     session.resources.transact({ credits: { salvage: 10 } });
     const before = session.resources.snapshot().balances;
@@ -34,7 +34,7 @@ describe('crafting (REQ-ECO-004)', () => {
   });
 
   it('does not spend partial inputs or create an item when one input is short', () => {
-    const { session, commands, debug } = testSession('craft-poor');
+    const { session, commands, debug } = workshopSession('craft-poor');
     const hunter = debug.spawnHunter({ level: 30 });
     const before = session.resources.snapshot();
     const items = session.armoury.all().length;
@@ -44,7 +44,7 @@ describe('crafting (REQ-ECO-004)', () => {
   });
 
   it('turns crafter capability into a real quality floor while loot can still exceed it', () => {
-    const { session, commands, debug } = testSession('craft-quality');
+    const { session, commands, debug } = workshopSession('craft-quality');
     const hunter = debug.spawnHunter({ level: 80 });
     session.resources.transact({ credits: { salvage: 10 } });
     const preview = commands.craftingPreview('forge_blade', hunter.id);
@@ -56,12 +56,12 @@ describe('crafting (REQ-ECO-004)', () => {
   });
 
   it('round-trips an unfinished order and completes it only after its saved deadline', () => {
-    const first = testSession('craft-save');
+    const first = workshopSession('craft-save');
     const hunter = first.debug.spawnHunter({ level: 30 });
     first.session.resources.transact({ credits: { salvage: 10 } });
     const started = first.commands.craftItem('forge_blade', hunter.id);
     expect(started.ok).toBe(true);
-    const second = testSession('craft-load');
+    const second = workshopSession('craft-load');
     second.session.restore(first.session.snapshot());
     expect(second.session.crafting.active()).toHaveLength(1);
     expect(second.session.armoury.all()).toHaveLength(0);

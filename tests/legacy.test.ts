@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { asItemId } from '../src/core/ids.js';
-import { LEGACY_UNLOCKS } from '../src/systems/progression/Legacy.js';
+import { loadContent } from '../src/data/loader.js';
 import { CURRENT_SAVE_VERSION } from '../src/save/envelope.js';
 import { migratePayload } from '../src/save/migrations/index.js';
 import { testSession } from './helpers.js';
@@ -24,7 +24,7 @@ describe('Legacy (REQ-LEG-001)', () => {
     expect(session.legacy.has('prepared_caravan')).toBe(true);
     expect(session.legacy.points).toBe(0);
     expect(commands.purchaseLegacyUnlock('prepared_caravan').ok).toBe(false);
-    expect(LEGACY_UNLOCKS.every((unlock) => !/damage|health|attack|power/i.test(unlock.description))).toBe(true);
+    expect(loadContent().progression.legacy.unlocks.every((unlock) => !/damage|health|attack|power/i.test(unlock.description))).toBe(true);
   });
 
   it('persists awards and unlocks while migrating older saves safely', () => {

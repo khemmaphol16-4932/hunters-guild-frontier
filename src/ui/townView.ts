@@ -681,6 +681,8 @@ export class TownView {
     card.append(el('p', 'subhead', board.advice.summary));
 
     const fitById = new Map(board.advice.ranked.map((f) => [f.hunterId, f]));
+    // Veteran Records (a Legacy convenience unlock): fuller histories, empty without it.
+    const histories = new Map(this.commands.recruitmentHistories().map((h) => [String(h.hunterId), h.lines]));
     const recommended = board.advice.recommended?.hunterId;
     const alternatives = new Set(board.advice.alternatives.map((a) => a.hunterId));
 
@@ -698,6 +700,7 @@ export class TownView {
         ),
       );
       block.append(el('p', 'subhead', candidate.originNote));
+      for (const line of histories.get(id)?.slice(1) ?? []) block.append(el('p', 'subhead', line));
 
       // v1.0 §4 asks for reasons, what the guild gains, and notable alternatives — not a
       // bare ranking the player has to take on faith.

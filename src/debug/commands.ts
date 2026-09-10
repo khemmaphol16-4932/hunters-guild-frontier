@@ -177,8 +177,13 @@ export class DebugConsole {
     return this.commands.spendAllOn(hunterId, attribute);
   }
 
+  /** Respec without paying — scenario setup, not play. */
   respec(hunterId: HunterId): Hunter {
-    return this.commands.respec(hunterId);
+    const price = this.commands.respecPrice(hunterId);
+    this.session.resources.transact({ credits: { [price.resourceId]: price.amount } });
+    const result = this.commands.respec(hunterId);
+    if (!result.ok) throw new Error(result.error);
+    return result.value;
   }
 
   /** Take a constellation node through the normal rules. */

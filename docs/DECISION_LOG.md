@@ -467,3 +467,136 @@ The second mistake was worse and less visible. Advancing "town time" never moved
 **Why.** Without it the rota was a pure suitability match, and a guild whose hunters were all best at drilling put its entire roster in the drill yard and never staffed the hunting camp next door. The posts existed and were unreachable — the same class of failure as an unreachable region (DL-033): nothing errors, the content is simply never seen.
 
 It is also the honest reading of rank 3. An optimiser that cannot express "this work matters more" is not optimising, it is matching; and the alternative fixes on offer were both worse — hand-tuning slot counts until the arithmetic happened to work, or giving the player a per-job priority lever that department priority already covers at the right altitude.
+
+---
+
+## DL-044 — The ledger never takes payment for goods it cannot store
+
+**Ambiguity.** None in the design. This records a bug found in the Phase 7–8 review.
+
+**Decision.** `Resources.transact` takes an overflow rule. `reject` fails the whole transaction when a credit would exceed capacity; `discard` fills to capacity and reports the excess on the receipt. Anything the guild *pays* for — every market trade — uses `reject`. Unpaid income (hauls, production, rewards) uses `discard`, because refusing an entire expedition reward over a full granary would be worse. Capacity is judged on the net result, so a trade that spends and receives the same resource is not refused for a moment of overflow it never reaches.
+
+**Why.** The ledger clamped every credit silently. Buying 5 Warding Salt into a full store charged 495 gold and delivered nothing, and nothing anywhere reported it.
+
+---
+
+## DL-045 — A balance the save does not mention restores to its founding value
+
+**Ambiguity.** The v10→v11 migration had to decide what a pre-economy guild owns. Its comment said "migrated saves start from zero".
+
+**Decision.** `Resources.restore` gives any resource missing from a save its authored `starting` balance. A balance the save *does* record — including zero — is kept exactly.
+
+**Why.** Zero meant a Phase 6 save opened with no gold, no food and no materials: starving from its first step and unable to build. A pre-economy guild never earned or spent anything, which is exactly what a new guild is, so the founding grant is the fair reading. The same rule covers a resource added to content after a save was written.
+
+---
+
+## DL-046 — The market prices each unit where the price is when it trades
+
+**Ambiguity.** REQ-ECO-005 asks for dynamic but controlled prices. It does not say how an order's size meets its own price impact.
+
+**Decision.** An order walks the price one unit at a time: a large buy pays the rising price it causes and a large sell accepts the falling one. Buys round the total up and sells round it down. `parseEconomy` refuses any config where `sellMarkdown × (1 + impactPerUnit / minPriceScale)` reaches `buyMarkup`, because then a single unit of impact could outrun the spread.
+
+**Why.** The whole order used to be priced at the pre-trade price, with the impact applied afterwards. Buying 150 materials and selling them straight back earned +300 gold per round trip, with no time passing: 3,000 → 9,420 gold in twenty clicks. The balance soak that was meant to reject free-profit round trips traded one unit at a time, the only size at which the bug could not appear. `sim/Balance.ts` now probes every good at the bottom, middle and top of its band, in both orders, at sizes up to the whole stock.
+
+**The rule worth keeping:** a check written at the scale its author imagined does not test the system; it tests the imagination. Probe at the sizes a player will actually try.
+
+---
+
+## DL-047 — Phase 8 balance lives in data, and Legacy is bounded
+
+**Ambiguity.** REQ-LEG-001 wants Legacy points "from multiple sources". It does not bound them.
+
+**Decision.**
+1. Every Phase 8 number moves to `balance/progression.json`, with the Phase 7 ones it touched: Guild Mastery curve and activity points, capability weights, the Legacy catalogue and awards, the retirement level, mentor effects, New Game+ openings. Crafter speed and quality floor go to `recipes.json`, and faction standing to `contracts.json`.
+2. Legacy awards are capped **per Monument kind per cycle** (`maxPerCycle`), and the loader refuses an uncapped award.
+3. A contract is historic the first time the guild completes *that contract*, keyed by template, not by individual offer.
+4. Every Legacy unlock must have a consumer. Starting choices, archetypes and world variants are checked against the tables that give them effects; Veteran Records now adds fuller histories to the recruitment board, Long Winter scales food consumption, and Carved Founders carves the previous generation onto the new cycle's Monument.
+
+**Why.** Every completed contract created a new plaque worth 2 Legacy points, and the board refilled with the same three contracts forever: thirty loops earned 42 points against a catalogue that costs 16 in total. Legendary finds and legendary hunters had the same unbounded shape. Separately, three of the six unlocks were paid for with Legacy points and read by nothing at all. All of it sat in TypeScript constants, against DL-002, where no designer would see it.
+
+---
+
+## DL-048 — New Game+ founds a new guild in a new world
+
+**Ambiguity.** v1.0 §12 and §20 reserve New Game+ carry-over and cycle rules for the design owner. What follows is the smallest behaviour that is not broken, and it is labelled as **pending approval** in data and on screen.
+
+**Decision.** `Session.beginNewGamePlus` resets the world and keeps Legacy and the chosen mentors. `GuildCommands.beginNewGamePlus` then founds a new guild through `foundGuild()`, the same starting roster and town a new save gets, plus any unlocked archetype as a developed recruit. Each cycle draws from RNG streams seeded from the world seed and the cycle number.
+
+**Why.** The reset restored a snapshot taken when the Session was constructed, which is *before* a guild is founded. New Game+ therefore opened on an empty grid: no Guild Hall, no hunters, twelve residents and nothing to do. And because the snapshot also held the constructor's RNG state, every cycle replayed the first — the same recruits, in the same order, with the same names. Reseeding per cycle keeps determinism (the same save and cycle always produce the same world) without making every generation identical.
+
+Legacy awards are keyed by cycle, so a new generation that beats the same world boss again has done it again. Nothing pays twice within one cycle.
+
+---
+
+## DL-049 — Smaller corrections from the Phase 7–8 review
+
+- **Crafting needs its workshop.** Each recipe names a building (`smithy`, `tannery`); a guild with no smithy used to forge blades, which made the crafting buildings decorative.
+- **Contracts can be abandoned.** An accepted contract for a region the guild never visits used to block every other contract for the rest of the save. Abandoning costs standing with the client (`contracts.json.standing.abandon`).
+- **Mentor effects stack under one cap.** Mastery training and training efficiency both apply to a practice session, so they multiply and the product is capped as a whole (`practiceCap`) rather than stacking two separately capped bonuses.
+- **The mentors' EXP bonus reaches expedition experience.** It only applied to town hunts.
+- **The Legacy restore runs after the New Game+ restore**, because Legacy keys awards by cycle and reconciles while it restores.
+- **Phase 7–8 systems are on screen.** The Hall tab exposes contracts, crafting, capability, the Monument, Legacy, mentors and New Game+. Everything but the market used to be reachable only from the debug console.
+
+---
+
+## DL-050 — Respec is charged, and Insight Crystals have sources
+
+**Ambiguity.** REQ-HUN-003 says respec is "relatively cheap, with an obtainable resource". The resource was authored (Insight Crystal) and nothing produced it.
+
+**Decision.** `GuildCommands.respec` charges `respecCost` in Insight Crystals and refuses when the guild cannot pay; the debug console's respec stays free, as scenario setup. `freeMovesPerLevel` is now applied per level, as its name says. Insight Crystals come from the market (with restocking, see below), Red and Black expeditions, the Tier 3 Ashfall contract, every Challenge Contract, and exploration-focused endless runs. A full respec at level 30 costs 10 crystals, about 450 gold at the market.
+
+The market now restocks toward its usual stock each step (`restockPerStep`). Stock used to change only through the guild's own trades, so anything bought out was gone for the rest of the save.
+
+**Why.** Phase 7's TECH_DEBT entry recorded every price as wired. Respec was not, and the resource it named — also the research-reset resource — had no source at all, so both actions were impossible in play. Separately, the duplicate-boss-card conversion named `boss_essence`, which no resource file defined and no check caught; it now names `essence` and the loader validates it.
+
+**Pending approval:** the crystal price, sources and respec rate are data-driven defaults.
+
+---
+
+## DL-051 — The contract board follows the guild; Challenge Contracts constrain the party
+
+**Ambiguity.** REQ-CON-001 says contract tiers scale with reputation and capability, and REQ-CAP-001 says capability drives contract generation. Neither says how.
+
+**Decision.** Each template names a tier and optional requirements — reputation, minimum capability readings, standing with the client. The board draws `board.size` offers from the templates the guild qualifies for, weighted by tier, and clients post new work every `board.refreshSteps` coarse steps. The Hall lists the next tier's locked contracts and exactly what each needs.
+
+Endgame Challenge Contracts (REQ-END-004) add constraints: a maximum party size, a maximum member level, forbidden roles. When the player lets the planner choose, the planner is given only the hunters the contract allows and trims the party to fit. A party the player picked is checked and never altered: a violating party is refused with reasons, and the player can change the party or abandon the contract. Challenge rewards pay in rare resources.
+
+**Why.** The first board offered the same three contracts for the whole save, whatever the guild had become, and the capability vector had no consumer but a readout. The catalogue (names, clients, numbers) is a **pending-approval** default; v1.0 §20 reserves content catalogues for the design owner.
+
+---
+
+## DL-052 — Endless expeditions are one run that keeps going deeper
+
+**Ambiguity.** REQ-END-002 asks for endless scaling across monsters, zones, events and rewards, with an objective chosen beforehand. It does not say what an endless run is structurally.
+
+**Decision.** An endless run is a single expedition. When the party walks a route to its end, the next route is laid down one depth deeper and the same continue-or-retreat decision governs it. Monster stats grow per depth (`statsPerDepth`), rewards grow per route cleared (`rewardPerDepth`, loot rolls per depth), and **item level never rises** (v1.0 §12). The ten-minute cap (REQ-EXP-003) still applies, and it is what makes depth a record rather than a function of patience.
+
+The six REQ-END-002 objectives are data. Each maps to a base party objective the planner and the Guild AI already play, plus an emphasis on what the run pays: maximum loot, survival, boss hunting, resource gathering, exploration, record attempt.
+
+Personal records (REQ-END-003) keep the best depth per region and objective, with the party and cycle, and survive New Game+ as the player's history rather than the world's. Crossing a milestone depth carves an "exceptional expedition" on the Monument (REQ-MON-001), capped for Legacy like every other kind. Save **v22** carries the records.
+
+**Why this structure.** Chaining ordinary expeditions would have failed immediately: every expedition sends its party home to recover, so a second floor would have had nobody to send. It would also have meant a second loop beside the one that already decides when to turn back. Extending the walk reuses the whole engine: branching events, rest nodes, time, audit, aftermath.
+
+**Tuning note.** The first growth rates (15% HP per depth) let a level-8 party match a level-60 one, because the time cap, not the monsters, ended every run. At 40% HP and 30% attack per depth, depth separates parties by strength: a level-6 party reaches depth 1 in the Coldwater Quarry, and a level-60 party reaches depth 6. All values are pending approval.
+
+---
+
+## DL-053 — Legacy Traits are inherited by apprentices, and trait effects must be read
+
+**Ambiguity.** REQ-LEG-004 says some Chronicle events become Legacy Traits; REQ-CHR-003 says history becomes mechanical only through an explicit conversion. `traits.json` already reserved `origin: "legacy"` for Phase 8.
+
+**Decision.** Three Legacy Traits grow from the three historic (significance 5) Chronicle kinds: Keeper of the Fallen (a companion lost), Wardenbane (a world boss defeated) and Black-Zone Walker (first into a Black Zone). The loader refuses a legacy trait whose Chronicle kind can never be historic. A retiring hunter's historic entries resolve to the Legacy Traits they carry. The explicit conversion is **apprenticeship**: the player chooses a mentor, pays, and picks which of the mentor's Legacy Traits the new recruit inherits. That is the generational play v1.0 §11 describes, with veteran value migrating into training. Pending approval: counts and costs.
+
+Two trait effects gained readers so the Legacy Traits would do what they say: `experienceGainMultiplier` (expedition and town-hunt XP) and `masteryGainMultiplier` (practice), which also makes the innate Quick Study trait work for the first time.
+
+**Why the guard.** The same review found that **seven of the eight innate traits did nothing at all**: only Tireless had an effect anything read. Glass Nerves, Battle-Born, Iron Stomach and the rest were rolled, displayed and valued by the recruiter, and were inert. `tests/legacyTraits.test.ts` now fails if a new trait effect has no reader, and it also fails if one of the known gaps gains a reader without leaving the list. The remaining gaps are in TECH_DEBT; wiring them into combat and the AI is real work with balance consequences, not a cleanup.
+
+---
+
+## DL-054 — Rebirth stays unimplemented, pending a design decision
+
+**Ambiguity.** REQ-HUN-004 says rebirth becomes available at the level cap. `core/hunter/leveling.ts` has carried a `RebirthRules` interface since Phase 1 with the note that its costs and grants are a design decision, and TECH_DEBT scheduled it for Phase 8.
+
+**Decision.** Not implemented. Every plausible version changes the Hunter aggregate, the attribute budget and the save format, and each embeds a balance philosophy (what carries over, what resets, what a rebirth grants) that REQ-HUN-005 constrains but does not settle. New Game+ was implemented as a labelled default because it was already built and broken; rebirth has no half-built version to repair.
+
+**Needed from the design owner:** what resets (level? attributes? skills?), what is kept, what a rebirth grants, and whether there is a limit.

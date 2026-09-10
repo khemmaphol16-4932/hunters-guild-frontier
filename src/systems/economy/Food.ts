@@ -16,6 +16,8 @@ export class Food {
   constructor(
     private readonly resources: Resources,
     private readonly consumptionPerResidentPerStep: number,
+    /** World-variant scaling on what each resident eats (the Long Winter), 1 otherwise. */
+    private readonly consumptionScale: () => number = () => 1,
   ) {}
 
   get fedFraction(): number { return this.lastFedFraction; }
@@ -26,7 +28,7 @@ export class Food {
     }
     const produced = Math.max(0, producedPerStep * steps);
     if (produced > 0) this.resources.transact({ credits: { food: produced } });
-    const required = Math.max(0, population * this.consumptionPerResidentPerStep * steps);
+    const required = Math.max(0, population * this.consumptionPerResidentPerStep * this.consumptionScale() * steps);
     const consumed = this.resources.consumeAvailable('food', required);
     if (!consumed.ok) throw new Error(consumed.error);
     this.lastFedFraction = required <= 0 ? 1 : consumed.value.consumed / required;

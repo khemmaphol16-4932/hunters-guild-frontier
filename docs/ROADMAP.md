@@ -145,6 +145,8 @@ Gold · resources · food · production · crafting · market · contracts · re
 
 **Phase DoD.** `sim/Balance.ts` runs 10,000 deterministic economy steps and rejects negative balances, resource-cap escape, unrecoverable food collapse and free-profit round trips. Authored capacities bound accumulation and the market remains inside its controlled band. Phase 7 is complete at 518 passing tests.
 
+**Correction (2026-09-10 review).** The gate above did not do what it claimed. It traded one unit at a time, the only size at which the market's infinite-money loop could not appear, and it checked capacity after the ledger had already clamped. Both are fixed (DL-044, DL-046): `sim/Balance.ts` now probes round trips at every size and price, alternates famine with recovery, and checks the price band, and it is green against the corrected market. See DEVLOG, *Phase 7–8 review and repair*.
+
 Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
 
 ## Phase 8 — Progression 🟨 in progress
@@ -162,6 +164,10 @@ Guild Monument complete: a passive event subscriber records world-boss victories
 Legacy foundation complete: Monument achievements award bounded, one-time Legacy points from multiple sources. The player explicitly spends them on starting choices, convenience, systems, archetypes, world variants and prestige; the catalogue contains no raw combat-stat upgrades. Save v19 preserves earned/spent points, claimed achievements and unlocks.
 
 Retirement and mentors complete: retirement is an explicit player command gated by the Mentor Hall unlock, level 30 and availability. Retirees leave the active roster and become distinct mentor profiles derived from their level, attributes, mastery, potential and historic Chronicle entries. Their bounded effects improve experience and mastery training; save v20 preserves mentors and Legacy Traits.
+
+Continued (2026-09-10): the contract board now follows reputation, capability and client standing, with Endgame Challenge Contracts (DL-051); endless expeditions run deeper routes with six objectives and personal records (DL-052, save v22); Legacy Traits grow from historic Chronicle entries and pass to apprentices (DL-053); respec is charged and Insight Crystals have sources (DL-050). **Remaining for Phase 8:** rebirth, which needs the design owner's rules (DL-054), and world-boss placement, which needs a world-event system.
+
+Review and repair (2026-09-10): New Game+ now founds a new guild in a freshly seeded world (DL-048); Legacy is bounded per kind per cycle and every unlock has an effect (DL-047); all Phase 8 balance lives in `balance/progression.json`; and the Hall tab puts every Phase 7–8 system on screen. New Game+ carry-over rules remain a default pending design approval (v1.0 §12, §20).
 
 New Game+ complete: an explicit player command resets roster, Chronicle, world knowledge, town, economy, reputation, research, Guild Mastery and Monument while retaining Legacy and only the mentors selected for the next generation. Unlocked starting choices, archetypes and world variants are validated before reset. Save v21 preserves cycle state, and restored RNG streams make resets deterministic.
 

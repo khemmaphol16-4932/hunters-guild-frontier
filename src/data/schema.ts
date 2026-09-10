@@ -893,12 +893,21 @@ export function parseNamePools(raw: unknown, path = 'names.json'): readonly Name
   return parsed;
 }
 
+export const TRAIT_ORIGINS = ['innate', 'legacy'] as const;
+export type TraitOrigin = (typeof TRAIT_ORIGINS)[number];
+
 export interface TraitDef {
   readonly id: string;
   readonly name: string;
-  readonly origin: string;
+  readonly origin: TraitOrigin;
   readonly description: string;
   readonly effects: Readonly<Record<string, number>>;
+  /**
+   * For a Legacy Trait (REQ-LEG-004): the historic Chronicle entry kind it grows out of.
+   * History becomes mechanical only through an explicit conversion (REQ-CHR-003) — here, a
+   * mentor passing the trait to an apprentice the player chose to take on.
+   */
+  readonly fromChronicle?: string;
 }
 
 export function parseTraits(raw: unknown, path = 'traits.json'): readonly TraitDef[] {
@@ -909,9 +918,12 @@ export function parseTraits(raw: unknown, path = 'traits.json'): readonly TraitD
     return {
       id: expectString(field(e, 'id', p), `${p}.id`),
       name: expectString(field(e, 'name', p), `${p}.name`),
-      origin: expectString(field(e, 'origin', p), `${p}.origin`),
+      origin: expectEnum(field(e, 'origin', p), `${p}.origin`, TRAIT_ORIGINS),
       description: expectString(field(e, 'description', p), `${p}.description`),
       effects: expectNumberRecord(field(e, 'effects', p), `${p}.effects`),
+      ...(e['fromChronicle'] !== undefined
+        ? { fromChronicle: expectString(e['fromChronicle'], `${p}.fromChronicle`) }
+        : {}),
     };
   });
   assertUniqueIds(parsed.map((t) => t.id), `${path}.traits`);

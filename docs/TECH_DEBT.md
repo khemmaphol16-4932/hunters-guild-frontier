@@ -9,7 +9,7 @@ Every entry names what is owed, why it was deferred, and what triggers repayment
 | ~~`EquipmentContribution` null object~~ | — | — | **done in Phase 2** — replaced by `systems/items/identityContributions` with no change to `BuildIdentity`'s interface |
 | ~~`CardContribution` null object~~ | — | — | **done in Phase 2** |
 | ~~Gold and resource accounting for refinement, selling and dismantling~~ | — | — | **done in Phase 7b** — all three transact through `systems/economy/Resources` |
-| Rebirth | `core/hunter/leveling` | Phase 8 | a hunter reaches level 100 in play |
+| Rebirth | `core/hunter/leveling` | **needs a design decision** (DL-054) | the design owner decides what resets, what is kept, what a rebirth grants, and any limit |
 | ~~Policy pipeline weight stages~~ | — | — | **done in Phase 3** — seven build-reading stages in `ai/hunter/hunterAI` |
 | Behavior memory | `systems/hunter/` | Phase 5+ | first behavior-memory-driven decision |
 | ~~`zone.firstEntered` never fires~~ | — | — | **done in Phase 5** — `WorldKnowledge` emits it on a region's first entry |
@@ -107,6 +107,17 @@ A null object satisfies the compiler but proves nothing about whether the consum
 |---|---|---|---|
 | Watching a town hunt or a defense as it happens | REQ-TWN-007, §7 | Phase 9 | `CombatEncounter.step` is public precisely so a renderer can drive it a tick at a time; nothing does yet, for expeditions either |
 | ~~Recruit fees, the research reset resource, and building repair costs~~ | — | **done in Phase 7b** — all are real ledger debits; repair scale is authored economy data |
+| ~~Respec cost~~ | — | **done in the 2026-09-10 review** (DL-050) — Phase 7b's entry above claimed every price; respec was missed, and its resource had no source |
 | Friendship | `systems/hunter/` | Phase 8 | recruitment lands, but friendship is behaviour memory rather than a recruitment feature |
 | The Shrine still provides comfort and no revival | REQ-TWN-005 | open | v1.0 §20 leaves exact resurrection methods an open design question; inventing one here would be the wrong kind of initiative |
 | Departments have no per-job lever | REQ-DEP-004 | if it proves needed | department priority separates departments, not jobs within one. `outputValue` (DL-043) covers the case that motivated it; a finer lever would sit below the altitude the design works at |
+
+## Found in the Phase 7–8 review (2026-09-10)
+
+| Item | Requirement | Deferred to | Why |
+|---|---|---|---|
+| Innate trait effects with no consumer: `riskPostureShift`, `hungerRateMultiplier`, `sustainedCombatBonus`, `moraleVolatility`, `reliabilityBonus`, `friendshipGainMultiplier`, `allySafetyWeightShift`, `partySupportBonus`, `departmentHeadAptitude` | REQ-HUN-009 | next AI/combat pass | seven of the eight innate traits were inert. Wiring these into combat, morale and the AI changes balance and belongs with the systems that read them. `tests/legacyTraits.test.ts` pins this exact list: a new unread effect fails the build, and so does one that gains a reader without leaving the list |
+| Field hunger is never applied | REQ-ECO-003 | next expedition pass | `Condition.exert` exists and nothing calls it, so hunters come home from expeditions exactly as hungry as they left; town food shortage still reaches recovery through `fedFraction` |
+| Boss cards still do not drop | REQ-CRD-* | next loot pass | unchanged from the entry above; the duplicate conversion now at least names a real resource (`essence`, DL-050) |
+| Contract, endless and New Game+ catalogues and numbers are defaults | v1.0 §20 | design approval | every one is labelled pending approval in its data file; v1.0 §20 reserves content catalogues, balance curves and New Game+ rules for the design owner |
+| World boss placement | REQ-BOS-003 | world-event system | unchanged; the Drowned Choir is authored and unplaced, so `worldBossVictory` plaques and Wardenbane are reachable only through the debug console until it lands |

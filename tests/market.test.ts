@@ -14,11 +14,11 @@ describe('bounded market (REQ-ECO-005)', () => {
     expect(h.resources.amount('gold')).toBe(gold - bought.value.total + sold.value.total);
   });
   it('moves prices with demand, clamps them, and reverts toward baseline', () => {
-    const h = market(); const first = h.market.quote('food', 1, 'buy'); expect(first.ok).toBe(true);
+    const h = market(); const first = h.market.quote('food', 10, 'buy'); expect(first.ok).toBe(true);
     for (let i = 0; i < 30; i++) h.market.buy('food', 1);
-    const high = h.market.quote('food', 1, 'buy'); expect(high.ok && first.ok && high.value.unitPrice).toBeGreaterThan(first.ok ? first.value.unitPrice : 0);
+    const high = h.market.quote('food', 10, 'buy'); expect(high.ok && first.ok && high.value.total).toBeGreaterThan(first.ok ? first.value.total : 0);
     h.market.step(100);
-    const reverted = h.market.quote('food', 1, 'buy'); expect(reverted.ok && first.ok ? reverted.value.unitPrice : 0).toBe(first.ok ? first.value.unitPrice : 0);
+    const reverted = h.market.quote('food', 10, 'buy'); expect(reverted.ok && first.ok ? reverted.value.total : 0).toBe(first.ok ? first.value.total : 0);
   });
   it('never permits buy-low/sell-high profit inside one unchanged quote cycle', () => {
     const h = market(); const before = h.resources.amount('gold'); expect(h.market.buy('materials', 5).ok).toBe(true); expect(h.market.sell('materials', 5).ok).toBe(true); expect(h.resources.amount('gold')).toBeLessThan(before);
