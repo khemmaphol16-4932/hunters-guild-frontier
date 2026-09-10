@@ -77,6 +77,8 @@ export interface ResearchNodeDef {
   readonly description: string;
   /** Research points. Accrued from the Research department, never from hunter activity. */
   readonly cost: number;
+  /** Institutional experience required to make this technology actionable. */
+  readonly masteryLevel?: number;
   readonly requires: readonly string[];
   /** Taking this node permanently forecloses these (REQ-RES-001). Symmetric. */
   readonly conflictsWith: readonly string[];
@@ -181,6 +183,11 @@ export function parseResearch(raw: unknown, path = 'research.json'): ResearchDat
 
       const requiresRaw = optionalField(n, 'requires');
       const conflictsRaw = optionalField(n, 'conflictsWith');
+      const masteryLevelRaw = optionalField(n, 'masteryLevel');
+      const masteryLevel = masteryLevelRaw === undefined ? 1 : expectNumber(masteryLevelRaw, `${np}.masteryLevel`);
+      if (!Number.isInteger(masteryLevel) || masteryLevel < 1) {
+        throw new ContentValidationError(`${np}.masteryLevel`, 'must be a positive integer');
+      }
 
       const effects = expectArray(field(n, 'effects', np), `${np}.effects`).map((e, i) =>
         parseEffect(e, `${np}.effects[${i}]`),
@@ -198,6 +205,7 @@ export function parseResearch(raw: unknown, path = 'research.json'): ResearchDat
         branch: expectEnum(field(n, 'branch', np), `${np}.branch`, RESEARCH_BRANCHES),
         description: expectString(field(n, 'description', np), `${np}.description`),
         cost,
+        masteryLevel,
         requires: requiresRaw === undefined ? [] : expectStringArray(requiresRaw, `${np}.requires`),
         conflictsWith:
           conflictsRaw === undefined ? [] : expectStringArray(conflictsRaw, `${np}.conflictsWith`),

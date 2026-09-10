@@ -365,6 +365,7 @@ export class Session {
     // nothing of them. The one genuinely acyclic corner of this cluster.
     this.research = new Research({
       content: this.content.research,
+      masteryLevel: () => session.guildMastery.level(),
       onCompleted: (node) => {
         this.events.emit('research.completed', { nodeId: node.id, name: node.name });
       },

@@ -209,6 +209,62 @@
           "describe": "The frontier notices a guild that brings its people home."
         }
       ]
+    },
+    {
+      "id": "tactical_doctrine",
+      "name": "Tactical Doctrine",
+      "branch": "combat",
+      "description": "Hard-won field reports become a doctrine the standing watch can actually use.",
+      "cost": 48,
+      "masteryLevel": 2,
+      "requires": [
+        "standing_watch"
+      ],
+      "effects": [
+        {
+          "kind": "capacity",
+          "axis": "defence",
+          "value": 8,
+          "describe": "Experienced watch rotations add eight defence capacity."
+        }
+      ]
+    },
+    {
+      "id": "frontier_logistics",
+      "name": "Frontier Logistics",
+      "branch": "economy",
+      "description": "The guild turns years of departures and returns into a durable supply doctrine.",
+      "cost": 46,
+      "masteryLevel": 2,
+      "requires": [
+        "provisioning"
+      ],
+      "effects": [
+        {
+          "kind": "capacity",
+          "axis": "food",
+          "value": 24,
+          "describe": "Experienced provisioning supports twenty-four more people."
+        }
+      ]
+    },
+    {
+      "id": "civic_archives",
+      "name": "Civic Archives",
+      "branch": "town",
+      "description": "The town records not only what it built, but what the guild learned by living there.",
+      "cost": 52,
+      "masteryLevel": 2,
+      "requires": [
+        "public_works"
+      ],
+      "effects": [
+        {
+          "kind": "reputation",
+          "value": 1.2,
+          "describe": "A public record makes successful guild work worth a fifth more reputation."
+        }
+      ]
     }
   ]
 }

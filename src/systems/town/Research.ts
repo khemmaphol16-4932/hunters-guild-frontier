@@ -52,6 +52,8 @@ export interface ResearchEntry {
 
 export interface ResearchDeps {
   readonly content: ResearchData;
+  /** Institutional experience is a gate, never a source of research points. */
+  readonly masteryLevel?: () => number;
   readonly onCompleted?: (node: ResearchNodeDef) => void;
 }
 
@@ -109,6 +111,11 @@ export class Research {
     const missing = node.requires
       .filter((required) => !this.completed.has(required))
       .map((required) => this.byId.get(required)?.name ?? required);
+    const masteryLevel = this.deps.masteryLevel?.() ?? 1;
+    const requiredMastery = node.masteryLevel ?? 1;
+    if (masteryLevel < requiredMastery) {
+      missing.push(`Guild Mastery level ${requiredMastery} (currently ${masteryLevel})`);
+    }
     if (missing.length > 0) return { state: 'blocked', missing };
 
     if (this.active === id) {

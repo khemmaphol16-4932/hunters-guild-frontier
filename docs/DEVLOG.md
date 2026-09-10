@@ -450,3 +450,13 @@ Reputation is now both rank and numerical value. The global ledger derives five 
 Expeditions and contract resolutions now also affect the region where the work happened. Regional values have their own rank reading, share the bounded explanation history, and persist through save v17; older global-only saves migrate with an empty regional ledger.
 
 The checkpoint closes with 524 tests across 26 suites. Typecheck and production build are clean.
+
+---
+
+# Phase 8c — Research depth
+
+The research tree now continues into Tactical Doctrine, Frontier Logistics and Civic Archives. Each advanced node needs both its branch prerequisite and Guild Mastery level 2: the guild must possess the technology and enough institutional experience to apply it.
+
+The two ledgers remain structurally separate. Starting advanced research neither spends mastery nor turns activity into research points; those points still come only from staffed Research Department output. Department leadership already multiplies that output, and an explicit integration test now proves an appointed qualified head improves the work without creating free progress.
+
+The checkpoint closes with 526 tests across 26 suites. Typecheck and production build are clean.

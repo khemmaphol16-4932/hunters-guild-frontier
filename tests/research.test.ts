@@ -59,6 +59,22 @@ describe('the research tree (REQ-RES-001)', () => {
     }
   });
 
+  it('gates advanced technology on institutional experience without spending mastery', () => {
+    const harness = foundedGuild('mastery-gate');
+    complete(harness, 'guild_charter');
+    complete(harness, 'standing_watch');
+
+    const blocked = harness.session.research.availabilityOf('tactical_doctrine');
+    expect(blocked).toMatchObject({ state: 'blocked' });
+    if (blocked.state === 'blocked') expect(blocked.missing.join(' ')).toContain('Mastery level 2');
+
+    harness.session.guildMastery.record('defense', 25);
+    const masteryBefore = harness.session.guildMastery.points;
+    expect(harness.session.research.availabilityOf('tactical_doctrine').state).toBe('available');
+    expect(harness.commands.beginResearch('tactical_doctrine').ok).toBe(true);
+    expect(harness.session.guildMastery.points).toBe(masteryBefore);
+  });
+
   it('says which prerequisites are missing, not merely that some are', () => {
     // REQ-RES-001 asks for "partial requirements" to be shown.
     const { session } = foundedGuild();
@@ -184,6 +200,30 @@ describe('research is technology, not experience (REQ-RES-002)', () => {
     const before = session.research.current?.progress ?? 0;
     commands.advanceTown(3);
     expect(session.research.current?.progress ?? 0).toBeGreaterThan(before);
+  });
+
+  it('turns an appointed Research head into faster work, not free research', () => {
+    const unmanaged = foundedGuild('research-leadership-a');
+    const managed = foundedGuild('research-leadership-b');
+
+    for (const harness of [unmanaged, managed]) {
+      const hall = harness.session.town.grid.all().find((p) => p.buildingId === 'guild_hall')!;
+      expect(harness.commands.upgradeBuilding(hall.instanceId).ok).toBe(true);
+      for (let i = 0; i < 4; i++) {
+        harness.debug.spawnHunter({ archetype: 'adept', level: 40, fullyEquipped: true });
+      }
+      harness.session.townJobs.refresh();
+      expect(harness.commands.beginResearch('field_medicine').ok).toBe(true);
+    }
+
+    const head = managed.session.roster.all()[0]!;
+    expect(managed.commands.appointDepartmentHead('research', head.id).ok).toBe(true);
+    const unmanagedOutput = unmanaged.session.departments.report('research').output;
+    const managedOutput = managed.session.departments.report('research').output;
+
+    expect(unmanagedOutput).toBeGreaterThan(0);
+    expect(managedOutput).toBeGreaterThan(unmanagedOutput);
+    expect(managed.session.research.current?.progress).toBe(0);
   });
 });
 

@@ -155,6 +155,8 @@ Foundation complete: institutional Guild Mastery is earned from expeditions, cra
 
 Reputation depth foundation complete: reputation now retains its numerical value while deriving five readable ranks, and expedition and contract outcomes build or damage standing in the region where they occur. Scoped history and regional values persist in save v17. Cross-system rank effects remain part of the next progression passes.
 
+Research depth complete: three advanced branch nodes extend Combat, Economy and Town research. Advanced technology requires prior research plus Guild Mastery level 2, but mastery is neither spent nor converted into research points. Appointed Research heads continue to improve staffed output, keeping leadership, institutional experience and technology distinct.
+
 ## Phase 9 — UX / Presentation ⬜
 
 Progressive UI · build dashboard polish · chronicle · combat timeline · AI explain · guild report · notifications · town and world presentation · **isometric pixel-art** · audio hooks · accessibility.
