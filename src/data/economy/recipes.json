@@ -1,0 +1,9 @@
+{
+  "$comment": "REQ-ECO-004: crafting targets a known item type and rarity. It stops at epic so loot retains the ancient/legendary jackpot.",
+  "recipes": [
+    { "id": "forge_blade", "name": "Forge a Blade", "typeId": "blade", "rarity": "refined", "itemLevel": 10, "durationSteps": 4, "cost": { "gold": 140, "iron": 5, "salvage": 2 } },
+    { "id": "forge_shield", "name": "Forge a Shield", "typeId": "shield", "rarity": "refined", "itemLevel": 10, "durationSteps": 4, "cost": { "gold": 150, "iron": 6, "salvage": 2 } },
+    { "id": "tailor_robes", "name": "Tailor Robes", "typeId": "robes", "rarity": "rare", "itemLevel": 20, "durationSteps": 7, "cost": { "gold": 320, "materials": 12, "salvage": 8 } },
+    { "id": "craft_focus", "name": "Craft a Focus", "typeId": "focus", "rarity": "rare", "itemLevel": 20, "durationSteps": 8, "cost": { "gold": 360, "iron": 10, "essence": 4 } }
+  ]
+}

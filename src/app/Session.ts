@@ -65,6 +65,7 @@ import { SaveGame, type SaveStorage } from '../save/SaveGame.js';
 import type { CurrentSavePayload } from '../save/envelope.js';
 import { Resources } from '../systems/economy/Resources.js';
 import { Food } from '../systems/economy/Food.js';
+import { Crafting } from '../systems/economy/Crafting.js';
 
 export interface SessionOptions {
   readonly worldSeed: string;
@@ -199,6 +200,7 @@ export class Session {
   readonly townCombat: TownCombat;
   readonly resources: Resources;
   readonly food: Food;
+  readonly crafting: Crafting;
 
   readonly partyPlanner: PartyPlanner;
   readonly hunterAI: HunterAI;
@@ -252,6 +254,17 @@ export class Session {
     });
     this.refinement = new Refinement(this.content.balance.refinement);
     this.itemGenerator = new ItemGenerator(this.content);
+    this.crafting = new Crafting(
+      this.content.crafting,
+      this.resources,
+      (rng, recipe, qualityFloor) => this.itemGenerator.generate(rng, {
+        itemLevel: recipe.itemLevel,
+        typeId: recipe.typeId,
+        rarity: recipe.rarity,
+        qualityFloor,
+        setChance: 0,
+      }),
+    );
 
     this.constellation = new Constellation({
       content: this.content,

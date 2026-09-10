@@ -52,6 +52,7 @@ import { analysePool } from '../ai/town/guildFit.js';
 import type { DefenseResult, HuntResult } from '../sim/town/TownCombat.js';
 import type { EconomyReward } from '../data/economySchema.js';
 import type { FoodReport } from '../systems/economy/Food.js';
+import type { CraftPreview } from '../systems/economy/Crafting.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -75,6 +76,23 @@ export interface ExpeditionOutcome {
 
 export class GuildCommands {
   constructor(private readonly session: Session) {}
+
+  craftingPreview(recipeId: string, crafterId: HunterId): Result<CraftPreview, string> {
+    const crafter = this.session.roster.get(crafterId);
+    if (!crafter) return err(`unknown hunter ${crafterId}`);
+    return this.session.crafting.preview(recipeId, crafter);
+  }
+
+  craftItem(recipeId: string, crafterId: HunterId): Result<{ readonly item: Item; readonly durationSteps: number }, string> {
+    const crafter = this.session.roster.get(crafterId);
+    if (!crafter) return err(`unknown hunter ${crafterId}`);
+    if (crafter.availability.state !== 'available') return err(`${crafter.name} is not available to craft`);
+    const result = this.session.crafting.craft(this.session.streams.crafting, recipeId, crafter);
+    if (!result.ok) return result;
+    this.session.armoury.add(result.value.item);
+    this.session.audit.record({ actor: { kind: 'hunter', id: crafter.id }, system: 'crafting', outcome: `${crafter.name} crafted ${result.value.item.name}`, reasonCodes: ['item_crafted', `recipe:${recipeId}`], inputs: { durationSteps: result.value.preview.durationSteps, cost: result.value.preview.recipe.cost } });
+    return ok({ item: result.value.item, durationSteps: result.value.preview.durationSteps });
+  }
 
   /**
    * Recruit a hunter and walk them out from their starting position.

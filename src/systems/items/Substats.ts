@@ -33,7 +33,7 @@ export class Substats {
    * total is identical, and it makes comparing two items harder than it needs to be.
    * If the pool is smaller than the requested count, the item simply gets fewer.
    */
-  roll(rng: Rng, poolName: string, count: number, itemLevel: number): readonly SubstatRoll[] {
+  roll(rng: Rng, poolName: string, count: number, itemLevel: number, qualityFloor = 0): readonly SubstatRoll[] {
     const pool = this.pool(poolName);
     if (pool.length === 0 || count <= 0) return [];
 
@@ -45,14 +45,15 @@ export class Substats {
       if (!picked) break;
 
       remaining.splice(remaining.indexOf(picked), 1);
-      rolls.push(this.rollOne(rng, picked, itemLevel));
+      rolls.push(this.rollOne(rng, picked, itemLevel, qualityFloor));
     }
 
     return rolls;
   }
 
-  private rollOne(rng: Rng, def: SubstatDef, itemLevel: number): SubstatRoll {
-    const quality = rng.next();
+  private rollOne(rng: Rng, def: SubstatDef, itemLevel: number, qualityFloor: number): SubstatRoll {
+    const floor = Math.max(0, Math.min(1, qualityFloor));
+    const quality = floor + rng.next() * (1 - floor);
     const perLevel = def.min + (def.max - def.min) * quality;
     return {
       stat: def.stat,

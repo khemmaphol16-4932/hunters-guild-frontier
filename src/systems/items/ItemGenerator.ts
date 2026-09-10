@@ -27,6 +27,7 @@ export interface GenerateOptions {
   readonly setId?: string;
   /** Chance a set-capable item rolls as a set piece. */
   readonly setChance?: number;
+  readonly qualityFloor?: number;
 }
 
 export interface PityState {
@@ -91,7 +92,7 @@ export class ItemGenerator {
 
     const itemLevel = Math.max(1, Math.floor(options.itemLevel));
     const sockets = rng.int(rarity.sockets.min, rarity.sockets.max + 1);
-    const substats = this.substats.roll(rng, type.substatPool, rarity.substatCount, itemLevel);
+    const substats = this.substats.roll(rng, type.substatPool, rarity.substatCount, itemLevel, options.qualityFloor);
 
     const setId = this.pickSet(rng, rarity, options);
     const uniqueEffectId = this.pickUniqueEffect(rng, rarity, type);

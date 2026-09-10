@@ -384,3 +384,15 @@ Expeditions and successful town hunts deposit gold, provisions and materials fro
 ## Next
 
 Crafting: validated recipes, previewed inputs and outcome range, crafter capability, completion time, and deterministic quality—while keeping loot as the jackpot.
+
+---
+
+# Phase 7d — Targeted crafting
+
+Four data-authored recipes now provide the certainty half of “craft = certainty, loot = jackpot”: the player chooses the item type and known rarity, sees every input, the estimated work time and the capability-driven quality floor, then receives an item from the same generator loot uses. Payment is atomic and an unavailable hunter cannot craft. Crafted tiers stop at Rare while Ancient and Legendary remain drop-only aspirations.
+
+The content loader rejects recipes with unknown item types, rarities or resource ids. The item generator gained a general quality-floor input rather than a second crafting-only roll path, so deterministic generation and item identity remain shared. 507 tests green, typecheck and production build clean.
+
+## Next
+
+Persisted crafting orders that consume the displayed duration, followed by the bounded market, contracts/factions and the long-run balance harness. Phase 8 begins only when those Phase 7 gates are green.

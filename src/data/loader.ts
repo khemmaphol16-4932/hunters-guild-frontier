@@ -33,7 +33,9 @@ import originsJson from './town/origins.json';
 import threatsJson from './town/threats.json';
 import townBalanceJson from './balance/town.json';
 import resourcesJson from './economy/resources.json';
+import recipesJson from './economy/recipes.json';
 import { parseEconomy, type EconomyData, type ResourceDef } from './economySchema.js';
+import { parseCrafting, type CraftingData } from './craftingSchema.js';
 
 import raritiesJson from './items/rarities.json';
 import itemTypesJson from './items/item-types.json';
@@ -207,6 +209,7 @@ export interface GameContent {
   readonly threats: ThreatData;
   readonly economy: EconomyData;
   readonly resourcesById: ReadonlyMap<string, ResourceDef>;
+  readonly crafting: CraftingData;
 
   readonly balance: {
     readonly attributes: AttributeBalance;
@@ -697,6 +700,7 @@ export function loadContent(): GameContent {
   const recruitment = parseRecruitment(originsJson);
   const threats = parseThreats(threatsJson);
   const economy = parseEconomy(resourcesJson);
+  const crafting = parseCrafting(recipesJson);
   const refinementBalance = parseRefinementBalance(refinementBalanceJson);
   const lootBalance = parseLootBalance(lootBalanceJson);
 
@@ -718,6 +722,11 @@ export function loadContent(): GameContent {
     reputationMax: townBalance.reputation.max,
   });
   crossValidateEconomy({ economy, research, refinement: refinementBalance, loot: lootBalance });
+  for (const recipe of crafting.recipes) {
+    if (!itemTypes.types.some((type) => type.id === recipe.typeId)) throw new ContentValidationError(`recipes.json:${recipe.id}`, `unknown item type "${recipe.typeId}"`);
+    if (!rarities.rarities.some((rarity) => rarity.id === recipe.rarity)) throw new ContentValidationError(`recipes.json:${recipe.id}`, `unknown rarity "${recipe.rarity}"`);
+    for (const resource of Object.keys(recipe.cost)) if (!economy.resources.some((entry) => entry.id === resource)) throw new ContentValidationError(`recipes.json:${recipe.id}.cost`, `unknown resource "${resource}"`);
+  }
 
   cached = Object.freeze({
     archetypes,
@@ -771,6 +780,7 @@ export function loadContent(): GameContent {
     threats,
     economy,
     resourcesById: new Map(economy.resources.map((resource) => [resource.id, resource])),
+    crafting,
 
     balance: {
       attributes: parseAttributeBalance(attributeBalanceJson),
