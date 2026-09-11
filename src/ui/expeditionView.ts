@@ -20,6 +20,8 @@
 import type { Session } from '../app/Session.js';
 import type { ExpeditionOutcome, GuildCommands } from '../app/GuildCommands.js';
 import { OBJECTIVES, type ObjectiveId, type PartyProposal } from '../systems/party/Party.js';
+import { preferences } from './preferences.js';
+import { activatable } from './a11y.js';
 import { describeAvailability } from '../core/hunter/availability.js';
 import { STANDING_ORDERS, contradictionsIn } from '../ai/policy/orders.js';
 
@@ -468,6 +470,7 @@ export class ExpeditionView {
     const wrap = el('div', 'grid');
     const { result } = outcome;
 
+    const advanced = preferences().detail === 'advanced';
     const route = el('div', 'card');
     route.append(el('h3', undefined, `Route — ${result.reachedNode}/${result.routeLength}`));
     route.append(
@@ -487,22 +490,46 @@ export class ExpeditionView {
         el('span', 'slot-item', report.node.label),
         el('span', 'slot-quality', `${report.outcome} · ${pct(report.partyHealth)}`),
       );
-      row.onclick = () => {
+      activatable(row, () => {
         this.state.expandedNode = this.state.expandedNode === index ? undefined : index;
         this.render();
-      };
+      });
+      row.setAttribute('aria-expanded', String(this.state.expandedNode === index));
 
       // The decision comes *before* the node it decided on, because that is when it was
       // made. Rendering it after made "the party sets out" appear beneath a fight that had
       // already happened, which reads as the log being one step out of order (v1.0 §14).
-      if (decision) route.append(el('p', 'subhead', decision.explanation));
+      if (decision) {
+        route.append(el('p', 'subhead', decision.explanation));
+        if (advanced && decision.reasonCodes.length > 0) {
+          route.append(el('p', 'log-line', `reason codes: ${decision.reasonCodes.join(', ')}`));
+        }
+      }
       route.append(row);
 
+      // REQ-UX-004: a fight that cost someone, or felled a boss, says why without a click.
+      const story = report.story;
+      if (story && story.why.length > 0 && this.state.expandedNode !== index) {
+        route.append(el('p', 'story-why', story.why[0]!));
+      }
+
       if (this.state.expandedNode === index) {
-        for (const entry of report.highlights) {
-          route.append(el('p', 'log-line', `${entry.atSeconds}s — ${entry.text}`));
+        if (story) {
+          route.append(el('p', 'name', story.verdict));
+          for (const line of story.why) route.append(el('p', 'story-why', line));
+          if (story.keySkills.length > 0) route.append(el('p', 'subhead', `Key skills: ${story.keySkills.join(' · ')}`));
+          for (const moment of story.moments) {
+            route.append(el('p', `log-line moment-${moment.kind}`, `${moment.at.toFixed(1)}s — ${moment.text}`));
+          }
         }
-        if (report.highlights.length === 0) {
+        // The raw combat log is implementation detail; REQ-UX-002 shows it only on request.
+        if (advanced || !story) {
+          for (const entry of report.highlights) {
+            const codes = advanced && entry.reasonCodes.length > 0 ? `  [${entry.reasonCodes.join(', ')}]` : '';
+            route.append(el('p', 'log-line', `${entry.atSeconds}s — ${entry.text}${codes}`));
+          }
+        }
+        if (report.highlights.length === 0 && !story) {
           route.append(el('p', 'empty', 'Nothing worth recording happened here.'));
         }
       }

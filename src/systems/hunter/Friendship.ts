@@ -91,7 +91,11 @@ export class Friendship {
     if (a === b) return;
     const rate = (this.deps.gainMultiplier(a) + this.deps.gainMultiplier(b)) / 2;
     const k = key(a, b);
-    this.bonds.set(k, Math.min(1, (this.bonds.get(k) ?? 0) + base * rate));
+    // Diminishing returns: each shared hardship closes part of the remaining distance. With a
+    // flat gain, a standing order running for a few hours made every pair best friends, and a
+    // bond that everyone has means nothing.
+    const current = this.bonds.get(k) ?? 0;
+    this.bonds.set(k, Math.min(1, current + base * rate * (1 - current)));
   }
 }
 

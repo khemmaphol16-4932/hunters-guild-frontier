@@ -1,6 +1,6 @@
 {
   "$comment": "REQ-HUN-012: relationships are Friendship only, no life simulation. A bond grows from shared expeditions and, much faster, from rescues; past friendThreshold two hunters are friends and fight harder side by side. sustainedFullSeconds sets how long Battle-Born takes to reach full strength in a fight. PENDING APPROVAL — all values are data-driven defaults (DL-057).",
-  "sharedExpedition": 0.06,
+  "sharedExpedition": 0.02,
   "rescue": 0.2,
   "friendThreshold": 0.5,
   "friendCombatBonus": 0.05,

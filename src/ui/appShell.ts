@@ -19,6 +19,8 @@ import { TownView } from './townView.js';
 import { HallView } from './hallView.js';
 import { renderGuildReport } from './reportView.js';
 import type { GuildReport } from '../app/GuildReport.js';
+import { onPreferencesChanged, preferences, setPreference } from './preferences.js';
+import { applyAccessibilityPreferences } from './a11y.js';
 
 type ViewId = 'guild' | 'town' | 'hall' | 'field';
 
@@ -40,6 +42,7 @@ export class AppShell {
   private readonly expedition: ExpeditionView;
   private report: GuildReport | undefined;
   private feedOpen = false;
+  private settingsOpen = false;
 
   constructor(
     private readonly root: HTMLElement,
@@ -60,6 +63,10 @@ export class AppShell {
     this.town = new TownView(this.body, session, commands);
     this.hall = new HallView(this.body, session, commands);
     this.expedition = new ExpeditionView(this.body, session, commands);
+
+    applyAccessibilityPreferences();
+    // Easy/Advanced changes what every screen says, so a change re-renders the current one.
+    onPreferencesChanged(() => this.renderBody());
 
     // A critical notice raised by the live tick must interrupt even if nothing re-renders.
     session.notifications.subscribe((notice) => {
@@ -127,6 +134,58 @@ export class AppShell {
       this.renderAlerts();
     };
     this.nav.append(notices);
+
+    const settings = el('button', this.settingsOpen ? 'active' : '', 'Settings') as HTMLButtonElement;
+    settings.setAttribute('aria-expanded', String(this.settingsOpen));
+    settings.onclick = () => {
+      this.settingsOpen = !this.settingsOpen;
+      this.renderNav();
+      this.renderAlerts();
+    };
+    this.nav.append(settings);
+  }
+
+  /** REQ-UX-002's Easy/Advanced switch, and the accessibility options. */
+  private renderSettings(): HTMLElement {
+    const panel = el('section', 'card settings-panel');
+    panel.setAttribute('aria-label', 'Settings');
+    panel.append(el('h3', undefined, 'Settings'));
+    const prefs = preferences();
+
+    const detail = el('fieldset', 'settings-group');
+    detail.append(el('legend', undefined, 'How much of the AI to show'));
+    for (const [value, label, hint] of [
+      ['easy', 'Easy', 'Plain explanations of what the guild and its hunters decided.'],
+      ['advanced', 'Advanced', 'Also the policy, constraints, reason codes and build numbers behind each decision.'],
+    ] as const) {
+      const option = el('label', 'settings-option');
+      const radio = el('input') as HTMLInputElement;
+      radio.type = 'radio';
+      radio.name = 'detail';
+      radio.checked = prefs.detail === value;
+      radio.onchange = () => setPreference('detail', value);
+      option.append(radio, document.createTextNode(` ${label} — ${hint}`));
+      detail.append(option);
+    }
+    panel.append(detail);
+
+    const access = el('fieldset', 'settings-group');
+    access.append(el('legend', undefined, 'Accessibility'));
+    for (const [key, label] of [
+      ['largeText', 'Larger text'],
+      ['highContrast', 'Higher contrast'],
+      ['reducedMotion', 'Reduce motion'],
+    ] as const) {
+      const option = el('label', 'settings-option');
+      const box = el('input') as HTMLInputElement;
+      box.type = 'checkbox';
+      box.checked = prefs[key];
+      box.onchange = () => setPreference(key, box.checked);
+      option.append(box, document.createTextNode(` ${label}`));
+      access.append(option);
+    }
+    panel.append(access);
+    return panel;
   }
 
   /** The interrupting banner for critical notices, and the feed when it is open. */
@@ -149,6 +208,8 @@ export class AppShell {
       banner.append(dismiss);
       this.alerts.append(banner);
     }
+
+    if (this.settingsOpen) this.alerts.append(this.renderSettings());
 
     if (this.feedOpen) {
       const feed = el('section', 'card notice-feed');

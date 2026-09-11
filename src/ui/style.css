@@ -239,3 +239,22 @@ select:hover { border-color: var(--accent); }
 .notice-important { color: var(--accent); }
 .notice-routine { color: var(--muted); }
 .notice.unread::before { content: '• '; }
+
+/* --- Combat replay (REQ-UX-004) ------------------------------------------ */
+.story-why { margin: 2px 0 4px 14px; color: var(--text, #d8dee6); }
+.moment-death, .moment-declined-rescue { color: var(--warn); }
+.moment-boss-fell, .moment-rescue { color: var(--accent); }
+
+/* --- Settings & accessibility (REQ-UX-002, Phase 9) ---------------------- */
+.settings-panel { margin: 10px 18px; max-width: 760px; }
+.settings-group { border: 1px solid var(--line); border-radius: 4px; margin: 0 0 10px; padding: 6px 10px; }
+.settings-group legend { color: var(--muted); padding: 0 4px; }
+.settings-option { display: block; margin: 4px 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[role="button"] { cursor: pointer; }
+html.large-text { font-size: 115%; }
+html.large-text body, html.large-text button, html.large-text select, html.large-text input { font-size: 15px; }
+html.high-contrast { --muted: #c3ccd8; --line: #6b7b8f; --panel: #0e1116; --panel-2: #151a21; }
+html.high-contrast .subhead, html.high-contrast .empty { color: #d5dde8; }
+html.reduced-motion *, html.reduced-motion *::before, html.reduced-motion *::after { transition: none !important; animation: none !important; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }

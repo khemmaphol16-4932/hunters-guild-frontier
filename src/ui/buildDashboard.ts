@@ -29,6 +29,8 @@ import type { RefineResult } from '../systems/items/Refinement.js';
 import { composeTagPhrase, generateBuildTags } from '../systems/hunter/buildTags.js';
 import { describeAvailability } from '../core/hunter/availability.js';
 import { asSkillId } from '../core/ids.js';
+import { preferences } from './preferences.js';
+import { activatable } from './a11y.js';
 
 interface DashboardState {
   selected: HunterId | undefined;
@@ -158,8 +160,8 @@ export class BuildDashboard {
         ),
       );
 
-      row.onclick = (event) => {
-        // Shift-click picks the comparison hunter — this is how REQ-BLD-003 is inspected.
+      activatable(row, (event) => {
+        // Shift-click (or Shift+Enter) picks the comparison hunter — how REQ-BLD-003 is inspected.
         if (event.shiftKey && hunter.id !== this.state.selected) {
           this.state.compareWith =
             this.state.compareWith === hunter.id ? undefined : hunter.id;
@@ -167,12 +169,13 @@ export class BuildDashboard {
           this.state.selected = hunter.id;
         }
         this.render();
-      };
+      }, `${hunter.name}, level ${hunter.level}`);
+      if (hunter.id === this.state.selected) row.setAttribute('aria-current', 'true');
 
       panel.append(row);
     }
 
-    panel.append(el('p', 'empty', 'Shift-click a second hunter to compare builds.'));
+    panel.append(el('p', 'empty', 'Shift-click (or Shift+Enter) a second hunter to compare builds.'));
     return panel;
   }
 
@@ -199,6 +202,7 @@ export class BuildDashboard {
       this.renderEquipmentCard(hunter),
       this.renderSkillsCard(hunter),
       this.renderPotentialCard(hunter),
+      this.renderTraitsCard(hunter),
       this.renderChronicleCard(hunter),
       this.renderArmouryCard(hunter),
     );
@@ -316,6 +320,62 @@ export class BuildDashboard {
       card.append(weaknesses);
     }
 
+    // REQ-UX-002 Advanced: the numbers the AI actually reads, hidden unless asked for.
+    if (preferences().detail === 'advanced') {
+      card.append(el('h3', undefined, 'What the AI reads'));
+      const table = el('table', 'kv');
+      const rows: [string, string][] = [
+        ['primary role', `${profile.primaryRole}${profile.secondaryRole ? ` / ${profile.secondaryRole}` : ''}`],
+        ['risk posture', profile.riskPosture.toFixed(3)],
+        ['resource profile', profile.resourceProfile.toFixed(3)],
+        ['versatility', profile.versatility.toFixed(3)],
+        ['focus', profile.focus.toFixed(3)],
+        ['ally safety', (profile.allySafety ?? 0).toFixed(3)],
+        ...Object.entries(profile.skillAffinity)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([tag, weight]): [string, string] => [`affinity: ${tag}`, weight.toFixed(3)]),
+      ];
+      for (const [label, value] of rows) {
+        const row = el('tr');
+        row.append(el('td', undefined, label), el('td', 'num', value));
+        table.append(row);
+      }
+      card.append(table);
+    }
+
+    return card;
+  }
+
+  /** Traits (innate and inherited), condition, and the people this hunter is close to. */
+  private renderTraitsCard(hunter: Hunter): HTMLElement {
+    const card = el('div', 'card');
+    card.append(el('h3', undefined, 'Traits & bonds'));
+    const traits = hunter.traitIds
+      .map((id) => this.session.content.traitsById.get(id))
+      .filter((trait): trait is NonNullable<typeof trait> => trait !== undefined);
+    if (traits.length === 0) card.append(el('p', 'empty', 'No notable traits.'));
+    for (const trait of traits) {
+      card.append(el('p', 'name', `${trait.name}${trait.origin === 'legacy' ? ' (Legacy)' : ''}`));
+      card.append(el('p', 'subhead', trait.description));
+      if (preferences().detail === 'advanced') {
+        card.append(el('p', 'log-line', Object.entries(trait.effects).map(([k, v]) => `${k} ${v}`).join(', ')));
+      }
+    }
+
+    const condition = hunter.condition;
+    card.append(el('h3', undefined, 'Condition'));
+    card.append(this.bar('fatigue', condition.fatigue, 'neutral'));
+    card.append(this.bar('hunger', condition.hunger, 'neutral'));
+    card.append(this.bar('morale', condition.morale, 'neutral'));
+
+    card.append(el('h3', undefined, 'Friends'));
+    const bonds = this.session.friendship.bondsOf(hunter.id).slice(0, 5);
+    if (bonds.length === 0) card.append(el('p', 'empty', 'Nobody close yet. Bonds grow on shared expeditions and rescues.'));
+    for (const bond of bonds) {
+      const other = this.session.roster.get(bond.with)?.name ?? 'someone who has left';
+      card.append(el('p', bond.friends ? 'points' : 'subhead', `${other} — ${bond.friends ? 'friends' : 'getting to know each other'} (${Math.round(bond.strength * 100)}%)`));
+    }
     return card;
   }
 

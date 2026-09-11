@@ -683,3 +683,29 @@ Two trait effects gained readers so the Legacy Traits would do what they say: `e
 **Decision.** `ui/notifications.json` classifies every notice kind the game raises into critical, important or routine, and the loader refuses a missing or unknown kind. Critical notices (a death, a breached wall, the world boss appearing, a legendary find) interrupt as a dismissible banner with `role="alert"`. Important notices raise the unread count on the Notices button. Routine notices wait in the feed. A notice about a party-wide event (a contract, a boss kill) is raised once, not once per hunter. Events the Guild Report already covered are marked read when the report is shown, so returning from time away never produces a wall of banners. Two domain events were added so the notifier could hear them: `town.defended` and `worldBoss.appeared`.
 
 **Pending approval:** which kinds are critical.
+
+---
+
+## DL-061 — The combat replay is a story built from recorded facts
+
+**Ambiguity.** REQ-UX-004 asks for a timeline and highlights that explain why a hunter died, why a boss fell, the key skills, rescues, mistakes and turning points, without a full-frame replay. The combat log held sentences, not facts a replay could reason over.
+
+**Decision.** Every encounter now returns `CombatFacts`: damage dealt and taken, healing, skill uses, killing blows, downs with their source, deaths, rescues, **declined rescues** (read from the AI's own scored candidates: a rescue was on the table and something else was chosen) and a once-a-second sample of each side's health. `sim/combat/combatStory.ts` turns those into:
+- a verdict;
+- *why* sentences, with the boss first, then each death with its cause and any rescue that was passed over;
+- key skills and who leaned on them;
+- up to twelve moments, including the largest swing either way in the balance of the fight.
+
+A fight with a death or a boss kill shows its first *why* line in the route report without a click.
+
+**Why "mistakes" are phrased as choices.** A declined rescue appears only if the hunter it left behind went on to die, and the sentence says what the chooser did instead ("chose to keep attacking"). The replay's job is to make the choice visible. Whether it was wrong is the player's call — the same AI would decline a hopeless rescue every time.
+
+---
+
+## DL-062 — Easy and Advanced views, accessibility, and friendship that takes time
+
+**Decision.**
+- **REQ-UX-002.** A Settings panel switches between Easy (plain explanations: the default) and Advanced. Advanced adds the policy reason codes on route decisions and log lines, the raw combat log under each replay, the numbers the AI reads from a build profile (risk posture, resource profile, focus, ally safety, top skill affinities), and each trait's effect values. Preferences describe the viewer, not the guild, so they live in browser storage, not the save.
+- **Accessibility.** Larger text, higher contrast and reduced motion (which also follows the OS setting). Visible focus rings. Roster rows and route nodes are keyboard-operable, and Shift+Enter compares builds the way Shift-click does. The critical banner is `role="alert"` and the notice feed `role="log"`.
+- **REQ-UX-003.** The hunter dashboard gains a Traits & bonds card: traits (innate and Legacy), condition bars, and friends.
+- **Friendship now has diminishing returns** (each shared hardship closes part of the remaining distance), and the shared-expedition gain is lower. With the live calendar, a flat gain made every pair of hunters best friends within a few hours of standing orders, and a bond everyone has means nothing.

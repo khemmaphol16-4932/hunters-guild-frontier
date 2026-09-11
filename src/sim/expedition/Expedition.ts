@@ -42,6 +42,7 @@ import type { HardConstraint } from '../../ai/policy/pipeline.js';
 import type { EmergencyPolicy } from '../../ai/policy/emergency.js';
 import type { RouteOrders } from '../../ai/policy/orders.js';
 import type { ObjectiveDef, PartyProposal } from '../../systems/party/Party.js';
+import { tellStory, type CombatStory } from '../combat/combatStory.js';
 
 export type NodeKind = 'combat' | 'rest' | 'discovery' | 'event' | 'boss';
 
@@ -87,6 +88,8 @@ export interface NodeReport {
   readonly encounterSeconds: number;
   /** Party health fraction on leaving the node. */
   readonly partyHealth: number;
+  /** For a fight: the replay's verdict, its "why", key skills and moments (REQ-UX-004). */
+  readonly story?: CombatStory;
 }
 
 export interface HunterAftermath {
@@ -483,6 +486,7 @@ export class Expedition {
         highlights: result.log.filter((e) => e.highlight),
         encounterSeconds: Math.round(result.elapsedSeconds * 10) / 10,
         partyHealth: partyHealthFraction([...combatants.values()]),
+        story: tellStory(result.facts, result.outcome, result.elapsedSeconds),
       });
 
       if (result.outcome === 'victory') {

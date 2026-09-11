@@ -79,6 +79,34 @@ export interface EncounterResult {
   readonly downed: readonly Combatant[];
   readonly dead: readonly Combatant[];
   readonly xp: number;
+  /** What happened, as data rather than prose — the raw material for the replay (REQ-UX-004). */
+  readonly facts: CombatFacts;
+}
+
+/**
+ * The structured record of one fight (REQ-UX-004).
+ *
+ * The log says what happened in sentences; this says it in numbers a timeline can reason
+ * over: who dealt and took the damage, what brought each hunter down, who went back for
+ * whom, who could have and did not, and how the balance of the fight moved second by
+ * second. `sim/combat/combatStory.ts` turns it into "why".
+ */
+export interface CombatFacts {
+  readonly names: Readonly<Record<string, string>>;
+  readonly bosses: readonly string[];
+  readonly damageBy: Readonly<Record<string, number>>;
+  readonly damageTo: Readonly<Record<string, number>>;
+  readonly healingBy: Readonly<Record<string, number>>;
+  /** combatant id -> skill name -> uses. */
+  readonly skillUses: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  readonly kills: readonly { readonly at: number; readonly targetId: string; readonly byId: string; readonly label: string }[];
+  readonly downs: readonly { readonly at: number; readonly targetId: string; readonly sourceId: string }[];
+  readonly deaths: readonly { readonly at: number; readonly id: string }[];
+  readonly rescues: readonly { readonly at: number; readonly byId: string; readonly targetId: string }[];
+  /** A rescue that was on the table and not taken: the chooser, the fallen, what they did instead. */
+  readonly declinedRescues: readonly { readonly at: number; readonly byId: string; readonly targetId: string; readonly chose: string }[];
+  /** Once a second: the guild's and the enemy's remaining health, as fractions. */
+  readonly samples: readonly { readonly at: number; readonly guild: number; readonly enemy: number }[];
 }
 
 export interface EncounterDeps {
@@ -120,6 +148,18 @@ export class CombatEncounter {
   private readonly damage: DamagePipeline;
   private readonly log: CombatLogEntry[] = [];
   private elapsed = 0;
+  private readonly damageBy = new Map<string, number>();
+  private readonly damageTo = new Map<string, number>();
+  private readonly healingBy = new Map<string, number>();
+  private readonly skillUses = new Map<string, Map<string, number>>();
+  private readonly kills: { at: number; targetId: string; byId: string; label: string }[] = [];
+  private readonly downs: { at: number; targetId: string; sourceId: string }[] = [];
+  private readonly deaths: { at: number; id: string }[] = [];
+  private readonly rescues: { at: number; byId: string; targetId: string }[] = [];
+  private readonly declined: { at: number; byId: string; targetId: string; chose: string }[] = [];
+  private readonly declinedSeen = new Set<string>();
+  private readonly samples: { at: number; guild: number; enemy: number }[] = [];
+  private nextSampleAt = 0;
   private finished: EncounterOutcome = 'ongoing';
   /** Elapsed time at which the whole standing party first committed to breaking off. */
   private disengagingSince: number | undefined;
@@ -165,6 +205,10 @@ export class CombatEncounter {
   step(rng: Rng, dt: number): void {
     if (this.finished !== 'ongoing') return;
     this.elapsed += dt;
+    if (this.elapsed >= this.nextSampleAt) {
+      this.samples.push({ at: Math.round(this.elapsed * 10) / 10, guild: healthShare(this.guild), enemy: healthShare(this.monsters) });
+      this.nextSampleAt += 1;
+    }
 
     for (const c of this.all()) {
       if (c.dead) continue;
@@ -240,6 +284,7 @@ export class CombatEncounter {
     // zone's business, not combat's — the expedition decides, per REQ-ZON-001.
     c.dead = true;
     c.downed = false;
+    this.deaths.push({ at: this.at(), id: c.id });
     this.record(c, `${c.name} did not get back up.`, true, ['death']);
 
     // Deliberately no `combat.companionLost` here. Whether a hunter is *permanently* lost is
@@ -281,6 +326,16 @@ export class CombatEncounter {
 
     const decision = this.deps.ai.decide(view);
     if (!decision) return;
+    if (decision.action.kind !== 'rescue') {
+      for (const scored of decision.trace ?? []) {
+        const candidate = scored.candidate;
+        if (candidate.kind !== 'rescue' || candidate.targetId === undefined) continue;
+        const key = `${c.id}>${candidate.targetId}`;
+        if (this.declinedSeen.has(key)) continue;
+        this.declinedSeen.add(key);
+        this.declined.push({ at: this.at(), byId: c.id, targetId: candidate.targetId, chose: decision.action.kind });
+      }
+    }
 
     this.deps.onDecision?.(c, decision.explanation, decision.reasonCodes);
     this.perform(rng, c, decision.action, decision.explanation, decision.reasonCodes);
@@ -360,6 +415,8 @@ export class CombatEncounter {
           const before = target.health;
           target.health = Math.min(target.maxHealth, target.health + healed);
           const actual = target.health - before;
+          this.healingBy.set(actor.id, (this.healingBy.get(actor.id) ?? 0) + actual);
+          this.countSkill(actor, skill.name);
 
           // Healing generates threat (REQ-AI-003) — this is why a healer needs a tank.
           for (const monster of this.monsters) {
@@ -388,6 +445,7 @@ export class CombatEncounter {
         }
 
         actor.targetId = target.id;
+        this.countSkill(actor, skill.name);
         const type = skill.tags.includes('magical') ? 'magic' : 'physical';
         const result = this.damage.resolve(rng, {
           attacker: actor,
@@ -420,6 +478,7 @@ export class CombatEncounter {
     rescuer.rescuingId = undefined;
     rescuer.rescueProgress = 0;
 
+    this.rescues.push({ at: this.at(), byId: rescuer.id, targetId: target.id });
     this.record(rescuer, `${rescuer.name} pulled ${target.name} back to their feet.`, true, [
       'rescue_completed',
     ]);
@@ -621,6 +680,9 @@ export class CombatEncounter {
   ): void {
     if (target.dead || target.downed) return;
 
+    const landed = Math.min(amount, Math.max(0, target.health));
+    this.damageBy.set(sourceId, (this.damageBy.get(sourceId) ?? 0) + landed);
+    this.damageTo.set(target.id, (this.damageTo.get(target.id) ?? 0) + landed);
     target.health -= amount;
     target.secondsSinceAttacked = 0;
 
@@ -630,6 +692,7 @@ export class CombatEncounter {
 
     if (target.side === 'monster') {
       target.dead = true;
+      this.kills.push({ at: this.at(), targetId: target.id, byId: sourceId, label });
       this.record(target, `${target.name} fell to ${label}.`, true, ['monster_defeated']);
       // REQ-AI-006 / DL-004: this is the moment a hunter may retarget.
       for (const hunter of this.guild) {
@@ -656,6 +719,7 @@ export class CombatEncounter {
     target.downed = true;
     target.downedRemaining = this.deps.balance.downed.timerSeconds;
     target.rescuingId = undefined;
+    this.downs.push({ at: this.at(), targetId: target.id, sourceId });
     this.record(target, `${target.name} went down.`, true, ['downed', `source:${sourceId}`]);
     if (target.hunterId) this.deps.events?.emit('combat.nearDeath', { hunterId: target.hunterId });
   }
@@ -773,6 +837,41 @@ export class CombatEncounter {
       downed: this.guild.filter((c) => c.downed),
       dead: this.guild.filter((c) => c.dead),
       xp,
+      facts: this.facts(),
+    };
+  }
+
+  private at(): number {
+    return Math.round(this.elapsed * 10) / 10;
+  }
+
+  private countSkill(actor: Combatant, skill: string): void {
+    const uses = this.skillUses.get(actor.id) ?? new Map<string, number>();
+    uses.set(skill, (uses.get(skill) ?? 0) + 1);
+    this.skillUses.set(actor.id, uses);
+  }
+
+  private facts(): CombatFacts {
+    const names: Record<string, string> = {};
+    for (const c of this.all()) names[c.id] = c.name;
+    const bosses = this.monsters
+      .filter((m) => m.monsterId !== undefined && this.deps.monsterOf(m.monsterId)?.tier === 'boss')
+      .map((m) => m.id);
+    const skillUses: Record<string, Record<string, number>> = {};
+    for (const [id, uses] of this.skillUses) skillUses[id] = Object.fromEntries(uses);
+    return {
+      names,
+      bosses,
+      damageBy: Object.fromEntries(this.damageBy),
+      damageTo: Object.fromEntries(this.damageTo),
+      healingBy: Object.fromEntries(this.healingBy),
+      skillUses,
+      kills: this.kills,
+      downs: this.downs,
+      deaths: this.deaths,
+      rescues: this.rescues,
+      declinedRescues: this.declined,
+      samples: this.samples,
     };
   }
 
@@ -797,4 +896,11 @@ export class CombatEncounter {
       reasonCodes,
     });
   }
+}
+
+/** Remaining health across a side, as a fraction of its total. */
+function healthShare(side: readonly Combatant[]): number {
+  const total = side.reduce((sum, c) => sum + c.maxHealth, 0);
+  if (total <= 0) return 0;
+  return Math.round((side.reduce((sum, c) => sum + (c.dead ? 0 : Math.max(0, c.health)), 0) / total) * 1000) / 1000;
 }

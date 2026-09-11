@@ -49,7 +49,7 @@ describe('friendship bonds (REQ-HUN-012)', () => {
     const h = testSession('bond-friends');
     const a = h.debug.spawnHunter();
     const b = h.debug.spawnHunter();
-    for (let i = 0; i < 3; i++) h.session.events.emit('combat.rescued', { hunterId: a.id, byHunterId: b.id });
+    for (let i = 0; i < 4; i++) h.session.events.emit('combat.rescued', { hunterId: a.id, byHunterId: b.id });
     expect(h.session.friendship.areFriends(a.id, b.id)).toBe(true);
     expect(h.session.friendship.bondsOf(a.id)[0]).toMatchObject({ with: b.id, friends: true });
     h.session.friendship.forget(b.id);
@@ -110,5 +110,22 @@ describe('combat bonuses from traits and friendship', () => {
     const loyal = { ...h.debug.spawnHunter(), traitIds: ['loyal' as never] };
     expect(h.session.buildIdentity.profileOf(loyal).allySafety).toBeGreaterThan(0);
     expect(h.session.buildIdentity.profileOf(plain).allySafety ?? 0).toBe(0);
+  });
+});
+
+describe('friendship takes time', () => {
+  it('diminishing returns: dozens of shared expeditions, not a handful, make two hunters friends', () => {
+    const { session, debug } = testSession('bond-slow');
+    const a = debug.spawnHunter();
+    const b = debug.spawnHunter();
+    session.roster.update({ ...a, traitIds: [] });
+    session.roster.update({ ...b, traitIds: [] });
+    let expeditions = 0;
+    while (!session.friendship.areFriends(a.id, b.id) && expeditions < 500) {
+      session.friendship.recordShared([a.id, b.id]);
+      expeditions++;
+    }
+    expect(expeditions).toBeGreaterThan(20);
+    expect(session.friendship.strength(a.id, b.id)).toBeLessThan(1);
   });
 });
