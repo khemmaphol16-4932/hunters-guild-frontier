@@ -91,6 +91,12 @@ export interface EncounterDeps {
   readonly emergency: EmergencyPolicy | undefined;
   /** Where the fight is (§140-M). Defaults to a safe zone when the caller has none. */
   readonly environment?: CombatEnvironment;
+  /**
+   * The monster id that is a *world* boss in this fight, when one is present (REQ-BOS-003).
+   * The encounter is the one place a boss kill is reported; knowing which boss is the world
+   * boss here is what stops a caller reporting the same kill a second time.
+   */
+  readonly worldBossId?: string;
   /** What the guild sent this party to do (§28). Defaults to neutral. */
   readonly objective?: CombatObjective;
   /**
@@ -631,7 +637,7 @@ export class CombatEncounter {
             this.deps.events?.emit('combat.bossDefeated', {
               hunterId: hunter.hunterId,
               bossId: def.id,
-              worldBoss: false,
+              worldBoss: def.id === this.deps.worldBossId,
             });
           }
         }

@@ -198,7 +198,7 @@ export class Session {
 
   /** What the guild knows about the world. Permanent (REQ-WLD-001). */
   readonly worldKnowledge: WorldKnowledge;
-  readonly worldEvents = new WorldEvents();
+  readonly worldEvents: WorldEvents;
 
   /** The town, and everything that follows from having one (REQ-TWN-*, REQ-DEP-*). */
   readonly town: Town;
@@ -367,6 +367,10 @@ export class Session {
       balance: this.content.balance.chronicle,
       events: this.events,
       currentTick: () => this.clock.tick,
+    });
+    this.worldEvents = new WorldEvents({
+      boss: this.content.worldBoss,
+      ticksPerStep: () => this.clock.coarseStepRatio,
     });
     this.monument = new Monument({
       events: this.events,

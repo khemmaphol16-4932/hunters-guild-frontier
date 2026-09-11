@@ -810,6 +810,37 @@ export class GuildCommands {
     return this.dispatch(event.regionId, 'slay', party, undefined, event);
   }
 
+  /**
+   * REQ-CRD-002/003 for the world boss: the authored drop chance, the per-boss guarantee
+   * after enough kills without a card, and a duplicate that converts into essence rather
+   * than sitting as a dead second copy.
+   */
+  private rollWorldBossCard(bossId: string): void {
+    const boss = this.session.content.monstersById.get(bossId);
+    const pool = boss?.cardPool ?? [];
+    if (pool.length === 0) return;
+    const rules = this.session.content.balance.loot.bossCards;
+    const guaranteed = this.session.worldEvents.killsSinceCard + 1 >= rules.duplicateProtection.guaranteeAfterKills;
+    const rng = this.session.streams.loot;
+    const dropped = guaranteed || rng.bool(rules.dropChance);
+    this.session.worldEvents.recordCardRoll(dropped);
+    if (!dropped) return;
+    const card = pool[rng.int(0, pool.length)] ?? pool[0]!;
+    const added = this.session.armoury.addCard(card);
+    if (added.duplicate) {
+      const conversion = this.session.cards.duplicateConversion(card);
+      if (conversion.ok) {
+        this.session.resources.transact({ credits: { [conversion.value.resourceId]: conversion.value.amount } });
+      }
+    }
+    this.session.audit.record({
+      actor: { kind: 'system', name: 'guild-ai' },
+      system: 'loot',
+      outcome: `${boss?.name ?? bossId} dropped ${card}${added.duplicate ? ' (a duplicate, converted)' : ''}${guaranteed ? ' — guaranteed by duplicate protection' : ''}`,
+      reasonCodes: ['world_boss_card', `card:${card}`],
+    });
+  }
+
   /** Why endless expeditions are or are not open to the guild yet. */
   endlessAvailability(): { readonly open: boolean; readonly reason: string } {
     const needed = this.session.content.endless.unlock.guildMasteryLevel;
@@ -871,7 +902,10 @@ export class GuildCommands {
       rng,
       region,
       proposal,
-      endless ? { endless: { maxDepth: endlessConfig.maxDepth, statsPerDepth: endlessConfig.statsPerDepth } } : {},
+      {
+        ...(endless ? { endless: { maxDepth: endlessConfig.maxDepth, statsPerDepth: endlessConfig.statsPerDepth } } : {}),
+        ...(worldBoss ? { worldBossId: worldBoss.bossId } : {}),
+      },
     );
     this.session.guildMastery.record('expedition', Math.max(1, result.reachedNode) * this.masteryPoints.expeditionPerNode);
 
@@ -1012,16 +1046,12 @@ export class GuildCommands {
       regionName: region.name,
     });
 
+    // The encounter itself reported the kill as a world-boss kill (worldBossId above). This
+    // used to emit it a second time for every survivor, so each hunter's boss counter went up
+    // by two for one kill (DL-056).
     if (worldBoss && result.bossDefeated) {
       this.session.worldEvents.defeat(worldBoss.id, this.session.clock.tick);
-      const boss = this.session.content.monstersById.get(worldBoss.bossId);
-      for (const survivor of result.aftermath.filter((entry) => !entry.died)) {
-        this.session.events.emit('combat.bossDefeated', { hunterId: survivor.hunterId, bossId: worldBoss.bossId, worldBoss: true });
-      }
-      const card = boss?.cardPool[0];
-      if (card && this.session.streams.loot.bool(this.session.content.balance.loot.bossCards.dropChance)) {
-        this.session.armoury.addCard(card);
-      }
+      this.rollWorldBossCard(worldBoss.bossId);
     }
 
     const contract = endless ? undefined : this.session.contracts.resolve(regionId, proposal.objective.id);

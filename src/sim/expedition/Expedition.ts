@@ -67,6 +67,8 @@ export interface EndlessRunConfig {
 
 export interface RunOptions {
   readonly endless?: EndlessRunConfig;
+  /** The boss on this route is the world boss (REQ-BOS-003); its kill is reported as one. */
+  readonly worldBossId?: string;
 }
 
 export interface NodeReport {
@@ -456,7 +458,7 @@ export class Expedition {
         continue;
       }
 
-      const result = this.fight(rng, node, combatants, region, party.objective, ambushNext, endless);
+      const result = this.fight(rng, node, combatants, region, party.objective, ambushNext, endless, options.worldBossId);
       ambushNext = false;
       elapsedSeconds += result.elapsedSeconds + 20;
 
@@ -593,6 +595,7 @@ export class Expedition {
     objective: ObjectiveDef,
     ambushed = false,
     endless?: EndlessRunConfig,
+    worldBossId?: string,
   ): EncounterResult {
     const guild = [...combatants.values()].filter((c) => !c.dead);
     for (const c of guild) {
@@ -640,6 +643,7 @@ export class Expedition {
           canInjure: this.deps.world.zoneTiers[region.zoneTier].canInjure,
         },
         objective: { id: objective.id, riskPreference: objective.riskPreference },
+        ...(worldBossId !== undefined ? { worldBossId } : {}),
         ...(this.deps.chronicle ? { events: this.deps.chronicle } : {}),
       },
       guild,

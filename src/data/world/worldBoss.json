@@ -1,0 +1,8 @@
+{
+  "$comment": "REQ-BOS-003: the world boss appears as a world event in a real region and respawns after defeat. Values moved out of WorldEvents.ts, where they were constants (DL-056). respawnSteps is in COARSE steps — the TypeScript version added 500 to the tick, which is 25 steps, twenty times faster than DL-055 said. PENDING APPROVAL: respawn interval.",
+  "id": "drowned_choir",
+  "bossId": "the_drowned_choir",
+  "regionId": "ashfall_barrows",
+  "firstAppearanceSteps": 0,
+  "respawnSteps": 500
+}

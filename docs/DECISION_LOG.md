@@ -608,3 +608,16 @@ Two trait effects gained readers so the Legacy Traits would do what they say: `e
 **Decision.** The Drowned Choir appears in the Ashfall Barrows as an explicit world event rather than becoming the region's permanent boss. The expedition screen exposes the event and a dedicated challenge command replaces the route boss for that run. A victory emits the world-boss form of the combat event, applies world-boss reputation, rolls the Choir's own card pool, removes the event, and schedules its deterministic respawn 500 simulation steps later.
 
 **Why.** Making the Choir Ashfall's ordinary boss would erase the authored Warden of Ash and would not satisfy appearance or respawn. A saved event identity and next-appearance tick make the world state inspectable, replayable and migration-safe. Save v23 carries this state. The respawn interval is a pending-approval balance default.
+
+---
+
+## DL-056 — World-boss corrections: respawn in steps, one kill reported once
+
+**Ambiguity.** None. This records two bugs in DL-055's implementation, found in review.
+
+**Decision.**
+1. `respawnSteps` is authored in coarse steps in `world/worldBoss.json`, together with the boss, region and first appearance, and is converted with the clock's ratio. The original constant was added straight to the tick, so the Choir returned after **25 steps instead of 500**.
+2. The encounter is the only place a boss kill is reported. `Expedition.run` tells the encounter which boss is the world boss, and the encounter emits the kill with `worldBoss: true`. The command layer used to emit it a second time for every survivor, so **one kill counted twice** in every hunter's Chronicle.
+3. The world-boss card roll now honours the per-boss guarantee after `guaranteeAfterKills`, and converts a duplicate into essence (REQ-CRD-003). Both rules were authored and ignored.
+
+**Why.** The first bug is DL-042's mistake again: a second notion of time beside the clock. The second is the rule the Chronicle depends on: one fact, reported once, at the place it happened.

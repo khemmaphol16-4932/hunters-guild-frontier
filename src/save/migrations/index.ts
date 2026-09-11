@@ -455,7 +455,14 @@ const v21ToV22: Migration = {
     return { ...asRecord(payload, 21), endlessRecords: { records: [] } };
   },
 };
-const v22ToV23: Migration = { from:22,to:23,describe:'persist world-boss events and respawn',migrate(payload:unknown):unknown{if(typeof payload!=='object'||payload===null)throw new SaveMigrationError('v22 payload is not an object');return{...(payload as Record<string,unknown>),worldEvents:{nextWorldBossAtTick:0,worldBossDefeats:0}}}};
+const v22ToV23: Migration = {
+  from: 22,
+  to: 23,
+  describe: 'persist world-boss events and respawn',
+  migrate(payload: unknown): unknown {
+    return { ...asRecord(payload, 22), worldEvents: { nextWorldBossAtTick: 0, worldBossDefeats: 0 } };
+  },
+};
 
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
