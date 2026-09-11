@@ -177,9 +177,62 @@ ul.notes.weak li { color: var(--warn); }
    list with coordinates printed next to it — a footprint bug should be visible.
    Isometric pixel-art presentation is Phase 9 (REQ-UX-007); this is legibility. */
 
-.town-layout { display: grid; gap: 14px; grid-template-columns: auto minmax(280px, 1fr); align-items: start; }
+.town-layout { display: grid; gap: 14px; grid-template-columns: minmax(0, auto) minmax(280px, 1fr); align-items: start; min-width: 0; }
 
 .town-grid { display: grid; gap: 2px; }
+
+/* Phase 9 vertical art slice: the simulation still owns rectangular cells; this layer only
+   projects them into diamonds. Moving or selecting a building therefore exercises the same
+   TownGrid rules as the old diagnostic grid. */
+.town-scene-card { overflow: hidden; min-width: 0; }
+.town-art-banner {
+  height: 150px; margin: -2px -4px 12px; border: 1px solid var(--line); border-radius: 4px;
+  background:
+    linear-gradient(90deg, rgba(20,23,28,.15), rgba(20,23,28,.88)),
+    url('../../art/generated/guild-town-overview-v1.png') center 61% / cover;
+  image-rendering: pixelated;
+}
+.iso-town-viewport {
+  overflow: auto; min-height: 330px; border: 1px solid #3b4650; border-radius: 5px;
+  background: radial-gradient(ellipse at 50% 20%, #3d5547 0, #263b35 48%, #182b2b 100%);
+  scrollbar-color: var(--accent) var(--panel-2);
+}
+.iso-town { position: relative; margin: 18px auto 0; min-width: 620px; }
+.iso-tile {
+  position: absolute; width: 48px; height: 24px; padding: 0; border: 1px solid #63705b;
+  border-radius: 0; background: #405443; transform: translate(-50%, 0) skewY(-26.565deg) scaleY(.894);
+  opacity: .84;
+}
+.iso-tile:nth-child(3n) { background: #465d47; }
+.iso-tile:hover, .iso-tile:focus-visible { z-index: 400; border-color: #f0c56c; filter: brightness(1.25); }
+.iso-tile.occupied { background: #465044; border-color: #58675a; }
+.iso-tile.buildable { background: #547454; border-color: #8fbd7b; }
+.iso-building {
+  --footprint-w: 1; --footprint-h: 1;
+  position: absolute; transform: translate(-50%, 0); width: calc(34px + var(--footprint-w) * 11px);
+  min-height: calc(43px + var(--footprint-h) * 7px); padding: 19px 4px 4px;
+  border: 2px solid #111820; border-radius: 2px; color: #f2ead8; background: #725035;
+  box-shadow: 7px 9px 0 rgba(8,12,15,.38), inset -6px -8px 0 rgba(20,20,20,.22);
+  text-shadow: 1px 1px #111; font-size: 9px; line-height: 1.15;
+}
+.iso-building:hover { border-color: var(--accent); filter: brightness(1.12); }
+.iso-building.selected { outline: 3px solid #f1c35f; outline-offset: 3px; z-index: 500 !important; }
+.iso-building.damaged { filter: grayscale(.75) brightness(.65); }
+.iso-building.damaged::after { content: '✕'; position: absolute; inset: 2px 4px auto auto; color: var(--warn); font-size: 15px; }
+.iso-roof {
+  position: absolute; left: -5px; right: -5px; top: -12px; height: 25px;
+  background: #8b4e3d; border: 2px solid #281d1b; clip-path: polygon(50% 0,100% 45%,82% 100%,18% 100%,0 45%);
+}
+.iso-building-name { position: relative; display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iso-tier { position: relative; color: #f1c35f; font-size: 7px; letter-spacing: -1px; }
+.iso-building.cat-management { background: #705838; }
+.iso-building.cat-housing { background: #526b79; }
+.iso-building.cat-services, .iso-building.cat-healing { background: #4f765e; }
+.iso-building.cat-crafting { background: #86523a; }
+.iso-building.cat-economy { background: #7a693b; }
+.iso-building.cat-research, .iso-building.cat-revival { background: #665579; }
+.iso-building.cat-defense { background: #754547; }
+.iso-building.cat-recruitment { background: #476b72; }
 
 .town-cell {
   width: 22px; height: 22px; padding: 0;
@@ -265,3 +318,13 @@ html.reduced-motion *, html.reduced-motion *::before, html.reduced-motion *::aft
   background: var(--panel-2); color: var(--accent); border-bottom: 1px solid var(--line);
 }
 .hint button { margin-left: auto; }
+
+@media (max-width: 760px) {
+  #view-switch { overflow-x: auto; }
+  #view-switch button { flex: 0 0 auto; }
+  #view-body > .grid, #detail { padding-inline: 10px; }
+  .town-layout { grid-template-columns: minmax(0, 1fr); }
+  .town-art-banner { height: 112px; }
+  .iso-town-viewport { width: 100%; }
+  main { grid-template-columns: minmax(150px, 42%) minmax(0, 1fr); }
+}

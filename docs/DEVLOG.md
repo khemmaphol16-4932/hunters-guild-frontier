@@ -615,3 +615,9 @@ Isometric pixel-art presentation of the town and world (REQ-UX-007, `art/ART_DIR
 # 2026-09-11 — Rebirth approved and delivered
 
 The design owner approved five rebirths per Hunter: three permanent attribute points, one level-only constellation bypass and a cumulative 10% XP/mastery gain per journey, with a data-authored Awakened trait choice at rank 3. Rebirth resets the leveling journey and equipped build while retaining the Hunter's identity, knowledge, mastery, relationships and history. Save v26 migrates existing Hunters with zero rebirth progress.
+
+---
+
+# 2026-09-11 — Phase 9 art vertical slice
+
+The first generated Guild Town overview now lives in `art/generated/` as the palette and composition anchor from `ART_DIRECTION.md`. `TownView` projects the authoritative rectangular grid into interactive isometric diamonds and depth-sorted building silhouettes without moving any placement rules into UI. Categories, tiers, damage and selection read visually, while building, relocation and inspection still dispatch the same commands. A narrow-screen review also caught and fixed the town layout forcing page-wide horizontal overflow.

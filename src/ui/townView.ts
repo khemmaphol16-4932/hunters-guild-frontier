@@ -179,12 +179,18 @@ export class TownView {
   // --- The grid -------------------------------------------------------------
 
   private renderGrid(): HTMLElement {
-    const card = el('div', 'card');
-    card.append(el('h3', undefined, 'The town'));
+    const card = el('div', 'card town-scene-card');
+    card.append(el('h3', undefined, 'The town · isometric view'));
+    card.append(el('div', 'town-art-banner'));
 
     const town = this.session.town;
-    const grid = el('div', 'town-grid');
-    grid.style.gridTemplateColumns = `repeat(${town.grid.width}, 22px)`;
+    const grid = el('div', 'iso-town');
+    const tileW = 48;
+    const tileH = 24;
+    const originX = town.grid.height * tileW / 2 + 28;
+    grid.style.width = `${(town.grid.width + town.grid.height) * tileW / 2 + 56}px`;
+    grid.style.height = `${(town.grid.width + town.grid.height) * tileH / 2 + 150}px`;
+    grid.setAttribute('aria-label', `${town.stage().name} building grid`);
 
     // Which placement covers each cell, so a click anywhere on a building selects it.
     const owner = new Map<string, Placement>();
@@ -199,24 +205,47 @@ export class TownView {
     for (let y = 0; y < town.grid.height; y++) {
       for (let x = 0; x < town.grid.width; x++) {
         const placement = owner.get(`${x},${y}`);
-        const cell = el('button', 'town-cell');
+        const cell = el('button', 'iso-tile');
+        cell.style.left = `${originX + (x - y) * tileW / 2}px`;
+        cell.style.top = `${18 + (x + y) * tileH / 2}px`;
         cell.title = placement
           ? `${this.nameOf(placement)} — click to select`
           : `${x},${y} — empty`;
-
-        if (placement) {
-          const def = town.definition(placement.buildingId);
-          cell.classList.add('built', `cat-${def?.category ?? 'management'}`);
-          cell.textContent = (def?.name[0] ?? '?').toUpperCase();
-          if (placement.instanceId === this.state.selected) cell.classList.add('selected');
-        }
+        if (placement) cell.classList.add('occupied');
+        if (this.state.placing && !placement) cell.classList.add('buildable');
 
         cell.onclick = () => this.onCellClick(x, y, placement);
         grid.append(cell);
       }
     }
 
-    card.append(grid);
+    // Buildings sit above the diamond floor and are depth-sorted by their southern edge.
+    for (const placement of town.grid.all()) {
+      const rect = town.grid.rectFor(placement);
+      if (!rect) continue;
+      const def = town.definition(placement.buildingId);
+      const centreX = rect.x + rect.width / 2;
+      const centreY = rect.y + rect.height / 2;
+      const building = el('button', `iso-building cat-${def?.category ?? 'management'}`) as HTMLButtonElement;
+      building.style.left = `${originX + (centreX - centreY) * tileW / 2}px`;
+      building.style.top = `${18 + (centreX + centreY) * tileH / 2 - 35 - placement.tier * 5}px`;
+      building.style.zIndex = String(100 + rect.y + rect.height + rect.x + rect.width);
+      building.style.setProperty('--footprint-w', String(rect.width));
+      building.style.setProperty('--footprint-h', String(rect.height));
+      building.classList.toggle('selected', placement.instanceId === this.state.selected);
+      building.classList.toggle('damaged', placement.damaged === true);
+      building.setAttribute('aria-label', `${this.nameOf(placement)}, tier ${placement.tier}${placement.damaged ? ', damaged' : ''}`);
+      building.title = `${this.nameOf(placement)} · tier ${placement.tier} · facing ${placement.rotation}°`;
+      building.append(el('span', 'iso-roof'));
+      building.append(el('span', 'iso-building-name', def?.name ?? placement.buildingId));
+      building.append(el('span', 'iso-tier', '◆'.repeat(placement.tier)));
+      building.onclick = () => this.onCellClick(placement.x, placement.y, placement);
+      grid.append(building);
+    }
+
+    const viewport = el('div', 'iso-town-viewport');
+    viewport.append(grid);
+    card.append(viewport);
 
     if (this.state.placing) {
       const def = town.definition(this.state.placing);
