@@ -102,11 +102,20 @@ export class AppShell {
    * the middle of using a control, so a tick never snatches a half-made choice away.
    */
   refresh(): void {
-    this.renderNav();
-    this.renderAlerts();
     const active = document.activeElement;
-    if (active && this.body.contains(active) && ['SELECT', 'INPUT', 'TEXTAREA'].includes(active.tagName)) return;
-    this.renderBody();
+    // Each renderer replaces its region's children. Preserve the focused region so the
+    // live clock cannot throw a keyboard user back to the document every few seconds.
+    // Other regions still refresh, so the town and its notices do not appear frozen while
+    // somebody is navigating the top bar or changing a setting.
+    if (!active || !this.nav.contains(active)) this.renderNav();
+    if (!active || !this.alerts.contains(active)) this.renderAlerts();
+    if (
+      !active ||
+      !this.body.contains(active) ||
+      !['SELECT', 'INPUT', 'TEXTAREA'].includes(active.tagName)
+    ) {
+      this.renderBody();
+    }
   }
 
   private renderNav(): void {
