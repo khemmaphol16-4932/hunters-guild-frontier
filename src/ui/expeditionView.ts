@@ -24,6 +24,7 @@ import { preferences } from './preferences.js';
 import { activatable } from './a11y.js';
 import { describeAvailability } from '../core/hunter/availability.js';
 import { STANDING_ORDERS, contradictionsIn } from '../ai/policy/orders.js';
+import type { NodeReport } from '../sim/expedition/Expedition.js';
 
 const el = (tag: string, className?: string, text?: string): HTMLElement => {
   const node = document.createElement(tag);
@@ -343,7 +344,8 @@ export class ExpeditionView {
         this.state.outcome = outcome.value;
         this.state.message = outcome.value.result.summary;
         this.state.messageIsError = outcome.value.result.wiped;
-        this.state.expandedNode = undefined;
+        const firstFight = outcome.value.result.nodes.findIndex((node) => node.facts);
+        this.state.expandedNode = firstFight >= 0 ? firstFight : undefined;
       }
       this.render();
     };
@@ -445,7 +447,8 @@ export class ExpeditionView {
         this.state.outcome = outcome.value;
         this.state.message = outcome.value.result.summary;
         this.state.messageIsError = outcome.value.result.wiped;
-        this.state.expandedNode = undefined;
+        const firstFight = outcome.value.result.nodes.findIndex((node) => node.facts);
+        this.state.expandedNode = firstFight >= 0 ? firstFight : undefined;
       }
       this.render();
     };
@@ -507,7 +510,8 @@ export class ExpeditionView {
             : '';
         this.state.message = outcome.value.result.summary + recordLine;
         this.state.messageIsError = outcome.value.result.wiped;
-        this.state.expandedNode = undefined;
+        const firstFight = outcome.value.result.nodes.findIndex((node) => node.facts);
+        this.state.expandedNode = firstFight >= 0 ? firstFight : undefined;
       }
       this.render();
     };
@@ -565,6 +569,7 @@ export class ExpeditionView {
       }
 
       if (this.state.expandedNode === index) {
+        if (report.facts) route.append(this.renderBattlefield(report, outcome));
         if (story) {
           route.append(el('p', 'name', story.verdict));
           for (const line of story.why) route.append(el('p', 'story-why', line));
@@ -614,6 +619,58 @@ export class ExpeditionView {
     wrap.append(aftermath);
 
     return wrap;
+  }
+
+  /**
+   * REQ-UX-004: replay the fight as a readable battlefield, driven only by the immutable
+   * facts combat emitted. The written verdict below remains the accessible explanation.
+   */
+  private renderBattlefield(report: NodeReport, outcome: ExpeditionOutcome): HTMLElement {
+    const facts = report.facts!;
+    const stage = el('div', 'combat-stage');
+    const partyIds = new Set(outcome.party.members.map((member) => String(member.hunterId)));
+    const ids = Object.keys(facts.names);
+    const guild = ids.filter((id) => partyIds.has(id));
+    const enemies = ids.filter((id) => !partyIds.has(id));
+    const lastSample = facts.samples.at(-1);
+    const last = {
+      guild: report.partyHealth,
+      enemy: report.outcome === 'cleared' ? 0 : (lastSample?.enemy ?? 1),
+    };
+
+    const force = (label: string, members: readonly string[], side: 'guild' | 'enemy', health: number) => {
+      const group = el('div', `combat-force ${side}`);
+      group.append(el('span', 'combat-force-name', label));
+      const track = el('span', 'combat-force-track');
+      const fill = el('span', 'combat-force-fill');
+      fill.style.setProperty('--remaining', `${Math.max(0, health) * 100}%`);
+      track.append(fill);
+      group.append(track);
+      const line = el('div', 'combat-line');
+      for (const [index, id] of members.entries()) {
+        const token = el('span', `combat-token ${side}`);
+        token.style.animationDelay = `${index * 110}ms`;
+        const name = facts.names[id] ?? id;
+        token.textContent = name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2);
+        token.title = `${name} · ${Math.round(facts.damageBy[id] ?? 0)} damage dealt`;
+        token.setAttribute('aria-hidden', 'true');
+        line.append(token);
+      }
+      group.append(line);
+      return group;
+    };
+
+    stage.append(
+      force('Guild', guild, 'guild', last.guild),
+      el('div', 'combat-clash', '⚔'),
+      force('Enemy', enemies, 'enemy', last.enemy),
+    );
+    stage.setAttribute(
+      'aria-label',
+      `Battlefield replay: Guild ended at ${pct(last.guild)} strength; enemies at ${pct(last.enemy)}.`,
+    );
+    stage.setAttribute('role', 'img');
+    return stage;
   }
 
   private field(label: string, control: HTMLElement): HTMLElement {

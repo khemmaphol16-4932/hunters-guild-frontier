@@ -356,6 +356,36 @@ select:hover { border-color: var(--accent); }
 
 /* --- Combat replay (REQ-UX-004) ------------------------------------------ */
 .story-why { margin: 2px 0 4px 14px; color: var(--text, #d8dee6); }
+.combat-stage {
+  display: grid; grid-template-columns: minmax(0,1fr) 34px minmax(0,1fr);
+  align-items: center; gap: 8px; min-height: 150px; margin: 8px 0 12px; padding: 14px;
+  overflow: hidden; border: 1px solid #526046; border-radius: 7px;
+  background: linear-gradient(rgba(9,16,18,.2), rgba(9,16,18,.72)),
+    url('../../art/generated/verdant-reach-vista-v1.png') center 58% / cover;
+}
+.combat-force { min-width: 0; }
+.combat-force-name { display: block; margin-bottom: 4px; font-weight: 700; text-transform: uppercase; }
+.combat-force.enemy .combat-force-name { text-align: right; }
+.combat-force-track { display: block; height: 7px; background: rgba(7,10,12,.72); border: 1px solid #172027; }
+.combat-force-fill {
+  display: block; height: 100%; width: var(--remaining); transform-origin: left;
+  background: #64a7d8; animation: combat-health 1.6s ease-out both;
+}
+.combat-force.enemy .combat-force-fill { margin-left: auto; transform-origin: right; background: #cb665e; }
+.combat-line { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 13px; }
+.combat-force.enemy .combat-line { justify-content: flex-end; }
+.combat-token {
+  display: grid; place-items: center; width: 28px; height: 35px; border: 2px solid #1a252b;
+  border-radius: 48% 48% 35% 35%; color: #fff8dc; background: #3e779d;
+  font-size: 8px; font-weight: 700; box-shadow: 2px 4px 0 rgba(5,9,12,.5);
+  animation: combat-arrival .55s ease-out both, combat-idle 1.4s .6s ease-in-out infinite alternate;
+}
+.combat-token.enemy { background: #923f43; }
+.combat-clash { color: #f4cf72; font-size: 24px; text-align: center; animation: combat-clash .8s ease-in-out infinite alternate; }
+@keyframes combat-arrival { from { opacity: 0; transform: translateY(18px); } }
+@keyframes combat-idle { to { transform: translateY(-3px); filter: brightness(1.14); } }
+@keyframes combat-clash { to { transform: scale(1.16) rotate(-7deg); } }
+@keyframes combat-health { from { width: 100%; } }
 .moment-death, .moment-declined-rescue { color: var(--warn); }
 .moment-boss-fell, .moment-rescue { color: var(--accent); }
 

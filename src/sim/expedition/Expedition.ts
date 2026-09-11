@@ -33,6 +33,7 @@ import { REASON } from '../../core/audit.js';
 import {
   CombatEncounter,
   type CombatEventSink,
+  type CombatFacts,
   type CombatLogEntry,
   type EncounterResult,
 } from '../combat/CombatEncounter.js';
@@ -90,6 +91,8 @@ export interface NodeReport {
   readonly partyHealth: number;
   /** For a fight: the replay's verdict, its "why", key skills and moments (REQ-UX-004). */
   readonly story?: CombatStory;
+  /** Structured replay data retained for presentation; it never feeds back into combat. */
+  readonly facts?: CombatFacts;
 }
 
 export interface HunterAftermath {
@@ -487,6 +490,7 @@ export class Expedition {
         encounterSeconds: Math.round(result.elapsedSeconds * 10) / 10,
         partyHealth: partyHealthFraction([...combatants.values()]),
         story: tellStory(result.facts, result.outcome, result.elapsedSeconds),
+        facts: result.facts,
       });
 
       if (result.outcome === 'victory') {
