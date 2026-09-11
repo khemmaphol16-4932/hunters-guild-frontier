@@ -41,8 +41,9 @@ import type { NewGamePlusSnapshot } from '../systems/progression/NewGamePlus.js'
 import type { EndlessRecordsSnapshot } from '../systems/progression/EndlessRecords.js';
 import type { WorldEventsSnapshot } from '../systems/world/WorldEvents.js';
 import type { FriendshipSnapshot } from '../systems/hunter/Friendship.js';
+import type { StandingOrdersSnapshot } from '../systems/guild/StandingOrders.js';
 
-export const CURRENT_SAVE_VERSION = 24;
+export const CURRENT_SAVE_VERSION = 25;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -222,7 +223,9 @@ export interface SavePayloadV22 extends SavePayloadV21 { readonly endlessRecords
 export interface SavePayloadV23 extends SavePayloadV22 { readonly worldEvents: WorldEventsSnapshot }
 /** v24 — friendship bonds between hunters (REQ-HUN-012). */
 export interface SavePayloadV24 extends SavePayloadV23 { readonly friendship: FriendshipSnapshot }
-export type CurrentSavePayload = SavePayloadV24;
+/** v25 — the standing expedition order the guild follows while the player is away. */
+export interface SavePayloadV25 extends SavePayloadV24 { readonly standingOrders: StandingOrdersSnapshot }
+export type CurrentSavePayload = SavePayloadV25;
 
 export interface Migration {
   readonly from: number;

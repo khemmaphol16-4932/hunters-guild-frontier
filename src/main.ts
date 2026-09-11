@@ -12,6 +12,7 @@ import { GuildCommands } from './app/GuildCommands.js';
 import { DebugConsole } from './debug/commands.js';
 import { AppShell } from './ui/appShell.js';
 import { BrowserStorage } from './save/SaveGame.js';
+import type { GuildReport } from './app/GuildReport.js';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('main: #root is missing from index.html');
@@ -33,8 +34,16 @@ const debug = new DebugConsole(session);
 // A new guild gets its starting roster and town (REQ-TWN-001). Only a *new* guild: placing
 // buildings for a restored save would put them somewhere the player did not choose.
 const restored = session.save.load('autosave');
+let offlineReport: GuildReport | undefined;
 if (restored.ok && restored.value.hunters.length > 0) {
   session.restore(restored.value);
+  // REQ-OFF-001: the guild kept working while the player was away. The wall clock is read
+  // here, at the composition root, and nowhere below it (tests/architecture.test.ts).
+  const savedAt = session.save.listSlots().find((slot) => slot.slot === 'autosave')?.savedAt;
+  if (savedAt !== undefined && Date.now() > savedAt) {
+    const report = commands.catchUpOffline(Date.now() - savedAt);
+    if (report.steps > 0) offlineReport = report;
+  }
 } else {
   commands.foundGuild();
 }
@@ -46,6 +55,22 @@ session.townJobs.refresh();
 
 const shell = new AppShell(root, session, commands);
 shell.mount();
+if (offlineReport) shell.showReport(offlineReport);
+
+// The town's live calendar: one step per `realSecondsPerStep` of real time, autosaved each
+// step so closing the tab loses at most one step (REQ-TEC-004). Before this the town only
+// moved when the player pressed "Let a season pass".
+const autosave = (): void => { session.save.autoSave(session.snapshot()); };
+autosave();
+setInterval(() => {
+  commands.passTime(1);
+  autosave();
+  shell.refresh();
+}, session.content.time.realSecondsPerStep * 1000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') autosave();
+});
+window.addEventListener('beforeunload', autosave);
 
 // Debug console is dev-only (REQ-TEC-006 — never exposed to normal players).
 if (import.meta.env.DEV) {

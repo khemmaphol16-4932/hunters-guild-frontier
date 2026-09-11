@@ -13,6 +13,8 @@ import { BuildDashboard } from './buildDashboard.js';
 import { ExpeditionView } from './expeditionView.js';
 import { TownView } from './townView.js';
 import { HallView } from './hallView.js';
+import { renderGuildReport } from './reportView.js';
+import type { GuildReport } from '../app/GuildReport.js';
 
 type ViewId = 'guild' | 'town' | 'hall' | 'field';
 
@@ -23,11 +25,12 @@ export class AppShell {
   private readonly dashboard: BuildDashboard;
   private readonly town: TownView;
   private readonly hall: HallView;
+  private report: GuildReport | undefined;
   private readonly expedition: ExpeditionView;
 
   constructor(
     private readonly root: HTMLElement,
-    session: Session,
+    private readonly session: Session,
     commands: GuildCommands,
   ) {
     this.nav = document.createElement('nav');
@@ -68,8 +71,39 @@ export class AppShell {
     }
   }
 
+  /** Show a Guild Report above the current screen until the player dismisses it. */
+  showReport(report: GuildReport): void {
+    this.report = report;
+    this.renderBody();
+  }
+
+  /**
+   * Re-render after time passed on its own (the live tick). Skipped while the player is in
+   * the middle of using a control, so a tick never snatches a half-made choice away.
+   */
+  refresh(): void {
+    const active = document.activeElement;
+    if (active && this.body.contains(active) && ['SELECT', 'INPUT', 'TEXTAREA'].includes(active.tagName)) return;
+    this.renderBody();
+  }
+
   private renderBody(): void {
     this.body.replaceChildren();
+    if (this.report) {
+      const report = this.report;
+      this.body.append(
+        renderGuildReport(
+          report,
+          this.session.content.time.realSecondsPerStep,
+          (id) => this.session.content.resourcesById.get(id)?.name ?? id,
+          () => {
+            this.report = undefined;
+            this.renderBody();
+          },
+        ),
+      );
+      return;
+    }
     if (this.view === 'guild') this.dashboard.mount();
     else if (this.view === 'town') this.town.render();
     else if (this.view === 'hall') this.hall.render();

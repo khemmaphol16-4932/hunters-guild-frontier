@@ -39,6 +39,7 @@ import progressionJson from './balance/progression.json';
 import endlessJson from './balance/endless.json';
 import worldBossJson from './world/worldBoss.json';
 import friendshipJson from './balance/friendship.json';
+import timeJson from './balance/time.json';
 import { parseEconomy, type EconomyData, type ResourceDef } from './economySchema.js';
 import { parseCrafting, type CraftingData } from './craftingSchema.js';
 import { parseContracts, type ContractData } from './contractSchema.js';
@@ -46,6 +47,7 @@ import { parseProgression, type ProgressionData } from './progressionSchema.js';
 import { parseEndless, type EndlessData } from './endlessSchema.js';
 import { parseWorldBoss, type WorldBossDef } from './worldBossSchema.js';
 import { parseFriendship, type FriendshipBalance } from './friendshipSchema.js';
+import { parseTime, type TimeBalance } from './timeSchema.js';
 
 import raritiesJson from './items/rarities.json';
 import itemTypesJson from './items/item-types.json';
@@ -229,6 +231,8 @@ export interface GameContent {
   readonly worldBoss: WorldBossDef;
   /** Friendship and trait combat bonuses (REQ-HUN-012). */
   readonly friendship: FriendshipBalance;
+  /** The town's calendar: live rate and offline cap (REQ-OFF-001). */
+  readonly time: TimeBalance;
 
   readonly balance: {
     readonly attributes: AttributeBalance;
@@ -729,6 +733,7 @@ export function loadContent(): GameContent {
   const progression = parseProgression(progressionJson);
   const worldBoss = parseWorldBoss(worldBossJson);
   const friendship = parseFriendship(friendshipJson);
+  const time = parseTime(timeJson);
   const worldBossMonster = monsters.find((monster) => monster.id === worldBoss.bossId);
   if (!worldBossMonster || worldBossMonster.tier !== 'boss') {
     throw new ContentValidationError('world/worldBoss.json.bossId', `"${worldBoss.bossId}" is not a boss monster`);
@@ -854,6 +859,7 @@ export function loadContent(): GameContent {
     endless,
     worldBoss,
     friendship,
+    time,
 
     balance: {
       attributes: parseAttributeBalance(attributeBalanceJson),

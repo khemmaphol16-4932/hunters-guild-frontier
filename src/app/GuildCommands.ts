@@ -64,6 +64,9 @@ import type { RecordOutcome } from '../systems/progression/EndlessRecords.js';
 import { traitMultiplier } from '../systems/hunter/traitEffects.js';
 import type { EndlessObjectiveDef } from '../data/endlessSchema.js';
 import type { WorldBossEvent } from '../systems/world/WorldEvents.js';
+import { ReportRecorder, type GuildReport } from './GuildReport.js';
+import type { StandingOrder } from '../systems/guild/StandingOrders.js';
+import { OBJECTIVES } from '../systems/party/Party.js';
 
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
@@ -1200,6 +1203,129 @@ export class GuildCommands {
     return outcome;
   }
 
+  // --- Time passing: live, offline, and the report -------------------------
+
+  /**
+   * Let town time pass and account for it (REQ-UX-006).
+   *
+   * Steps run in chunks, and the standing order is checked at the start of each, so a long
+   * catch-up dispatches expeditions on the same cadence live play would. Every step goes
+   * through `advanceTown`, the same path the season button uses: offline is the same
+   * systems accelerated, never a different model (REQ-OFF-002).
+   */
+  passTime(steps: number, options: { readonly offline?: boolean } = {}): GuildReport {
+    const recorder = new ReportRecorder(this.session, options.offline ?? false);
+    const chunk = this.session.content.time.catchUpChunkSteps;
+    let remaining = Math.max(0, Math.floor(steps));
+    while (remaining > 0) {
+      this.runStandingOrder(recorder);
+      const n = Math.min(chunk, remaining);
+      const result = this.advanceTown(n);
+      recorder.addSteps(n);
+      recorder.noteHunts(result.hunts);
+      recorder.noteRecovered(result.recovered.length);
+      recorder.noteCrafted(result.completedCrafts.map((item) => item.name));
+      if (result.defense) recorder.noteDefense(result.defense.summary, result.defense.held);
+      if (this.session.standingOrders.autoRepair) this.repairDamaged(recorder);
+      remaining -= n;
+    }
+    return recorder.finish();
+  }
+
+  /**
+   * Catch up on real time the player spent away (REQ-OFF-001): converted to steps at the
+   * authored calendar rate and capped at three days.
+   */
+  catchUpOffline(elapsedMs: number): GuildReport {
+    const time = this.session.content.time;
+    const capped = Math.min(Math.max(0, elapsedMs), time.maxOfflineHours * 3_600_000);
+    const steps = Math.floor(capped / 1000 / time.realSecondsPerStep);
+    return this.passTime(steps, { offline: true });
+  }
+
+  /** Set, replace or clear the standing expedition order (REQ-OFF-003: the risk is chosen here). */
+  setStandingOrder(order: StandingOrder | undefined): Result<StandingOrder | undefined, string> {
+    if (order) {
+      if (!this.session.content.worldRegionsById.has(order.regionId)) return err(`unknown region "${order.regionId}"`);
+      if (!OBJECTIVES.some((objective) => objective.id === order.objective)) return err(`unknown objective "${order.objective}"`);
+      if (!Number.isInteger(order.everySteps) || order.everySteps < 1) return err('an order needs a whole number of steps between expeditions');
+    }
+    this.session.standingOrders.set(order);
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'standing-orders',
+      outcome: order
+        ? `standing order: ${order.objective} in ${order.regionId} every ${order.everySteps} steps${order.allowLethal ? ', lethal zones allowed' : ''}`
+        : 'standing order cleared',
+      reasonCodes: ['standing_order'],
+    });
+    return ok(order);
+  }
+
+  /** Turn the Guild AI's automatic repairs on or off (REQ-OFF-004). */
+  setAutoRepair(on: boolean): void {
+    this.session.standingOrders.setAutoRepair(on);
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'standing-orders',
+      outcome: `automatic repairs ${on ? 'on' : 'off'}`,
+      reasonCodes: ['auto_repair'],
+    });
+  }
+
+  /**
+   * The Guild AI rebuilds what attacks damaged, through the same paid command the player
+   * uses, cheapest first. What it cannot afford it leaves, and the report says so.
+   */
+  private repairDamaged(recorder: ReportRecorder): void {
+    const damaged = [...this.session.town.grid.damaged()].sort((a, b) => a.instanceId.localeCompare(b.instanceId));
+    for (const placement of damaged) {
+      const name = this.session.content.buildingsById.get(placement.buildingId)?.name ?? placement.buildingId;
+      const repaired = this.repairBuilding(placement.instanceId);
+      if (repaired.ok) {
+        recorder.noteRepair(`Rebuilt the ${name}.`);
+        this.session.audit.record({
+          actor: { kind: 'system', name: 'guild-ai' },
+          system: 'town',
+          outcome: `rebuilt the ${name}`,
+          reasonCodes: ['auto_repair'],
+        });
+      } else {
+        recorder.noteSkipped(`Could not rebuild the ${name}: ${repaired.error}.`);
+      }
+    }
+  }
+
+  /** Run the standing order if it is due. Never leaves anything pending (REQ-OFF-004). */
+  private runStandingOrder(recorder: ReportRecorder): void {
+    const orders = this.session.standingOrders;
+    const order = orders.order;
+    if (!order || !orders.due(this.session.clock.tick, this.session.clock.coarseStepRatio)) return;
+    orders.attempted(this.session.clock.tick);
+
+    const region = this.session.content.worldRegionsById.get(order.regionId);
+    if (!region) return;
+    const lethal = this.session.content.world.zoneTiers[region.zoneTier].canKill;
+    if (lethal && !order.allowLethal) {
+      recorder.noteSkipped(`${region.name} can kill, and the standing order does not allow lethal zones.`);
+      return;
+    }
+    const outcome = this.sendExpedition(order.regionId, order.objective as ObjectiveId);
+    if (!outcome.ok) {
+      recorder.noteSkipped(`${region.name}: ${outcome.error}`);
+      return;
+    }
+    recorder.noteExpedition(
+      {
+        regionName: region.name,
+        summary: outcome.value.result.summary,
+        completed: outcome.value.result.completed,
+        wiped: outcome.value.result.wiped,
+      },
+      outcome.value.result.aftermath,
+    );
+  }
+
   // --- The town -------------------------------------------------------------
 
   /**
@@ -1625,10 +1751,16 @@ export class GuildCommands {
     if (materialsProduced > 0) {
       this.session.resources.transact({ credits: { materials: materialsProduced } });
     }
+    // Provisions produced = the residents the town says it can feed, at the ration each one
+    // eats (DL-059). Food capacity — granary, field kitchen, staffed kitchen and hunting
+    // posts, research — is authored in *residents fed*, and the pressure panel reads it that
+    // way ("Enough food for 14"). Phase 7c produced provisions from staffed jobs only, in a
+    // different unit, so the founding town, which has a granary and no kitchen, produced
+    // nothing: it starved after ~90 steps and emptied within 200.
     const food = this.session.food.step(
       this.session.population.size,
       steps,
-      this.session.departments.foodOutput(),
+      this.session.town.capacity().food * this.session.content.economy.foodConsumptionPerResidentPerStep,
     );
 
     const populationChange = this.session.population.step(steps);

@@ -474,6 +474,16 @@ const v23ToV24: Migration = {
   },
 };
 
+const v24ToV25: Migration = {
+  from: 24,
+  to: 25,
+  describe: 'persist the standing expedition order',
+  migrate(payload: unknown): unknown {
+    // No guild had a standing order before v25: nobody is sent anywhere unasked.
+    return { ...asRecord(payload, 24), standingOrders: {} };
+  },
+};
+
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -498,6 +508,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v21ToV22,
   v22ToV23,
   v23ToV24,
+  v24ToV25,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

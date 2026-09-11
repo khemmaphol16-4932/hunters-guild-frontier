@@ -67,6 +67,9 @@ describe('guild resources (REQ-ECO-001/002)', () => {
   it('makes a real provisions shortage visible to town pressure', () => {
     const { session, commands } = testSession('economy-hunger');
     commands.foundTown();
+    // More mouths than the town can feed, and nothing in the stores to cover the gap. (The
+    // founding town alone now feeds itself — DL-059 — so the shortage has to be made.)
+    session.population.adjust(20);
     session.resources.transact({ debits: { food: session.resources.amount('food') } });
     commands.advanceTown(1);
     expect(session.town.foodAvailable()).toBe(false);
@@ -76,6 +79,7 @@ describe('guild resources (REQ-ECO-001/002)', () => {
   it('preserves a food shortage across save and reload', () => {
     const first = testSession('economy-hunger-save');
     first.commands.foundTown();
+    first.session.population.adjust(20);
     first.session.resources.transact({ debits: { food: first.session.resources.amount('food') } });
     first.commands.advanceTown(1);
     const second = testSession('economy-hunger-load');

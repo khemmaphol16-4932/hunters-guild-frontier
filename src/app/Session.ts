@@ -79,6 +79,7 @@ import { NewGamePlus, type NewGamePlusOptions } from '../systems/progression/New
 import { EndlessRecords } from '../systems/progression/EndlessRecords.js';
 import { traitMultiplier, traitSum } from '../systems/hunter/traitEffects.js';
 import { Friendship } from '../systems/hunter/Friendship.js';
+import { StandingOrders } from '../systems/guild/StandingOrders.js';
 import { outgoingMultiplier } from '../systems/combat/outgoing.js';
 import type { Result } from '../core/result.js';
 import type { WorldVariantDef } from '../data/progressionSchema.js';
@@ -230,6 +231,8 @@ export class Session {
   readonly endlessRecords = new EndlessRecords();
   /** The one relationship hunters have (REQ-HUN-012). */
   readonly friendship: Friendship;
+  /** What the guild does on its own while the player is away (REQ-OFF-001..004). */
+  readonly standingOrders = new StandingOrders();
   private cycleBaseline: CurrentSavePayload;
 
   readonly partyPlanner: PartyPlanner;
@@ -854,6 +857,7 @@ export class Session {
       newGamePlus: this.newGamePlus.snapshot(),
       endlessRecords: this.endlessRecords.snapshot(),
       friendship: this.friendship.snapshot(),
+      standingOrders: this.standingOrders.snapshot(),
       worldEvents: this.worldEvents.snapshot(),
     };
   }
@@ -898,6 +902,7 @@ export class Session {
     this.mentors.restore(payload.mentors);
     this.endlessRecords.restore(payload.endlessRecords);
     this.friendship.restore(payload.friendship);
+    this.standingOrders.restore(payload.standingOrders);
     this.worldEvents.restore(payload.worldEvents);
     this.townJobs.restore(payload.townJobs);
   }

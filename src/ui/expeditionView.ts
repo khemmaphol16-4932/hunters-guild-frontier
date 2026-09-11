@@ -74,6 +74,7 @@ export class ExpeditionView {
       this.renderProposal(),
       this.renderWorldBoss(),
       this.renderEndless(),
+      this.renderStandingOrder(),
     );
     this.host.append(grid);
 
@@ -295,6 +296,73 @@ export class ExpeditionView {
     };
     card.append(send);
 
+    return card;
+  }
+
+  // --- REQ-OFF-001..004: what the guild does while you are away ------------
+
+  private renderStandingOrder(): HTMLElement {
+    const card = el('div', 'card');
+    card.append(el('h3', undefined, 'While you are away'));
+    const current = this.session.standingOrders.order;
+    const region = (id: string) => this.session.content.worldRegionsById.get(id)?.name ?? id;
+    card.append(
+      el(
+        'p',
+        current ? 'points' : 'subhead',
+        current
+          ? `Every ${current.everySteps} steps: ${OBJECTIVES.find((o) => o.id === current.objective)?.name ?? current.objective} in ${region(current.regionId)}${current.allowLethal ? ' — lethal zones allowed' : ''}.`
+          : 'No standing order. While you are away the town keeps working, but nobody is sent into the field.',
+      ),
+    );
+    card.append(
+      el('p', 'subhead', 'Uses the region and objective chosen above. Hunters can die in Red and Black zones; an order only goes there if you allow it.'),
+    );
+
+    const every = el('input') as HTMLInputElement;
+    every.type = 'number';
+    every.min = '1';
+    every.value = String(current?.everySteps ?? 40);
+    every.setAttribute('aria-label', 'Steps between expeditions');
+    const lethalLabel = el('label', 'subhead');
+    const lethal = el('input') as HTMLInputElement;
+    lethal.type = 'checkbox';
+    lethal.checked = current?.allowLethal ?? false;
+    lethalLabel.append(lethal, document.createTextNode(' Allow zones where hunters can die'));
+    const repairLabel = el('label', 'subhead');
+    const repair = el('input') as HTMLInputElement;
+    repair.type = 'checkbox';
+    repair.checked = this.session.standingOrders.autoRepair;
+    repair.onchange = () => {
+      this.commands.setAutoRepair(repair.checked);
+      this.render();
+    };
+    repairLabel.append(repair, document.createTextNode(' The Guild AI rebuilds damaged buildings when it can pay'));
+    card.append(this.field('Every (steps)', every), lethalLabel, repairLabel);
+
+    const row = el('div', 'build-row');
+    const set = el('button', 'small', 'Set standing order') as HTMLButtonElement;
+    set.onclick = () => {
+      const result = this.commands.setStandingOrder({
+        regionId: this.state.regionId,
+        objective: this.state.objective,
+        everySteps: Math.max(1, Math.floor(Number(every.value) || 1)),
+        allowLethal: lethal.checked,
+      });
+      this.state.message = result.ok ? 'Standing order set.' : result.error;
+      this.state.messageIsError = !result.ok;
+      this.render();
+    };
+    const clear = el('button', 'small', 'Clear') as HTMLButtonElement;
+    clear.disabled = !current;
+    clear.onclick = () => {
+      this.commands.setStandingOrder(undefined);
+      this.state.message = 'Standing order cleared.';
+      this.state.messageIsError = false;
+      this.render();
+    };
+    row.append(set, clear);
+    card.append(row);
     return card;
   }
 

@@ -646,3 +646,30 @@ Two trait effects gained readers so the Legacy Traits would do what they say: `e
 **Why.** Seven of eight innate traits were inert, while the recruiter valued them and the dashboard displayed them. A trait is part of what a hunter *is* (REQ-HUN-009); if it changes nothing, the identity is only a label. Every value (`balance/friendship.json`, `resources.json.hunger`) is **pending approval**.
 
 **Note on DL-009.** `BuildProfile` gained one optional field (`allySafety`). It is additive; existing consumers and hand-built profiles are unchanged, and the §140 A–M scenarios still pass.
+
+---
+
+## DL-058 — The town has a calendar, and the guild works while you are away
+
+**Ambiguity.** REQ-OFF-001 says the guild keeps working while the player is away, for up to three days. Nothing said how town time relates to real time, and nothing moved town time except the "Let a season pass" button.
+
+**Decision.**
+- `balance/time.json` sets the live rate: one town step per `realSecondsPerStep` (30), so a 20-step season is ten minutes. The browser entry point advances the town on that interval and autosaves every step, when the tab hides and on unload.
+- On load, real time since the last autosave converts to steps at the same rate, capped at 72 hours, and runs through `passTime`. That is the same `advanceTown` path the season button uses (REQ-OFF-002: the same systems, accelerated, never a separate model). Three days, 8,640 steps, takes about half a second.
+- A **standing expedition order** (region, objective, cadence) runs during catch-up and live play. REQ-OFF-003: it never goes where hunters can die unless the player ticked "allow lethal zones" when writing it. REQ-OFF-004: an order that cannot run is resolved as "not now" and reported, never left pending.
+- The Guild AI **rebuilds damaged buildings** it can afford, on by default and switchable off, and reports what it could not afford.
+- The **Guild Report** (REQ-UX-006) records the window from domain events and ledger diffs. It leads with the worst news, groups repeated expeditions and attacks, and shows once on return.
+
+**Why the repair rule.** The first long catch-up in the browser emptied a town holding 6,848 gold: attacks damaged both bunkhouses, the well and the Guild Hall, nothing rebuilt them, and every resident left. A standing policy that lets that happen is not a policy anyone would choose.
+
+**Pending approval:** the calendar rate, and the default for automatic repairs.
+
+---
+
+## DL-059 — Food capacity is production, in residents fed
+
+**Ambiguity.** Phase 6 authored food as capacity in *residents fed* (Granary 14, Field Kitchen 6, a kitchen worker 4) and the pressure panel reads it that way. Phase 7c made provisions a stored flow, but produced them only from staffed jobs, in *provisions per step*.
+
+**Decision.** Provisions produced per step = the town's food capacity × the ration each resident eats. One unit throughout: a town "with enough food for 14" produces what 14 residents eat, so the stores grow when it is bigger than its population and drain when it is not.
+
+**Why.** The founding town has a granary and no kitchen, so under Phase 7c it produced nothing. It starved after about 90 steps and emptied within 200 — five presses of the season button, which is why nobody noticed. The live calendar makes 200 steps less than two hours. The balance soak missed it because it fed the town a fixed production figure rather than the town's own. `tests/offline.test.ts` now holds the founding town through two back-to-back three-day absences.

@@ -1,0 +1,6 @@
+{
+  "$comment": "The town's calendar: how simulation time maps onto real time (REQ-OFF-001). Until now town time moved only when the player pressed 'Let a season pass', so the guild never worked while the player was away. realSecondsPerStep sets the live rate (a 20-step season is 10 minutes); maxOfflineHours is REQ-OFF-001's three-day cap; catchUpChunkSteps is how many steps catch-up advances between standing-order checks. PENDING APPROVAL (DL-058).",
+  "realSecondsPerStep": 30,
+  "maxOfflineHours": 72,
+  "catchUpChunkSteps": 10
+}
