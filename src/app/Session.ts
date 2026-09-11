@@ -80,6 +80,7 @@ import { EndlessRecords } from '../systems/progression/EndlessRecords.js';
 import { traitMultiplier, traitSum } from '../systems/hunter/traitEffects.js';
 import { Friendship } from '../systems/hunter/Friendship.js';
 import { StandingOrders } from '../systems/guild/StandingOrders.js';
+import { Notifications } from './Notifications.js';
 import { outgoingMultiplier } from '../systems/combat/outgoing.js';
 import type { Result } from '../core/result.js';
 import type { WorldVariantDef } from '../data/progressionSchema.js';
@@ -233,6 +234,8 @@ export class Session {
   readonly friendship: Friendship;
   /** What the guild does on its own while the player is away (REQ-OFF-001..004). */
   readonly standingOrders = new StandingOrders();
+  /** Importance-ranked notices for the player (REQ-UX-005). */
+  readonly notifications: Notifications;
   private cycleBaseline: CurrentSavePayload;
 
   readonly partyPlanner: PartyPlanner;
@@ -389,6 +392,7 @@ export class Session {
     this.worldEvents = new WorldEvents({
       boss: this.content.worldBoss,
       ticksPerStep: () => this.clock.coarseStepRatio,
+      onAppeared: (event) => this.events.emit('worldBoss.appeared', { bossId: event.bossId, regionId: event.regionId }),
     });
     this.monument = new Monument({
       events: this.events,
@@ -681,6 +685,7 @@ export class Session {
       worldSeed: options.worldSeed,
     });
     this.cycleBaseline = this.snapshot();
+    this.notifications = new Notifications(this);
   }
 
   /** The world variant this cycle runs under, if the player chose one (REQ-LEG-002). */
@@ -911,6 +916,7 @@ export class Session {
     this.chronicle.dispose();
     this.monument.dispose();
     this.friendship.dispose();
+    this.notifications.dispose();
     this.events.clear();
   }
 }

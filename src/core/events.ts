@@ -66,6 +66,10 @@ export interface DomainEventMap {
    * A new personal best in an endless expedition (REQ-END-003). `milestone` is true when the
    * depth crosses an authored milestone — the Monument carves those, not every record.
    */
+  /** A threat reached the walls and was fought (REQ-TWN-008). Guild-scoped, like town events. */
+  'town.defended': { threatName: string; held: boolean };
+  /** The world boss has appeared somewhere in the world (REQ-BOS-003). */
+  'worldBoss.appeared': { bossId: string; regionId: string };
   'endless.recordSet': { regionId: string; regionName: string; objectiveName: string; depth: number; milestone: boolean };
 }
 

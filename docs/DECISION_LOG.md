@@ -673,3 +673,13 @@ Two trait effects gained readers so the Legacy Traits would do what they say: `e
 **Decision.** Provisions produced per step = the town's food capacity × the ration each resident eats. One unit throughout: a town "with enough food for 14" produces what 14 residents eat, so the stores grow when it is bigger than its population and drain when it is not.
 
 **Why.** The founding town has a granary and no kitchen, so under Phase 7c it produced nothing. It starved after about 90 steps and emptied within 200 — five presses of the season button, which is why nobody noticed. The live calendar makes 200 steps less than two hours. The balance soak missed it because it fed the town a fixed production figure rather than the town's own. `tests/offline.test.ts` now holds the founding town through two back-to-back three-day absences.
+
+---
+
+## DL-060 — Notifications are ranked in data; only critical ones interrupt
+
+**Ambiguity.** REQ-UX-005 says notifications are prioritised by importance and only important events interrupt. It does not say which events are important.
+
+**Decision.** `ui/notifications.json` classifies every notice kind the game raises into critical, important or routine, and the loader refuses a missing or unknown kind. Critical notices (a death, a breached wall, the world boss appearing, a legendary find) interrupt as a dismissible banner with `role="alert"`. Important notices raise the unread count on the Notices button. Routine notices wait in the feed. A notice about a party-wide event (a contract, a boss kill) is raised once, not once per hunter. Events the Guild Report already covered are marked read when the report is shown, so returning from time away never produces a wall of banners. Two domain events were added so the notifier could hear them: `town.defended` and `worldBoss.appeared`.
+
+**Pending approval:** which kinds are critical.

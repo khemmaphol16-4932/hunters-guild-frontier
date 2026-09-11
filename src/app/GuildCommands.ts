@@ -1227,6 +1227,8 @@ export class GuildCommands {
       recorder.noteCrafted(result.completedCrafts.map((item) => item.name));
       if (result.defense) recorder.noteDefense(result.defense.summary, result.defense.held);
       if (this.session.standingOrders.autoRepair) this.repairDamaged(recorder);
+      // Asking is what lets the world boss appear on schedule (and announce itself).
+      this.worldBossEvent();
       remaining -= n;
     }
     return recorder.finish();
@@ -1898,6 +1900,7 @@ export class GuildCommands {
     const defenders = this.session.defense.defenders(threat);
     const result = this.session.townCombat.defend(rng, threat, defenders);
     this.session.defense.recordOutcome(result.held);
+    this.session.events.emit('town.defended', { threatName: result.threatName, held: result.held });
 
     // Defending is work, and a fight at the gate tires people out the way any fight does.
     for (const hunterId of defenders) {

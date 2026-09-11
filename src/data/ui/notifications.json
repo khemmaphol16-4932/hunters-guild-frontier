@@ -1,0 +1,21 @@
+{
+  "$comment": "REQ-UX-005: notifications are importance-prioritised, and only important events interrupt. critical interrupts with a banner; important raises the unread badge; routine only goes to the feed. Kinds are the domain events the notifier listens to. PENDING APPROVAL — which events interrupt is a design call.",
+  "feedSize": 60,
+  "priorities": {
+    "hunterDied": "critical",
+    "townBreached": "critical",
+    "worldBossAppeared": "critical",
+    "legendaryFound": "critical",
+    "stageReached": "important",
+    "researchCompleted": "important",
+    "contractResolved": "important",
+    "worldBossDefeated": "important",
+    "endlessRecord": "important",
+    "rareFound": "important",
+    "frontierEntered": "important",
+    "townDefended": "routine",
+    "hunterLeveled": "routine",
+    "rescue": "routine",
+    "bossDefeated": "routine"
+  }
+}

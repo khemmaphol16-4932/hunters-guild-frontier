@@ -19,6 +19,8 @@ export interface WorldEventsDeps {
   readonly boss: WorldBossDef;
   /** Fine ticks per coarse step, from the clock (DL-020, DL-042). */
   readonly ticksPerStep: () => number;
+  /** Told once, when the boss appears. */
+  readonly onAppeared?: (event: WorldBossEvent) => void;
 }
 
 /**
@@ -50,6 +52,7 @@ export class WorldEvents {
         regionId: this.deps.boss.regionId,
         appearedAtTick: tick,
       };
+      this.deps.onAppeared?.(this.activeBoss);
     }
     return this.activeBoss;
   }

@@ -161,7 +161,7 @@ ul.notes.weak li { color: var(--warn); }
 }
 
 /* The shell is the page: nav on top, one view filling the rest. */
-#root { display: grid; grid-template-rows: auto 1fr; min-height: 100vh; }
+#root { display: grid; grid-template-rows: auto auto 1fr; min-height: 100vh; }
 
 /* Standing orders (Phase 4) */
 .order-row {
@@ -223,3 +223,19 @@ select:hover { border-color: var(--accent); }
 .guild-report { margin: 14px 18px; max-width: 760px; }
 .report-list { margin: 0 0 8px; padding-left: 18px; }
 .report-list li { margin: 1px 0; }
+
+/* --- Notices (REQ-UX-005) ------------------------------------------------ */
+#view-switch .notices { margin-left: auto; }
+#alerts:empty { display: none; }
+.alert-banner {
+  display: flex; gap: 10px; align-items: center; padding: 8px 18px;
+  background: #3a2019; color: #f3d6cd; border-bottom: 1px solid var(--warn);
+}
+.alert-banner .meta { color: var(--muted); }
+.alert-banner button { margin-left: auto; }
+.notice-feed { margin: 10px 18px; max-width: 760px; max-height: 50vh; overflow: auto; }
+.notice { margin: 2px 0; }
+.notice-critical { color: var(--warn); }
+.notice-important { color: var(--accent); }
+.notice-routine { color: var(--muted); }
+.notice.unread::before { content: '• '; }
