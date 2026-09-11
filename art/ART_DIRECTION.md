@@ -55,3 +55,13 @@ excessively tiny detail, a full life-simulation crowd, grim-dark palette.
   their class or stats are known.
 - Town history belongs in the world: trophies, plaques, repaired walls,
   monuments, banners, and veteran traces grow over time.
+
+## Asset 04: Verdant Reach vista
+
+**Use:** world-map background and safe-region palette anchor.
+
+The first expedition vista follows the road from the warm guild settlement into
+a broad moss-green river valley. Trail markers, camps and a small travelling
+party make the guild's accumulated knowledge visible without turning the map
+into a tactical combat screen. The generated source is
+`generated/verdant-reach-vista-v1.png`.

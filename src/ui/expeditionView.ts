@@ -99,6 +99,57 @@ export class ExpeditionView {
     // is itself progression — hiding it would make the world feel smaller than it is.
     const availability = this.commands.regionAvailability();
 
+    const map = el('div', 'world-map');
+    map.setAttribute('role', 'group');
+    map.setAttribute('aria-label', 'Known frontier regions');
+    map.append(el('div', 'world-map-route'));
+    const positions = [
+      [14, 72],
+      [39, 49],
+      [65, 64],
+      [84, 29],
+    ] as const;
+    for (const [index, entry] of availability.entries()) {
+      const tier = this.session.content.world.zoneTiers[entry.region.zoneTier];
+      const known = this.session.worldKnowledge.of(entry.region.id);
+      const node = el(
+        'button',
+        `world-map-node tier-${entry.region.zoneTier}${entry.region.id === this.state.regionId ? ' selected' : ''}`,
+      ) as HTMLButtonElement;
+      node.type = 'button';
+      node.disabled = !entry.unlocked;
+      node.style.setProperty('--map-x', `${positions[index]?.[0] ?? 50}%`);
+      node.style.setProperty('--map-y', `${positions[index]?.[1] ?? 50}%`);
+      node.style.setProperty('--tier-colour', tier.colour);
+      node.setAttribute('aria-pressed', String(entry.region.id === this.state.regionId));
+      node.setAttribute(
+        'aria-label',
+        entry.unlocked
+          ? `${entry.region.name}, ${tier.name} zone, knowledge ${known.tier}, ${known.visits} expeditions`
+          : `${entry.region.name}, locked: ${entry.blockedBy.join('; ')}`,
+      );
+      const pin = el('span', 'world-map-pin');
+      pin.append(el('span', undefined, entry.unlocked ? String(index + 1) : '×'));
+      node.append(
+        pin,
+        el('span', 'world-map-label', entry.region.name),
+        el('span', 'world-map-knowledge', entry.unlocked ? known.tier : 'locked'),
+      );
+      node.onclick = () => {
+        this.state.regionId = entry.region.id;
+        this.render();
+      };
+      map.append(node);
+    }
+    const mapLegend = el('div', 'world-map-legend');
+    for (const [id, tier] of Object.entries(this.session.content.world.zoneTiers)) {
+      const item = el('span', `tier-${id}`, `${tier.name} zone`);
+      item.style.setProperty('--tier-colour', tier.colour);
+      mapLegend.append(item);
+    }
+    map.append(mapLegend);
+    card.append(map);
+
     const regionSelect = el('select') as HTMLSelectElement;
     for (const entry of availability) {
       const option = el(
