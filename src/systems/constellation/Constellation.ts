@@ -149,7 +149,7 @@ export class Constellation {
    * Returns *every* unmet requirement rather than the first. A player looking at a locked
    * node wants to know the whole gap, not to discover it one attempt at a time.
    */
-  eligibility(hunter: Hunter, nodeId: string): NodeEligibility {
+  eligibility(hunter: Hunter, nodeId: string, ignoreLevel = false): NodeEligibility {
     const node = this.nodesById.get(nodeId);
     if (!node) {
       return {
@@ -174,7 +174,7 @@ export class Constellation {
     }
 
     const effective = effectiveLevel(node.requiredLevel, affinity);
-    if (affinity > 0 && hunter.level < effective) {
+    if (!ignoreLevel && affinity > 0 && hunter.level < effective) {
       unmet.push(
         effective === node.requiredLevel
           ? `requires level ${effective}`
@@ -221,12 +221,12 @@ export class Constellation {
     };
   }
 
-  canTake(hunter: Hunter, nodeId: string): Result<ConstellationNodeDef, string> {
+  canTake(hunter: Hunter, nodeId: string, ignoreLevel = false): Result<ConstellationNodeDef, string> {
     if (this.hasNode(hunter, nodeId)) {
       return err(`${hunter.name} has already taken ${this.nodeLabel(nodeId)}`);
     }
 
-    const verdict = this.eligibility(hunter, nodeId);
+    const verdict = this.eligibility(hunter, nodeId, ignoreLevel);
     if (!verdict.eligible) return err(verdict.unmet.join('; '));
 
     const node = this.nodesById.get(nodeId);

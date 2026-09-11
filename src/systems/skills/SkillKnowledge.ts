@@ -47,6 +47,7 @@ export class SkillKnowledge {
     hunter: Hunter,
     skillId: SkillId,
     source: 'book' | 'node' | 'debug',
+    ignoreLevel = false,
   ): Result<Hunter, string> {
     if (hunter.knownSkills.includes(skillId)) {
       return err(`${hunter.name} already knows ${this.label(skillId)}`);
@@ -60,7 +61,7 @@ export class SkillKnowledge {
         return err(`no constellation node teaches ${this.label(skillId)}`);
       }
 
-      const verdict = this.constellation.eligibility(hunter, node.id);
+      const verdict = this.constellation.eligibility(hunter, node.id, ignoreLevel);
       if (!verdict.eligible) return err(verdict.unmet.join('; '));
     }
 

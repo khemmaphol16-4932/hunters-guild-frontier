@@ -484,6 +484,26 @@ const v24ToV25: Migration = {
   },
 };
 
+const v25ToV26: Migration = {
+  from: 25,
+  to: 26,
+  describe: 'persist hunter rebirth progress',
+  migrate(payload: unknown): unknown {
+    const record = asRecord(payload, 25);
+    const hunters = Array.isArray(record['hunters']) ? record['hunters'] : [];
+    return {
+      ...record,
+      hunters: hunters.map((value) => ({
+        ...asRecord(value, 25),
+        rebirths: 0,
+        bonusAttributePoints: 0,
+        constellationBypasses: 0,
+        rebirthBypassedNodeIds: [],
+      })),
+    };
+  },
+};
+
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -509,6 +529,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v22ToV23,
   v23ToV24,
   v24ToV25,
+  v25ToV26,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

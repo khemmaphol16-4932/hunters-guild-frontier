@@ -2,6 +2,27 @@
   "$comment": "Innate traits granted at generation (REQ-HUN-009). Legacy traits earned from chronicle events (REQ-LEG-004) use the same schema with origin: 'legacy' and arrive in Phase 8.",
   "traits": [
     {
+      "id": "awakened_vigor",
+      "name": "Awakened Vigor",
+      "origin": "awakened",
+      "description": "Three completed journeys hardened body and purpose.",
+      "effects": { "fatigueRecoveryMultiplier": 1.25 }
+    },
+    {
+      "id": "awakened_instinct",
+      "name": "Awakened Instinct",
+      "origin": "awakened",
+      "description": "Three completed journeys sharpened judgment under pressure.",
+      "effects": { "reliabilityBonus": 0.1 }
+    },
+    {
+      "id": "awakened_bond",
+      "name": "Awakened Bond",
+      "origin": "awakened",
+      "description": "Three completed journeys taught the hunter to protect their companions.",
+      "effects": { "allySafetyWeightShift": 0.08 }
+    },
+    {
       "id": "keeper_of_the_fallen",
       "name": "Keeper of the Fallen",
       "origin": "legacy",

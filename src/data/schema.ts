@@ -893,7 +893,7 @@ export function parseNamePools(raw: unknown, path = 'names.json'): readonly Name
   return parsed;
 }
 
-export const TRAIT_ORIGINS = ['innate', 'legacy'] as const;
+export const TRAIT_ORIGINS = ['innate', 'legacy', 'awakened'] as const;
 export type TraitOrigin = (typeof TRAIT_ORIGINS)[number];
 
 export interface TraitDef {

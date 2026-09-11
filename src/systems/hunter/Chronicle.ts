@@ -156,6 +156,14 @@ export class Chronicle {
       }
     });
 
+    on('hunter.rebirth', ({ hunterId, rank, awakenedTraitId }) => {
+      this.record(
+        hunterId,
+        'rebirth',
+        `Completed rebirth ${rank}${awakenedTraitId ? ` and awakened as ${awakenedTraitId}` : ''}.`,
+      );
+    });
+
     on('constellation.nodeTaken', ({ hunterId, nodeId, regionId }) => {
       this.record(hunterId, 'constellationNode', `Learned ${nodeId}, deepening into ${regionId}.`);
     });

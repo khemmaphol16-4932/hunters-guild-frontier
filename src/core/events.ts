@@ -20,6 +20,7 @@ import type { HunterId, SkillId, ItemId } from './ids.js';
 export interface DomainEventMap {
   'hunter.created': { hunterId: HunterId; name: string };
   'hunter.leveled': { hunterId: HunterId; level: number };
+  'hunter.rebirth': { hunterId: HunterId; rank: number; awakenedTraitId?: string };
   'constellation.nodeTaken': { hunterId: HunterId; nodeId: string; regionId: string };
   'hunter.respec': { hunterId: HunterId };
   'hunter.died': { hunterId: HunterId; zoneTier: string };

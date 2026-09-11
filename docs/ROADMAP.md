@@ -149,7 +149,7 @@ Gold · resources · food · production · crafting · market · contracts · re
 
 Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
 
-## Phase 8 — Progression ✅ (rebirth awaits a design decision, DL-054)
+## Phase 8 — Progression ✅
 
 Guild mastery · capability · reputation depth · research depth · legacy · NG+ · generational hunters · mentors · legacy traits · endless scaling.
 
@@ -165,7 +165,9 @@ Legacy foundation complete: Monument achievements award bounded, one-time Legacy
 
 Retirement and mentors complete: retirement is an explicit player command gated by the Mentor Hall unlock, level 30 and availability. Retirees leave the active roster and become distinct mentor profiles derived from their level, attributes, mastery, potential and historic Chronicle entries. Their bounded effects improve experience and mastery training; save v20 preserves mentors and Legacy Traits.
 
-Continued (2026-09-10): the contract board now follows reputation, capability and client standing, with Endgame Challenge Contracts (DL-051); endless expeditions run deeper routes with six objectives and personal records (DL-052, save v22); Legacy Traits grow from historic Chronicle entries and pass to apprentices (DL-053); respec is charged and Insight Crystals have sources (DL-050). The Drowned Choir now appears in Ashfall as a persistent world event, uses its own card pool and respawns deterministically (DL-055, save v23). **Remaining for Phase 8:** rebirth, which needs the design owner's rules (DL-054).
+Continued (2026-09-10): the contract board now follows reputation, capability and client standing, with Endgame Challenge Contracts (DL-051); endless expeditions run deeper routes with six objectives and personal records (DL-052); Legacy Traits grow from historic Chronicle entries and pass to apprentices (DL-053); respec is charged and Insight Crystals have sources (DL-050). The Drowned Choir now appears in Ashfall as a persistent world event, uses its own card pool and respawns deterministically (DL-055, save v23).
+
+Rebirth complete (2026-09-11): a level-100 available hunter may begin up to five new journeys. Each returns to level 1 with base attributes and unequipped gear, retains identity, knowledge, mastery and history, and grants three permanent attribute points, one level-only constellation bypass, and a cumulative 10% XP/mastery bonus. Rank 3 requires one data-authored Awakened trait choice. Save v26 preserves every reward.
 
 Review and repair (2026-09-10): New Game+ now founds a new guild in a freshly seeded world (DL-048); Legacy is bounded per kind per cycle and every unlock has an effect (DL-047); all Phase 8 balance lives in `balance/progression.json`; and the Hall tab puts every Phase 7–8 system on screen. New Game+ carry-over rules remain a default pending design approval (v1.0 §12, §20).
 

@@ -593,13 +593,13 @@ Two trait effects gained readers so the Legacy Traits would do what they say: `e
 
 ---
 
-## DL-054 — Rebirth stays unimplemented, pending a design decision
+## DL-054 — Rebirth is a bounded personal journey
 
 **Ambiguity.** REQ-HUN-004 says rebirth becomes available at the level cap. `core/hunter/leveling.ts` has carried a `RebirthRules` interface since Phase 1 with the note that its costs and grants are a design decision, and TECH_DEBT scheduled it for Phase 8.
 
-**Decision.** Not implemented. Every plausible version changes the Hunter aggregate, the attribute budget and the save format, and each embeds a balance philosophy (what carries over, what resets, what a rebirth grants) that REQ-HUN-005 constrains but does not settle. New Game+ was implemented as a labelled default because it was already built and broken; rebirth has no half-built version to repair.
+**Decision (approved 2026-09-11).** A level-100 available hunter may rebirth at most five times. Level, XP, allocated attributes, loadout, equipment and temporary condition reset; gear remains guild-owned. Identity, potential, personality, traits, skills, mastery, Chronicle, friendships and behavior memory remain. Each journey grants three permanent attribute points, one token that bypasses only a constellation node's level requirement, and a cumulative 10% XP/mastery gain. Rebirth 3 requires one Awakened trait chosen from a validated data-authored catalogue. Costs are data-authored in `balance/progression.json`.
 
-**Needed from the design owner:** what resets (level? attributes? skills?), what is kept, what a rebirth grants, and whether there is a limit.
+**Boundary.** Rebirth changes one Hunter and never grants Legacy or advances New Game+. A bypass cannot waive reachability, prerequisites, weapon, attribute, or skill-book requirements.
 
 ---
 

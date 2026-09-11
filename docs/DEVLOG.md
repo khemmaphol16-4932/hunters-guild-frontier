@@ -609,3 +609,9 @@ Three of today's bugs were invisible at the game's old pace, where the player pr
 
 ### Stops here
 Isometric pixel-art presentation of the town and world (REQ-UX-007, `art/ART_DIRECTION.md`) is the art phase. Rebirth still needs the design owner's rules (DL-054).
+
+---
+
+# 2026-09-11 — Rebirth approved and delivered
+
+The design owner approved five rebirths per Hunter: three permanent attribute points, one level-only constellation bypass and a cumulative 10% XP/mastery gain per journey, with a data-authored Awakened trait choice at rank 3. Rebirth resets the leveling journey and equipped build while retaining the Hunter's identity, knowledge, mastery, relationships and history. Save v26 migrates existing Hunters with zero rebirth progress.

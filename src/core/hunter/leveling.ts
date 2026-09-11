@@ -4,9 +4,8 @@
  * REQ-HUN-002/003/004. Level 1–100, points generated from the hunter's own level,
  * allocated by the player, and respeccable relatively cheaply with an obtainable resource.
  *
- * Rebirth (§10) is intentionally left as an interface with no implementation — it belongs
- * to Phase 8 progression, and stubbing it here rather than inventing rules now avoids
- * locking in a design the spec deliberately left open (TECH_DEBT.md).
+ * Rebirth (§10) was approved in Phase 8; its cumulative experience scale lives here while
+ * the player command owns eligibility, costs, resets and grants.
  */
 
 import type { AttributeBalance, AttributeKey } from '../../data/schema.js';
@@ -44,8 +43,9 @@ export function unspentPoints(
   attributes: Attributes,
   level: number,
   balance: AttributeBalance,
+  bonusPoints = 0,
 ): number {
-  return attributePointBudget(level, balance) - allocatedPoints(attributes, balance);
+  return attributePointBudget(level, balance) + bonusPoints - allocatedPoints(attributes, balance);
 }
 
 export interface LevelProgress {
@@ -101,6 +101,7 @@ export function allocate(
   level: number,
   requests: readonly AllocationRequest[],
   balance: AttributeBalance,
+  bonusPoints = 0,
 ): Result<Attributes, string> {
   const next: Record<AttributeKey, number> = { ...attributes };
 
@@ -120,7 +121,7 @@ export function allocate(
     next[request.attribute] = updated;
   }
 
-  const remaining = unspentPoints(next, level, balance);
+  const remaining = unspentPoints(next, level, balance, bonusPoints);
   if (remaining < 0) {
     return err(`allocation exceeds the point budget by ${-remaining}`);
   }
@@ -160,15 +161,7 @@ export function isAtLevelCap(level: number, balance: AttributeBalance): boolean 
 }
 
 /**
- * Rebirth (§10) — deliberately unimplemented.
- *
- * The spec locks in that rebirth exists at the level cap and that old hunters must remain
- * valuable (REQ-HUN-005), but not what rebirth costs or grants. Inventing those rules now
- * would violate §127's instruction to isolate ambiguity rather than resolve it prematurely.
- * Phase 8 implements this interface; until then `isAtLevelCap` is the only rebirth-adjacent
- * behavior the game needs.
+ * Cumulative training acceleration from completed rebirth journeys.
  */
-export interface RebirthRules {
-  canRebirth(level: number): boolean;
-  applyRebirth(attributes: Attributes): Attributes;
-}
+export const rebirthExperienceScale = (rebirths: number, bonusPerRebirth: number): number =>
+  1 + Math.max(0, rebirths) * bonusPerRebirth;

@@ -6,7 +6,7 @@ An autonomous Hunter Guild management RPG. The player is the Guild Master: they 
 
 The design goal is that a Hunter does not merely *have* a build — they **become** one, through what they actually do. Mastery grows from use, and build identity is what the AI reads when it decides how to act.
 
-**Status:** Phases 0–8 complete (rebirth awaits a design decision), and Phase 9 done up to the art. The guild runs in real time and while you are away, with standing orders, a Guild Report on return, ranked notices, a combat replay that explains itself, Easy/Advanced AI views and accessibility settings. Next: the isometric pixel-art presentation.
+**Status:** Phases 0–8 complete, including the approved five-rank Hunter rebirth system, and Phase 9 done up to the art. The guild runs in real time and while you are away, with standing orders, a Guild Report on return, ranked notices, a combat replay that explains itself, Easy/Advanced AI views and accessibility settings. Next: the isometric pixel-art presentation.
 
 ---
 
@@ -105,7 +105,7 @@ The last two both earn their place by having caught live requirement failures ra
 
 ## What is not built yet
 
-Rebirth (waiting on a design decision, DL-054) · isometric pixel-art presentation (Phase 9).
+Isometric pixel-art presentation and production audio (Phase 9).
 
 Several catalogues and curves are working defaults **pending design approval**, and each is labelled in its data file: contracts, endless-expedition scaling, apprentices and the New Game+ carry-over rules (v1.0 §20). `TECH_DEBT.md` lists what is still missing, including the nine innate trait effects no system reads yet.
 

@@ -20,16 +20,19 @@ import {
   allocate,
   applyExperience,
   attributePointBudget,
+  rebirthExperienceScale,
   respecToBase,
   respecCost,
 } from '../core/hunter/leveling.js';
 import {
   equippedItemIds,
+  emptyEquipment,
   withAttributes,
   withAvailability,
   withTraits,
   withEquipment,
   withLevel,
+  withRebirthProgress,
   type Hunter,
 } from '../core/hunter/Hunter.js';
 import { asItemId, asSkillId, asTraitId, type HunterId, type ItemId } from '../core/ids.js';
@@ -394,7 +397,7 @@ export class GuildCommands {
   ): Result<Hunter, string> {
     const hunter = this.session.roster.require(hunterId);
     const balance = this.session.content.balance.attributes;
-    const result = allocate(hunter.attributes, hunter.level, [{ attribute, amount }], balance);
+    const result = allocate(hunter.attributes, hunter.level, [{ attribute, amount }], balance, hunter.bonusAttributePoints ?? 0);
     if (isErr(result)) return result;
 
     const updated = withAttributes(hunter, result.value);
@@ -410,7 +413,7 @@ export class GuildCommands {
       (sum, key) => sum + (hunter.attributes[key] - balance.startingValue),
       0,
     );
-    const remaining = attributePointBudget(hunter.level, balance) - spent;
+    const remaining = attributePointBudget(hunter.level, balance) + (hunter.bonusAttributePoints ?? 0) - spent;
     if (remaining <= 0) return err('no unspent attribute points');
     return this.allocateAttribute(hunterId, attribute, remaining);
   }
@@ -445,34 +448,105 @@ export class GuildCommands {
     return ok(updated);
   }
 
+  /** Rebegin one hunter's journey without resetting the guild (§10, DL-054). */
+  rebirth(hunterId: HunterId, awakenedTraitId?: string): Result<Hunter, string> {
+    const hunter = this.session.roster.require(hunterId);
+    const rules = this.session.content.progression.rebirth;
+    const nextRank = (hunter.rebirths ?? 0) + 1;
+    if (hunter.level < this.session.content.balance.attributes.maxLevel) return err('rebirth requires level 100');
+    if (hunter.availability.state !== 'available' || hunter.availability.recallCompletesAtTick !== undefined) {
+      return err(`${hunter.name} must be available to rebirth`);
+    }
+    if (nextRank > rules.maxRebirths) return err(`${hunter.name} has reached the rebirth limit`);
+    if (nextRank === rules.awakenedAt) {
+      if (!awakenedTraitId || !rules.awakenedTraitIds.includes(awakenedTraitId)) {
+        return err(`rebirth ${rules.awakenedAt} requires an Awakened trait choice`);
+      }
+    } else if (awakenedTraitId !== undefined) {
+      return err(`an Awakened trait is chosen only at rebirth ${rules.awakenedAt}`);
+    }
+
+    const paid = this.session.resources.transact({
+      debits: { gold: rules.goldCost, insight_crystal: rules.insightCrystalCost },
+    });
+    if (isErr(paid)) return err(paid.error);
+
+    let updated: Hunter = {
+      ...hunter,
+      level: this.session.content.balance.attributes.minLevel,
+      xp: 0,
+      attributes: respecToBase(this.session.content.balance.attributes),
+      loadout: [],
+      equipment: emptyEquipment(),
+      condition: { hunger: 0, fatigue: 0, morale: 0.7 },
+    };
+    updated = withRebirthProgress(
+      updated,
+      nextRank,
+      (hunter.bonusAttributePoints ?? 0) + rules.attributePointsPerRebirth,
+      (hunter.constellationBypasses ?? 0) + rules.constellationBypassesPerRebirth,
+    );
+    if (awakenedTraitId) updated = withTraits(updated, [...updated.traitIds, asTraitId(awakenedTraitId)]);
+    this.session.roster.update(updated);
+    this.session.events.emit('hunter.rebirth', { hunterId, rank: nextRank, ...(awakenedTraitId ? { awakenedTraitId } : {}) });
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'hunter',
+      outcome: `${hunter.name} reached rebirth rank ${nextRank}`,
+      reasonCodes: ['hunter_rebirth'],
+      inputs: { hunterId, awakenedTraitId, gold: rules.goldCost, insightCrystals: rules.insightCrystalCost },
+    });
+    return ok(updated);
+  }
+
   /**
    * Take a constellation node — the act that replaces class advancement (v1.0 §5).
    * Learning the skill and taking the node are the same thing, so this delegates to
    * SkillKnowledge and lets the Constellation adjudicate eligibility.
    */
-  takeNode(hunterId: HunterId, nodeId: string): Result<Hunter, string> {
+  takeNode(hunterId: HunterId, nodeId: string, useRebirthBypass = false): Result<Hunter, string> {
     const hunter = this.session.roster.require(hunterId);
 
     const node = this.session.constellation.node(nodeId);
     if (!node) return err(`unknown constellation node "${nodeId}"`);
 
-    const taken = this.session.constellation.canTake(hunter, nodeId);
+    if (useRebirthBypass && (hunter.constellationBypasses ?? 0) < 1) return err('no rebirth constellation bypasses remain');
+    const normal = this.session.constellation.eligibility(hunter, nodeId);
+    if (useRebirthBypass) {
+      const bypassed = this.session.constellation.eligibility(hunter, nodeId, true);
+      if (!bypassed.eligible) return err(bypassed.unmet.join('; '));
+      if (normal.eligible) return err('that node does not need a rebirth bypass');
+    }
+    const taken = this.session.constellation.canTake(hunter, nodeId, useRebirthBypass);
     if (isErr(taken)) return taken;
 
-    const learned = this.session.knowledge.learn(hunter, asSkillId(node.skill), 'node');
+    const learned = this.session.knowledge.learn(hunter, asSkillId(node.skill), 'node', useRebirthBypass);
     if (isErr(learned)) return learned;
 
-    this.session.roster.update(learned.value);
+    const updated = useRebirthBypass
+      ? {
+          ...learned.value,
+          constellationBypasses: hunter.constellationBypasses - 1,
+          rebirthBypassedNodeIds: [...new Set([...(hunter.rebirthBypassedNodeIds ?? []), nodeId])],
+        }
+      : learned.value;
+    this.session.roster.update(updated);
     this.session.events.emit('constellation.nodeTaken', {
       hunterId,
       nodeId,
       regionId: node.region,
     });
-    return ok(learned.value);
+    return ok(updated);
   }
 
   equipSkill(hunterId: HunterId, skillId: string): Result<Hunter, string> {
     const hunter = this.session.roster.require(hunterId);
+    const node = this.session.constellation.nodeForSkill(skillId);
+    if (node) {
+      const eligibility = this.session.constellation.eligibility(hunter, node.id);
+      const levelBlock = eligibility.unmet.find((reason) => reason.startsWith('requires level'));
+      if (levelBlock && !(hunter.rebirthBypassedNodeIds ?? []).includes(node.id)) return err(levelBlock);
+    }
     const result = this.session.knowledge.equip(hunter, asSkillId(skillId));
     if (isErr(result)) return result;
     this.session.roster.update(result.value);
@@ -526,7 +600,8 @@ export class GuildCommands {
     const aptitude =
       (hunter.potential.facets['masteryAptitude'] ?? 1) *
       this.session.mentors.practiceScale() *
-      traitMultiplier(hunter, this.session.content.traitsById, 'masteryGainMultiplier');
+      traitMultiplier(hunter, this.session.content.traitsById, 'masteryGainMultiplier') *
+      rebirthExperienceScale(hunter.rebirths ?? 0, this.session.content.progression.rebirth.experienceAndMasteryBonusPerRebirth);
     for (let i = 0; i < uses; i++) {
       hunter = this.session.mastery.gainFromUse(hunter, id, significance, aptitude).hunter;
     }
@@ -956,7 +1031,8 @@ export class GuildCommands {
       const xp = Math.round(
         after.xp *
           this.session.mentors.experienceScale() *
-          traitMultiplier(hunter, this.session.content.traitsById, 'experienceGainMultiplier'),
+          traitMultiplier(hunter, this.session.content.traitsById, 'experienceGainMultiplier') *
+          rebirthExperienceScale(hunter.rebirths ?? 0, this.session.content.progression.rebirth.experienceAndMasteryBonusPerRebirth),
       );
       const progress = applyExperience(hunter.level, hunter.xp, xp, balance);
       hunter = withLevel(hunter, progress.level, progress.xp);
@@ -1850,7 +1926,8 @@ export class GuildCommands {
           Math.round(
             (result.xp / hunters.length) *
               this.session.mentors.experienceScale() *
-              traitMultiplier(hunter, this.session.content.traitsById, 'experienceGainMultiplier'),
+              traitMultiplier(hunter, this.session.content.traitsById, 'experienceGainMultiplier') *
+              rebirthExperienceScale(hunter.rebirths ?? 0, this.session.content.progression.rebirth.experienceAndMasteryBonusPerRebirth),
           ),
           this.session.content.balance.attributes,
         );

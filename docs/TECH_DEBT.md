@@ -9,7 +9,7 @@ Every entry names what is owed, why it was deferred, and what triggers repayment
 | ~~`EquipmentContribution` null object~~ | — | — | **done in Phase 2** — replaced by `systems/items/identityContributions` with no change to `BuildIdentity`'s interface |
 | ~~`CardContribution` null object~~ | — | — | **done in Phase 2** |
 | ~~Gold and resource accounting for refinement, selling and dismantling~~ | — | — | **done in Phase 7b** — all three transact through `systems/economy/Resources` |
-| Rebirth | `core/hunter/leveling` | **needs a design decision** (DL-054) | the design owner decides what resets, what is kept, what a rebirth grants, and any limit |
+| ~~Rebirth~~ | — | — | **done** (DL-054) — five journeys, cumulative attributes/training, level-only constellation bypasses, and an Awakened choice at rank 3 |
 | ~~Policy pipeline weight stages~~ | — | — | **done in Phase 3** — seven build-reading stages in `ai/hunter/hunterAI` |
 | Behavior memory | `systems/hunter/` | Phase 5+ | first behavior-memory-driven decision |
 | ~~`zone.firstEntered` never fires~~ | — | — | **done in Phase 5** — `WorldKnowledge` emits it on a region's first entry |

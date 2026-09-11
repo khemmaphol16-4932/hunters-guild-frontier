@@ -42,6 +42,12 @@ export interface Hunter {
 
   readonly level: number;
   readonly xp: number;
+  /** Completed level-cap journeys and unspent level-requirement bypasses (§10). */
+  readonly rebirths: number;
+  readonly bonusAttributePoints: number;
+  readonly constellationBypasses: number;
+  /** Nodes deliberately learned early by spending a rebirth bypass. */
+  readonly rebirthBypassedNodeIds: readonly string[];
 
   readonly attributes: Attributes;
   /**
@@ -116,6 +122,10 @@ export function createHunter(
     name: options.name,
     level: options.level ?? balance.minLevel,
     xp: 0,
+    rebirths: 0,
+    bonusAttributePoints: 0,
+    constellationBypasses: 0,
+    rebirthBypassedNodeIds: [],
     attributes: options.attributes ?? baseAttributes(balance),
     archetype: options.archetype,
     knownSkills: options.knownSkills ?? [],
@@ -146,6 +156,15 @@ export function withAttributes(hunter: Hunter, attributes: Attributes): Hunter {
 
 export function withLevel(hunter: Hunter, level: number, xp: number): Hunter {
   return { ...hunter, level, xp };
+}
+
+export function withRebirthProgress(
+  hunter: Hunter,
+  rebirths: number,
+  bonusAttributePoints: number,
+  constellationBypasses: number,
+): Hunter {
+  return { ...hunter, rebirths, bonusAttributePoints, constellationBypasses };
 }
 
 export function withKnownSkills(hunter: Hunter, knownSkills: readonly SkillId[]): Hunter {
@@ -190,7 +209,7 @@ export function equippedItemIds(hunter: Hunter): readonly ItemId[] {
 // --- Derived queries --------------------------------------------------------
 
 export function unspentAttributePoints(hunter: Hunter, balance: AttributeBalance): number {
-  return unspentPoints(hunter.attributes, hunter.level, balance);
+  return unspentPoints(hunter.attributes, hunter.level, balance, hunter.bonusAttributePoints ?? 0);
 }
 
 export function masteryOf(hunter: Hunter, skillId: SkillId): number {

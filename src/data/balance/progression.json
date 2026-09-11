@@ -114,6 +114,17 @@
   "retirement": {
     "minLevel": 30
   },
+  "rebirth": {
+    "$comment": "Approved design-owner rules: five journeys, cumulative growth bonuses, and one level-only constellation bypass per journey.",
+    "maxRebirths": 5,
+    "attributePointsPerRebirth": 3,
+    "constellationBypassesPerRebirth": 1,
+    "experienceAndMasteryBonusPerRebirth": 0.1,
+    "awakenedAt": 3,
+    "goldCost": 1000,
+    "insightCrystalCost": 5,
+    "awakenedTraitIds": ["awakened_vigor", "awakened_instinct", "awakened_bond"]
+  },
   "mentors": {
     "$comment": "Per-mentor bonuses, each capped, then the guild-wide total capped. practiceCap bounds mastery training and training efficiency together, because both apply to the same practice session.",
     "experiencePerLevel": 0.002,

@@ -43,7 +43,7 @@ import type { WorldEventsSnapshot } from '../systems/world/WorldEvents.js';
 import type { FriendshipSnapshot } from '../systems/hunter/Friendship.js';
 import type { StandingOrdersSnapshot } from '../systems/guild/StandingOrders.js';
 
-export const CURRENT_SAVE_VERSION = 25;
+export const CURRENT_SAVE_VERSION = 26;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -225,7 +225,9 @@ export interface SavePayloadV23 extends SavePayloadV22 { readonly worldEvents: W
 export interface SavePayloadV24 extends SavePayloadV23 { readonly friendship: FriendshipSnapshot }
 /** v25 — the standing expedition order the guild follows while the player is away. */
 export interface SavePayloadV25 extends SavePayloadV24 { readonly standingOrders: StandingOrdersSnapshot }
-export type CurrentSavePayload = SavePayloadV25;
+/** v26 — per-hunter rebirth rank and permanent journey rewards. */
+export interface SavePayloadV26 extends SavePayloadV25 {}
+export type CurrentSavePayload = SavePayloadV26;
 
 export interface Migration {
   readonly from: number;

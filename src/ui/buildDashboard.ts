@@ -250,6 +250,23 @@ export class BuildDashboard {
     card.append(
       el('p', 'subhead', `Status: ${describeAvailability(hunter.availability)}`),
     );
+    const rebirths = hunter.rebirths ?? 0;
+    const rebirthRules = this.session.content.progression.rebirth;
+    card.append(el('p', 'subhead', `Rebirth ${rebirths}/${rebirthRules.maxRebirths} · ${hunter.constellationBypasses ?? 0} constellation bypass${(hunter.constellationBypasses ?? 0) === 1 ? '' : 'es'} available`));
+    if (hunter.level >= this.session.content.balance.attributes.maxLevel && rebirths < rebirthRules.maxRebirths) {
+      const nextRank = rebirths + 1;
+      const choices = nextRank === rebirthRules.awakenedAt ? rebirthRules.awakenedTraitIds : [undefined];
+      for (const traitId of choices) {
+        const trait = traitId ? this.session.content.traitsById.get(traitId) : undefined;
+        const button = el('button', 'small', trait ? `Rebirth with ${trait.name}` : `Rebirth to rank ${nextRank}`) as HTMLButtonElement;
+        button.title = `${rebirthRules.goldCost} gold and ${rebirthRules.insightCrystalCost} Insight Crystals`;
+        button.onclick = () => {
+          const result = this.commands.rebirth(hunter.id, traitId);
+          this.notify(result.ok ? `${hunter.name} completed rebirth ${nextRank}.` : result.error, !result.ok);
+        };
+        card.append(button);
+      }
+    }
 
     // v1.0 §5: the constellation replaces class advancement. Available nodes are offered;
     // the frontier is shown with its unmet requirements so the tree explains itself.
@@ -275,10 +292,21 @@ export class BuildDashboard {
       const node = this.session.constellation.node(blocked.nodeId);
       const label = this.session.registry.get(node?.skill ?? '')?.name ?? blocked.nodeId;
 
-      const chip = el('span', 'tag', label);
-      chip.title = blocked.unmet.join('\n');
-      chip.style.opacity = '0.55';
-      constellation.append(chip);
+      const bypassed = this.session.constellation.eligibility(hunter, blocked.nodeId, true);
+      if ((hunter.constellationBypasses ?? 0) > 0 && bypassed.eligible) {
+        const button = el('button', 'small', `Bypass level: ${label}`) as HTMLButtonElement;
+        button.title = 'Spend one rebirth constellation bypass; other requirements still apply.';
+        button.onclick = () => {
+          const result = this.commands.takeNode(hunter.id, blocked.nodeId, true);
+          this.notify(result.ok ? `${hunter.name} learned ${label} early.` : result.error, !result.ok);
+        };
+        constellation.append(button);
+      } else {
+        const chip = el('span', 'tag', label);
+        chip.title = blocked.unmet.join('\n');
+        chip.style.opacity = '0.55';
+        constellation.append(chip);
+      }
     }
 
     card.append(constellation);
@@ -356,7 +384,7 @@ export class BuildDashboard {
       .filter((trait): trait is NonNullable<typeof trait> => trait !== undefined);
     if (traits.length === 0) card.append(el('p', 'empty', 'No notable traits.'));
     for (const trait of traits) {
-      card.append(el('p', 'name', `${trait.name}${trait.origin === 'legacy' ? ' (Legacy)' : ''}`));
+      card.append(el('p', 'name', `${trait.name}${trait.origin === 'legacy' ? ' (Legacy)' : trait.origin === 'awakened' ? ' (Awakened)' : ''}`));
       card.append(el('p', 'subhead', trait.description));
       if (preferences().detail === 'advanced') {
         card.append(el('p', 'log-line', Object.entries(trait.effects).map(([k, v]) => `${k} ${v}`).join(', ')));

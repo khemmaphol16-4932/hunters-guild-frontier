@@ -120,6 +120,16 @@ export interface ProgressionData {
     readonly unlocks: readonly LegacyUnlockDef[];
   };
   readonly retirement: { readonly minLevel: number };
+  readonly rebirth: {
+    readonly maxRebirths: number;
+    readonly attributePointsPerRebirth: number;
+    readonly constellationBypassesPerRebirth: number;
+    readonly experienceAndMasteryBonusPerRebirth: number;
+    readonly awakenedAt: number;
+    readonly goldCost: number;
+    readonly insightCrystalCost: number;
+    readonly awakenedTraitIds: readonly string[];
+  };
   readonly apprentices: { readonly perMentor: number; readonly goldCost: number };
   readonly mentors: MentorBalance;
   readonly newGamePlus: {
@@ -202,6 +212,7 @@ export function parseProgression(raw: unknown): ProgressionData {
   assertUniqueIds(unlocks.map((u) => u.id), unlocksPath);
 
   const retirement = section(root, 'retirement', FILE);
+  const rebirth = section(root, 'rebirth', FILE);
   const apprentices = section(root, 'apprentices', FILE);
 
   const mPath = `${FILE}.mentors`;
@@ -290,6 +301,16 @@ export function parseProgression(raw: unknown): ProgressionData {
     },
     retirement: {
       minLevel: positive(field(retirement, 'minLevel', `${FILE}.retirement`), `${FILE}.retirement.minLevel`),
+    },
+    rebirth: {
+      maxRebirths: positive(field(rebirth, 'maxRebirths', `${FILE}.rebirth`), `${FILE}.rebirth.maxRebirths`),
+      attributePointsPerRebirth: positive(field(rebirth, 'attributePointsPerRebirth', `${FILE}.rebirth`), `${FILE}.rebirth.attributePointsPerRebirth`),
+      constellationBypassesPerRebirth: positive(field(rebirth, 'constellationBypassesPerRebirth', `${FILE}.rebirth`), `${FILE}.rebirth.constellationBypassesPerRebirth`),
+      experienceAndMasteryBonusPerRebirth: positive(field(rebirth, 'experienceAndMasteryBonusPerRebirth', `${FILE}.rebirth`), `${FILE}.rebirth.experienceAndMasteryBonusPerRebirth`),
+      awakenedAt: positive(field(rebirth, 'awakenedAt', `${FILE}.rebirth`), `${FILE}.rebirth.awakenedAt`),
+      goldCost: nonNegative(field(rebirth, 'goldCost', `${FILE}.rebirth`), `${FILE}.rebirth.goldCost`),
+      insightCrystalCost: nonNegative(field(rebirth, 'insightCrystalCost', `${FILE}.rebirth`), `${FILE}.rebirth.insightCrystalCost`),
+      awakenedTraitIds: expectArray(field(rebirth, 'awakenedTraitIds', `${FILE}.rebirth`), `${FILE}.rebirth.awakenedTraitIds`).map((v, i) => expectString(v, `${FILE}.rebirth.awakenedTraitIds[${i}]`)),
     },
     mentors: {
       experiencePerLevel: m('experiencePerLevel'),

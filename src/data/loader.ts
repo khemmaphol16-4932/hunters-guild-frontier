@@ -739,6 +739,10 @@ export function loadContent(): GameContent {
   const crafting = parseCrafting(recipesJson);
   const contracts = parseContracts(contractsJson);
   const progression = parseProgression(progressionJson);
+  for (const id of progression.rebirth.awakenedTraitIds) {
+    const trait = traits.find((entry) => entry.id === id);
+    if (!trait || trait.origin !== 'awakened') throw new ContentValidationError(`balance/progression.json.rebirth.awakenedTraitIds`, `unknown awakened trait "${id}"`);
+  }
   const worldBoss = parseWorldBoss(worldBossJson);
   const friendship = parseFriendship(friendshipJson);
   const time = parseTime(timeJson);
