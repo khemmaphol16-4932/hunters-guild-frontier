@@ -621,3 +621,5 @@ The design owner approved five rebirths per Hunter: three permanent attribute po
 # 2026-09-11 — Phase 9 art vertical slice
 
 The first generated Guild Town overview now lives in `art/generated/` as the palette and composition anchor from `ART_DIRECTION.md`. `TownView` projects the authoritative rectangular grid into interactive isometric diamonds and depth-sorted building silhouettes without moving any placement rules into UI. Categories, tiers, damage and selection read visually, while building, relocation and inspection still dispatch the same commands. A narrow-screen review also caught and fixed the town layout forcing page-wide horizontal overflow.
+
+The same scene now projects the real TownJobs rota as small role-coloured hunters travelling between the Guild Hall and the building that supplies each assigned job. This remains a presentation layer over assignments and building-tier data rather than a second work simulation. Reduced-motion users see each hunter settled at their destination, and the existing textual job controls remain the interactive source of truth.

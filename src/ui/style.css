@@ -233,6 +233,25 @@ ul.notes.weak li { color: var(--warn); }
 .iso-building.cat-research, .iso-building.cat-revival { background: #665579; }
 .iso-building.cat-defense { background: #754547; }
 .iso-building.cat-recruitment { background: #476b72; }
+.iso-hunter {
+  position: absolute; left: 0; top: 0; width: 25px; height: 30px; padding: 0;
+  border: 2px solid #182029; border-radius: 50% 50% 42% 42%; color: #fff8dc;
+  background: var(--control); font-size: 8px; font-weight: 700;
+  box-shadow: 3px 5px 0 rgba(8,12,15,.45);
+  transform: translate(calc(var(--to-x) - 12px), var(--to-y));
+  animation: town-commute 9s ease-in-out infinite alternate;
+}
+.iso-hunter::before { content: ''; position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #d9ad82; left: 6px; top: -8px; border: 1px solid #182029; }
+.iso-hunter.role-tank { background: var(--tank); }
+.iso-hunter.role-healer { background: var(--healer); }
+.iso-hunter.role-damage { background: var(--damage); }
+.iso-hunter.role-support { background: var(--support); }
+.iso-hunter.role-control { background: var(--control); }
+.iso-hunter:hover { border-color: var(--accent); filter: brightness(1.2); }
+@keyframes town-commute {
+  0%, 18% { transform: translate(calc(var(--from-x) - 12px), calc(var(--from-y) + 36px)); }
+  82%, 100% { transform: translate(calc(var(--to-x) - 12px), var(--to-y)); }
+}
 
 .town-cell {
   width: 22px; height: 22px; padding: 0;

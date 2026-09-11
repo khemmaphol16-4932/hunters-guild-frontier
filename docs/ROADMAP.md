@@ -181,7 +181,7 @@ Delivered (2026-09-11): the town calendar with offline catch-up, standing orders
 
 **Remaining: the art phase** — isometric 2.5D pixel-art presentation of the town and the world (REQ-UX-007, `art/ART_DIRECTION.md`), and the sounds the audio hooks are waiting for.
 
-Art phase begun (2026-09-11): the first Guild Town overview establishes the approved palette and composition, and the real TownGrid is now projected into an interactive isometric scene. Buildings remain selectable, placeable and movable through the existing commands; tier, category, damage and selection state are visible. Next: hunter movement, world presentation, live combat rendering and production audio.
+Art phase begun (2026-09-11): the first Guild Town overview establishes the approved palette and composition, and the real TownGrid is now projected into an interactive isometric scene. Buildings remain selectable, placeable and movable through the existing commands; tier, category, damage and selection state are visible. Assigned hunters now commute visibly from the Guild Hall to the building that supplies their real TownJobs role, with role colours and a reduced-motion resting state. Next: world presentation, live combat rendering and production audio.
 
 ## Phase 10 — Technical Hardening ⬜
 

@@ -6,7 +6,7 @@ An autonomous Hunter Guild management RPG. The player is the Guild Master: they 
 
 The design goal is that a Hunter does not merely *have* a build — they **become** one, through what they actually do. Mastery grows from use, and build identity is what the AI reads when it decides how to act.
 
-**Status:** Phases 0–8 complete, including the approved five-rank Hunter rebirth system, and Phase 9 done up to the art. The guild runs in real time and while you are away, with standing orders, a Guild Report on return, ranked notices, a combat replay that explains itself, Easy/Advanced AI views and accessibility settings. Next: the isometric pixel-art presentation.
+**Status:** Phases 0–8 complete, including the approved five-rank Hunter rebirth system, with Phase 9 presentation in progress. The guild runs in real time and while you are away, with standing orders, a Guild Report on return, ranked notices, a combat replay that explains itself, Easy/Advanced AI views and accessibility settings. The real town grid now has an isometric presentation with visible hunters commuting to their assigned work; world presentation, live combat rendering and production audio remain.
 
 ---
 

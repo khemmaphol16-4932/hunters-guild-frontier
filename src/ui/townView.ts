@@ -17,6 +17,7 @@
 
 import type { Session } from '../app/Session.js';
 import type { GuildCommands } from '../app/GuildCommands.js';
+import type { HunterId } from '../core/ids.js';
 import type { Rotation, TownDepartmentId } from '../data/townSchema.js';
 import { ROTATIONS, capacityThroughTier } from '../data/townSchema.js';
 import type { Placement } from '../systems/town/TownGrid.js';
@@ -241,6 +242,45 @@ export class TownView {
       building.append(el('span', 'iso-tier', '◆'.repeat(placement.tier)));
       building.onclick = () => this.onCellClick(placement.x, placement.y, placement);
       grid.append(building);
+    }
+
+    // REQ-PRIME-006: the rota is visible in the place it affects. Markers travel from the
+    // Guild Hall to the building that actually supplies their assigned job; this is a pure
+    // projection of TownJobs and building tier data, never another assignment system.
+    const placements = town.grid.all();
+    const hall = placements.find((placement) => placement.buildingId === 'guild_hall');
+    const hallRect = hall ? town.grid.rectFor(hall) : undefined;
+    const project = (x: number, y: number) => ({
+      x: originX + (x - y) * tileW / 2,
+      y: 18 + (x + y) * tileH / 2,
+    });
+    const home = hallRect
+      ? project(hallRect.x + hallRect.width / 2, hallRect.y + hallRect.height / 2)
+      : project(town.grid.width / 2, town.grid.height / 2);
+    for (const [index, assignment] of this.session.townJobs.all().entries()) {
+      const hunter = this.session.roster.get(assignment.hunterId as HunterId);
+      if (!hunter) continue;
+      const workplace = placements.find((placement) => {
+        const def = town.definition(placement.buildingId);
+        return def?.tiers.find((tier) => tier.tier === placement.tier)?.jobs[assignment.jobId] !== undefined;
+      });
+      const rect = workplace ? town.grid.rectFor(workplace) : undefined;
+      const destination = rect
+        ? project(rect.x + rect.width / 2, rect.y + rect.height / 2)
+        : home;
+      const marker = el('span', `iso-hunter role-${this.session.buildIdentity.profileOf(hunter).primaryRole}`);
+      marker.style.setProperty('--from-x', `${home.x}px`);
+      marker.style.setProperty('--from-y', `${home.y}px`);
+      marker.style.setProperty('--to-x', `${destination.x + (index % 3 - 1) * 9}px`);
+      marker.style.setProperty('--to-y', `${destination.y + 34 + (index % 2) * 7}px`);
+      marker.style.animationDelay = `${-index * 1.7}s`;
+      marker.style.zIndex = String(350 + Math.round(destination.y));
+      marker.textContent = hunter.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2);
+      const job = this.session.content.townJobsById.get(assignment.jobId);
+      marker.title = `${hunter.name} · ${job?.name ?? assignment.jobId} at ${workplace ? this.nameOf(workplace) : 'the town approaches'}`;
+      marker.setAttribute('role', 'img');
+      marker.setAttribute('aria-label', marker.title);
+      grid.append(marker);
     }
 
     const viewport = el('div', 'iso-town-viewport');
