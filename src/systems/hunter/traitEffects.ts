@@ -25,3 +25,17 @@ export function traitMultiplier(
   }
   return multiplier;
 }
+
+/** The sum of every additive shift this hunter's traits carry for `effect` (0 when none do). */
+export function traitSum(
+  hunter: Hunter,
+  traitsById: ReadonlyMap<string, TraitDef>,
+  effect: string,
+): number {
+  let total = 0;
+  for (const traitId of hunter.traitIds) {
+    const value = traitsById.get(traitId)?.effects[effect];
+    if (typeof value === 'number') total += value;
+  }
+  return total;
+}

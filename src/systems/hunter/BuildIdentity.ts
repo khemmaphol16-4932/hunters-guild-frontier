@@ -52,6 +52,10 @@ export interface BuildIdentityDeps {
   readonly condition: Condition;
   readonly equipment?: EquipmentContribution;
   readonly cards?: CardContribution;
+  /** Innate and inherited traits' shift to risk posture (Battle-Born, Glass Nerves). */
+  readonly traitRiskShift?: (hunter: Hunter) => number;
+  /** Traits' shift toward protecting allies (Loyal: allySafetyWeightShift). */
+  readonly traitAllySafety?: (hunter: Hunter) => number;
 }
 
 type MutableRoles = Partial<Record<Role, number>>;
@@ -101,6 +105,8 @@ export class BuildIdentity {
   private readonly condition: Condition;
   private readonly equipment: EquipmentContribution;
   private readonly cards: CardContribution;
+  private readonly traitRiskShift: (hunter: Hunter) => number;
+  private readonly traitAllySafety: (hunter: Hunter) => number;
 
   /** Cost extremes across all content, used to normalise the resource profile. */
   private readonly maxSkillCost: number;
@@ -115,6 +121,8 @@ export class BuildIdentity {
     this.condition = deps.condition;
     this.equipment = deps.equipment ?? NULL_EQUIPMENT_CONTRIBUTION;
     this.cards = deps.cards ?? NULL_CARD_CONTRIBUTION;
+    this.traitRiskShift = deps.traitRiskShift ?? (() => 0);
+    this.traitAllySafety = deps.traitAllySafety ?? (() => 0);
 
     const all = this.registry.all();
     this.maxSkillCost = Math.max(1, ...all.map((s) => s.resourceCost));
@@ -235,6 +243,7 @@ export class BuildIdentity {
       ),
       focus,
       shape,
+      allySafety: this.traitAllySafety(hunter),
     };
   }
 
@@ -344,6 +353,7 @@ export class BuildIdentity {
     posture += this.personality.influenceOf(hunter).riskPostureShift;
     posture += this.personality.moraleRiskShift(hunter);
     posture += this.condition.riskPostureShift(hunter);
+    posture += this.traitRiskShift(hunter);
 
     return clamp(posture, config.clamp.min, config.clamp.max);
   }

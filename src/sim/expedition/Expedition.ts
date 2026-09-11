@@ -162,6 +162,8 @@ export interface ExpeditionDeps {
   readonly monsterCombatant: (def: MonsterDef, index: number, position: number) => Combatant;
   /** The guild's memory (§19). Optional so balance runs can stay silent. */
   readonly chronicle?: CombatEventSink;
+  /** Trait and friendship bonuses to a hunter's output, asked per action (systems/combat/outgoing). */
+  readonly outgoingMultiplier?: (actor: Combatant, allies: readonly Combatant[], elapsedSeconds: number) => number;
   /** Route-level force of the player's standing orders (§29). */
   readonly routeOrders?: () => RouteOrders;
   /** The authored event catalogue (REQ-EXP-002). */
@@ -644,6 +646,7 @@ export class Expedition {
         },
         objective: { id: objective.id, riskPreference: objective.riskPreference },
         ...(worldBossId !== undefined ? { worldBossId } : {}),
+        ...(this.deps.outgoingMultiplier ? { outgoingMultiplier: this.deps.outgoingMultiplier } : {}),
         ...(this.deps.chronicle ? { events: this.deps.chronicle } : {}),
       },
       guild,

@@ -14,7 +14,7 @@ Every entry names what is owed, why it was deferred, and what triggers repayment
 | Behavior memory | `systems/hunter/` | Phase 5+ | first behavior-memory-driven decision |
 | ~~`zone.firstEntered` never fires~~ | — | — | **done in Phase 5** — `WorldKnowledge` emits it on a region's first entry |
 | `no_rescues` and `save_ultimates` orders have no dedicated scenario coverage | `tests/scenarios.test.ts` | next AI pass |
-| Friendship | `systems/hunter/` | Phase 6b | recruitment lands (the Recruitment Hall stands and staffs jobs; its dynamic pool does not exist yet) |
+| ~~Friendship~~ | — | — | **done** (DL-057) — `systems/hunter/Friendship`, save v24 |
 
 ## Balance values needing simulation calibration
 
@@ -108,7 +108,7 @@ A null object satisfies the compiler but proves nothing about whether the consum
 | Watching a town hunt or a defense as it happens | REQ-TWN-007, §7 | Phase 9 | `CombatEncounter.step` is public precisely so a renderer can drive it a tick at a time; nothing does yet, for expeditions either |
 | ~~Recruit fees, the research reset resource, and building repair costs~~ | — | **done in Phase 7b** — all are real ledger debits; repair scale is authored economy data |
 | ~~Respec cost~~ | — | **done in the 2026-09-10 review** (DL-050) — Phase 7b's entry above claimed every price; respec was missed, and its resource had no source |
-| Friendship | `systems/hunter/` | Phase 8 | recruitment lands, but friendship is behaviour memory rather than a recruitment feature |
+| ~~Friendship~~ | — | **done** (DL-057) | bonds from shared expeditions and rescues; friends fight harder together |
 | The Shrine still provides comfort and no revival | REQ-TWN-005 | open | v1.0 §20 leaves exact resurrection methods an open design question; inventing one here would be the wrong kind of initiative |
 | Departments have no per-job lever | REQ-DEP-004 | if it proves needed | department priority separates departments, not jobs within one. `outputValue` (DL-043) covers the case that motivated it; a finer lever would sit below the altitude the design works at |
 
@@ -116,8 +116,8 @@ A null object satisfies the compiler but proves nothing about whether the consum
 
 | Item | Requirement | Deferred to | Why |
 |---|---|---|---|
-| Innate trait effects with no consumer: `riskPostureShift`, `hungerRateMultiplier`, `sustainedCombatBonus`, `moraleVolatility`, `reliabilityBonus`, `friendshipGainMultiplier`, `allySafetyWeightShift`, `partySupportBonus`, `departmentHeadAptitude` | REQ-HUN-009 | next AI/combat pass | seven of the eight innate traits were inert. Wiring these into combat, morale and the AI changes balance and belongs with the systems that read them. `tests/legacyTraits.test.ts` pins this exact list: a new unread effect fails the build, and so does one that gains a reader without leaving the list |
-| Field hunger is never applied | REQ-ECO-003 | next expedition pass | `Condition.exert` exists and nothing calls it, so hunters come home from expeditions exactly as hungry as they left; town food shortage still reaches recovery through `fedFraction` |
+| ~~Innate trait effects with no consumer~~ | — | **done** (DL-057) | every trait effect now has a reader; `tests/legacyTraits.test.ts` fails if a new one arrives without one |
+| ~~Field hunger is never applied~~ | — | **done** (DL-057) | expeditions add hunger by time in the field; the town feeds it back down as far as provisions allow |
 | Ordinary bosses' card pools are still not rolled | REQ-CRD-* | next loot pass | the world boss rolls its pool with the drop chance, the per-boss guarantee and duplicate conversion (DL-056); region bosses have empty pools and nothing rolls them |
 | Contract, endless and New Game+ catalogues and numbers are defaults | v1.0 §20 | design approval | every one is labelled pending approval in its data file; v1.0 §20 reserves content catalogues, balance curves and New Game+ rules for the design owner |
 | ~~World boss placement~~ | REQ-BOS-003 | **done in Phase 8** | the Drowned Choir is an actionable Ashfall world event with persistence and respawn |

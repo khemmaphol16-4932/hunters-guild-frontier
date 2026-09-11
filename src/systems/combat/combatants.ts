@@ -19,14 +19,25 @@ export interface HunterCombatantDeps {
   readonly profileOf: (hunter: Hunter) => BuildProfile;
   readonly conditionMultiplier: (hunter: Hunter) => number;
   readonly equipmentStats: (hunter: Hunter) => Readonly<Record<string, number>>;
+  /**
+   * Trait multipliers on individual derived stats (Sure Hands: accuracy). Applied last, so a
+   * trait scales the hunter as equipped and as tired as they actually are.
+   */
+  readonly traitStatScale?: (hunter: Hunter) => Readonly<Record<string, number>>;
 }
 
 export function hunterCombatant(hunter: Hunter, deps: HunterCombatantDeps): Combatant {
   const profile = deps.profileOf(hunter);
-  const stats = computeDerivedStats(hunter.attributes, hunter.level, deps.attributeBalance, {
+  const derived = computeDerivedStats(hunter.attributes, hunter.level, deps.attributeBalance, {
     globalMultiplier: deps.conditionMultiplier(hunter),
     flat: deps.equipmentStats(hunter),
   });
+  const scale = deps.traitStatScale?.(hunter) ?? {};
+  const stats: Record<string, number> = { ...derived };
+  for (const [stat, multiplier] of Object.entries(scale)) {
+    const value = stats[stat];
+    if (value !== undefined) stats[stat] = value * multiplier;
+  }
 
   const maxHealth = Math.max(1, Math.round(stats['maxHp'] ?? 100));
   const maxResource = Math.max(1, Math.round(stats['maxResource'] ?? 50));

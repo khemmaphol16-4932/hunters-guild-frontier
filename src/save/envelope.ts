@@ -40,8 +40,9 @@ import type { MentorsSnapshot } from '../systems/progression/Mentors.js';
 import type { NewGamePlusSnapshot } from '../systems/progression/NewGamePlus.js';
 import type { EndlessRecordsSnapshot } from '../systems/progression/EndlessRecords.js';
 import type { WorldEventsSnapshot } from '../systems/world/WorldEvents.js';
+import type { FriendshipSnapshot } from '../systems/hunter/Friendship.js';
 
-export const CURRENT_SAVE_VERSION = 23;
+export const CURRENT_SAVE_VERSION = 24;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -219,7 +220,9 @@ export interface SavePayloadV21 extends SavePayloadV20 { readonly newGamePlus: N
 /** v22 — personal records for endless expeditions (REQ-END-003). */
 export interface SavePayloadV22 extends SavePayloadV21 { readonly endlessRecords: EndlessRecordsSnapshot }
 export interface SavePayloadV23 extends SavePayloadV22 { readonly worldEvents: WorldEventsSnapshot }
-export type CurrentSavePayload = SavePayloadV23;
+/** v24 — friendship bonds between hunters (REQ-HUN-012). */
+export interface SavePayloadV24 extends SavePayloadV23 { readonly friendship: FriendshipSnapshot }
+export type CurrentSavePayload = SavePayloadV24;
 
 export interface Migration {
   readonly from: number;

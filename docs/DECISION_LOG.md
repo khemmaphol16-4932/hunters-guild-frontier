@@ -621,3 +621,28 @@ Two trait effects gained readers so the Legacy Traits would do what they say: `e
 3. The world-boss card roll now honours the per-boss guarantee after `guaranteeAfterKills`, and converts a duplicate into essence (REQ-CRD-003). Both rules were authored and ignored.
 
 **Why.** The first bug is DL-042's mistake again: a second notion of time beside the clock. The second is the rule the Chronicle depends on: one fact, reported once, at the place it happened.
+
+---
+
+## DL-057 — Every trait does something; field hunger; Friendship
+
+**Ambiguity.** REQ-HUN-012 models relationships as "Friendship only, no full life simulation", and says no more. The nine unread trait effects (DL-053) each named a behaviour, but not a mechanism.
+
+**Decision.**
+- **Each trait effect is read where its description points:**
+  - `riskPostureShift` (Battle-Born, Glass Nerves) goes into the build profile's risk posture.
+  - `departmentHeadAptitude` (Born Leader) is added on top of the head-qualification cap.
+  - `reliabilityBonus` (Sure Hands) scales accuracy.
+  - `moraleVolatility` (Glass Nerves) scales the morale swing on the way home.
+  - `hungerRateMultiplier` (Iron Stomach) scales field hunger.
+  - `sustainedCombatBonus` (Battle-Born) ramps up over a fight.
+  - `partySupportBonus` (Born Leader) lifts every standing ally.
+  - `allySafetyWeightShift` (Loyal) raises the AI's weight on rescues, through a new optional `allySafety` on the build profile.
+  - `friendshipGainMultiplier` (Loyal) speeds bonding.
+- **Field hunger exists.** Expeditions add hunger by minutes in the field, and the town feeds hunters back down as fast as provisions allow (`resources.json.hunger`). `Condition.exert` had existed since Phase 1 with no caller, so REQ-ECO-003's "hunger has gameplay effects" was true only on paper. Condition already turns hunger into a stat penalty and a cautious risk posture.
+- **Friendship** is a bond per pair, 0..1. It grows from shared expeditions and much faster from rescues, and ends when a hunter dies, retires or leaves. Past a threshold the two are friends, and a hunter with a friend in the fight gets one combat bonus, however many friends are present. There is no decay, rivalry or gossip. Save **v24**.
+- Combat reads every bonus through one hook, `EncounterDeps.outgoingMultiplier`, supplied from `systems/combat/outgoing.ts`. The encounter asks for a number and knows nothing about traits or friendship.
+
+**Why.** Seven of eight innate traits were inert, while the recruiter valued them and the dashboard displayed them. A trait is part of what a hunter *is* (REQ-HUN-009); if it changes nothing, the identity is only a label. Every value (`balance/friendship.json`, `resources.json.hunger`) is **pending approval**.
+
+**Note on DL-009.** `BuildProfile` gained one optional field (`allySafety`). It is additive; existing consumers and hand-built profiles are unchanged, and the §140 A–M scenarios still pass.

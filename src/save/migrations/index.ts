@@ -464,6 +464,16 @@ const v22ToV23: Migration = {
   },
 };
 
+const v23ToV24: Migration = {
+  from: 23,
+  to: 24,
+  describe: 'persist friendship bonds between hunters',
+  migrate(payload: unknown): unknown {
+    // Friendship did not exist before v24; every pair of hunters starts as strangers.
+    return { ...asRecord(payload, 23), friendship: { bonds: {} } };
+  },
+};
+
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -487,6 +497,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v20ToV21,
   v21ToV22,
   v22ToV23,
+  v23ToV24,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

@@ -20,6 +20,8 @@ export interface EconomyData {
   readonly resources: readonly ResourceDef[];
   readonly repairCostScale: number;
   readonly foodConsumptionPerResidentPerStep: number;
+  /** Field hunger and how the town feeds it back down (REQ-ECO-003). */
+  readonly hunger: { readonly fieldPerMinute: number; readonly townReliefPerStep: number };
   readonly expeditionRewards: Readonly<Record<'blue' | 'yellow' | 'red' | 'black', EconomyReward>>;
   readonly townHuntRewards: EconomyReward;
   readonly market: MarketConfig;
@@ -67,6 +69,15 @@ export function parseEconomy(value: unknown): EconomyData {
   if (typeof foodConsumption !== 'number' || !Number.isFinite(foodConsumption) || foodConsumption <= 0) {
     throw new ContentValidationError('resources.json.foodConsumptionPerResidentPerStep', 'must be positive');
   }
+  const hungerRaw = (value as Record<string, unknown>)['hunger'];
+  if (typeof hungerRaw !== 'object' || hungerRaw === null) throw new ContentValidationError('resources.json.hunger', 'must be an object');
+  const hungerRecord = hungerRaw as Record<string, unknown>;
+  const hungerRate = (key: string): number => {
+    const n = hungerRecord[key];
+    if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || n > 1) throw new ContentValidationError(`resources.json.hunger.${key}`, 'must be between 0 and 1');
+    return n;
+  };
+  const hunger = { fieldPerMinute: hungerRate('fieldPerMinute'), townReliefPerStep: hungerRate('townReliefPerStep') };
   const reward = (rawReward: unknown, path: string): EconomyReward => {
     if (typeof rawReward !== 'object' || rawReward === null) throw new ContentValidationError(path, 'must be an object');
     const record = rawReward as Record<string, unknown>;
@@ -155,5 +166,5 @@ export function parseEconomy(value: unknown): EconomyData {
     if (!seen.has(id)) throw new ContentValidationError(`resources.json.market.goods.${id}`, 'is not a defined resource');
     if (id === 'gold') throw new ContentValidationError('resources.json.market.goods.gold', 'the currency cannot be traded for itself');
   }
-  return { resources, repairCostScale, foodConsumptionPerResidentPerStep: foodConsumption, expeditionRewards, townHuntRewards, market };
+  return { resources, repairCostScale, foodConsumptionPerResidentPerStep: foodConsumption, hunger, expeditionRewards, townHuntRewards, market };
 }

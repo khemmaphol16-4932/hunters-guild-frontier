@@ -43,6 +43,8 @@ export interface TownCombatDeps {
   readonly monsterOf: (id: string) => MonsterDef | undefined;
   readonly combatantFor: (hunterId: HunterId) => Combatant;
   readonly monsterCombatant: (def: MonsterDef, index: number, position: number) => Combatant;
+  /** Trait and friendship bonuses to a hunter's output (systems/combat/outgoing). */
+  readonly outgoingMultiplier?: (actor: Combatant, allies: readonly Combatant[], elapsedSeconds: number) => number;
 }
 
 export interface HuntResult {
@@ -105,6 +107,7 @@ export class TownCombat {
         emergency: undefined,
         // Blue-zone rules. Nothing in the town's own reach can kill (REQ-ZON-001).
         environment: { zoneTier: 'blue', lethal: false, canInjure: false },
+        ...(this.deps.outgoingMultiplier ? { outgoingMultiplier: this.deps.outgoingMultiplier } : {}),
       },
       guild,
       monsters,
@@ -169,6 +172,7 @@ export class TownCombat {
         // Defenders can be hurt — the wall is a real fight — but the town does not kill its
         // own. Losing costs buildings and residents, which is the price REQ-TWN-008 names.
         environment: { zoneTier: 'yellow', lethal: false, canInjure: true },
+        ...(this.deps.outgoingMultiplier ? { outgoingMultiplier: this.deps.outgoingMultiplier } : {}),
       },
       guild,
       monsters,

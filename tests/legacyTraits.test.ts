@@ -31,21 +31,11 @@ function sourceText(dir: string): string {
 }
 
 /**
- * Trait effects authored before anything reads them. Each is a real gap, listed in
- * TECH_DEBT.md under "Innate trait effects with no consumer". The test below fails if a new
- * unread effect appears, and fails if one of these gains a reader without leaving this list.
+ * Trait effects authored before anything reads them. Empty since DL-057 wired the last nine;
+ * if a gap must be tolerated again it goes here *and* in TECH_DEBT. The test below fails if a
+ * new unread effect appears, and fails if one listed here gains a reader without leaving.
  */
-const KNOWN_UNREAD = new Set([
-  'riskPostureShift',
-  'hungerRateMultiplier',
-  'sustainedCombatBonus',
-  'moraleVolatility',
-  'reliabilityBonus',
-  'friendshipGainMultiplier',
-  'allySafetyWeightShift',
-  'partySupportBonus',
-  'departmentHeadAptitude',
-]);
+const KNOWN_UNREAD = new Set<string>();
 
 describe('trait effects are read by something (the Phase 7–8 review found most were not)', () => {
   const src = sourceText(join(__dirname, '..', 'src'));
@@ -159,5 +149,61 @@ describe('apprentices (generational play)', () => {
     const loaded = testSession('apprentice-load');
     loaded.session.restore(h.session.snapshot());
     expect(loaded.session.mentors.apprenticesOf(h.mentor.hunterId)).toBe(1);
+  });
+});
+
+describe('innate traits act (they were rolled, shown and inert)', () => {
+  function withTrait(seed: string, traitId: string | undefined, level = 20) {
+    const h = testSession(seed);
+    const base = h.debug.spawnHunter({ level, fullyEquipped: true });
+    const hunter = { ...base, traitIds: traitId ? [traitId as never] : [] };
+    h.session.roster.update(hunter);
+    return { ...h, hunter };
+  }
+
+  it('Battle-Born leans into risk and Glass Nerves away from it', () => {
+    const plain = withTrait('trait-risk', undefined);
+    const bold = withTrait('trait-risk', 'battle_born');
+    const nervy = withTrait('trait-risk', 'glass_nerves');
+    const posture = (h: typeof plain) => h.session.buildIdentity.profileOf(h.hunter).riskPosture;
+    expect(posture(bold)).toBeGreaterThan(posture(plain));
+    expect(posture(nervy)).toBeLessThan(posture(plain));
+  });
+
+  it('Born Leader makes a better department head than the same hunter without it', () => {
+    const plain = withTrait('trait-lead', undefined);
+    const leader = withTrait('trait-lead', 'born_leader');
+    expect(leader.session.departments.qualification(leader.hunter)).toBeGreaterThan(
+      plain.session.departments.qualification(plain.hunter),
+    );
+  });
+
+  it('expeditions make hunters hungry, Iron Stomach less so, and the town feeds them back down', () => {
+    const plain = withTrait('trait-hunger', undefined);
+    const iron = withTrait('trait-hunger', 'iron_stomach');
+    for (const h of [plain, iron]) {
+      h.commands.foundTown();
+      h.session.roster.update({ ...h.session.roster.require(h.hunter.id), condition: { ...h.hunter.condition, hunger: 0 } });
+      h.commands.sendExpedition('verdant_reach', 'clear');
+    }
+    const hungerOf = (h: typeof plain) => h.session.roster.require(h.hunter.id).condition.hunger;
+    expect(hungerOf(plain)).toBeGreaterThan(0);
+    expect(hungerOf(iron)).toBeLessThan(hungerOf(plain));
+
+    const before = hungerOf(plain);
+    plain.commands.advanceTown(200);
+    expect(hungerOf(plain)).toBeLessThan(before);
+  });
+
+  it('Glass Nerves swings morale harder on the way home', () => {
+    const plain = withTrait('trait-morale', undefined, 5);
+    const nervy = withTrait('trait-morale', 'glass_nerves', 5);
+    for (const h of [plain, nervy]) {
+      h.commands.foundTown();
+      h.session.roster.update({ ...h.session.roster.require(h.hunter.id), condition: { ...h.hunter.condition, morale: 0.5 } });
+      h.commands.sendExpedition('verdant_reach', 'clear');
+    }
+    const swing = (h: typeof plain) => Math.abs(h.session.roster.require(h.hunter.id).condition.morale - 0.5);
+    expect(swing(nervy)).toBeGreaterThan(swing(plain));
   });
 });

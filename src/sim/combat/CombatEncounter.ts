@@ -97,6 +97,13 @@ export interface EncounterDeps {
    * boss here is what stops a caller reporting the same kill a second time.
    */
   readonly worldBossId?: string;
+  /**
+   * How much harder a guild combatant hits (and heals) right now, as a multiplier on skill
+   * power. Supplied by the composition root from traits and friendship — Battle-Born grows
+   * with the length of the fight, an inspiring hunter lifts the people beside them, and
+   * friends fight harder together. The encounter only asks; it knows nothing about why.
+   */
+  readonly outgoingMultiplier?: (actor: Combatant, allies: readonly Combatant[], elapsedSeconds: number) => number;
   /** What the guild sent this party to do (§28). Defaults to neutral. */
   readonly objective?: CombatObjective;
   /**
@@ -335,7 +342,7 @@ export class CombatEncounter {
           attacker: actor,
           defender: target,
           type: 'physical',
-          power: 1,
+          power: 1 * this.outgoing(actor),
         });
         this.landAttack(rng, actor, target, result.hit ? result.amount : 0, result.critical, 'a strike');
         return;
@@ -349,7 +356,7 @@ export class CombatEncounter {
         actor.cooldowns.set(skill.id, skill.cooldownSeconds);
 
         if (skill.tags.includes('restorative')) {
-          const healed = this.damage.resolveHealing(rng, actor, 1.4);
+          const healed = this.damage.resolveHealing(rng, actor, 1.4 * this.outgoing(actor));
           const before = target.health;
           target.health = Math.min(target.maxHealth, target.health + healed);
           const actual = target.health - before;
@@ -386,7 +393,7 @@ export class CombatEncounter {
           attacker: actor,
           defender: target,
           type,
-          power: 1.6,
+          power: 1.6 * this.outgoing(actor),
         });
         this.landAttack(rng, actor, target, result.hit ? result.amount : 0, result.critical, skill.name);
         return;
@@ -767,6 +774,13 @@ export class CombatEncounter {
       dead: this.guild.filter((c) => c.dead),
       xp,
     };
+  }
+
+  /** The composition root's say on how hard a guild combatant hits right now (1 = unmodified). */
+  private outgoing(actor: Combatant): number {
+    if (actor.side !== 'guild' || !this.deps.outgoingMultiplier) return 1;
+    const allies = this.guild.filter((c) => c !== actor && !c.dead && !c.downed);
+    return Math.max(0, this.deps.outgoingMultiplier(actor, allies, this.elapsed));
   }
 
   private record(

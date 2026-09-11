@@ -125,6 +125,7 @@ export class GuildCommands {
       .map((trait) => trait.id);
     const mentor = this.session.mentors.retire(hunter, legacyTraits);
     this.session.roster.remove(hunter.id);
+    this.session.friendship.forget(hunter.id);
     this.session.audit.record({
       actor: { kind: 'player' },
       system: 'legacy',
@@ -960,13 +961,21 @@ export class GuildCommands {
         this.session.events.emit('hunter.leveled', { hunterId: hunter.id, level: progress.level });
       }
 
+      // Morale swings harder for some hunters than others (Glass Nerves: moraleVolatility).
+      const moraleSwing =
+        (after.moraleChange + (result.wiped ? -0.2 : result.retreated ? -0.05 : 0.08)) *
+        traitMultiplier(hunter, this.session.content.traitsById, 'moraleVolatility');
+      // REQ-ECO-003: time in the field makes a hunter hungry (Iron Stomach: hungerRateMultiplier).
+      // Nothing applied field hunger before; `Condition.exert` existed and had no caller.
+      const hungerAdded =
+        (result.elapsedSeconds / 60) *
+        this.session.content.economy.hunger.fieldPerMinute *
+        traitMultiplier(hunter, this.session.content.traitsById, 'hungerRateMultiplier');
       hunter = this.session.condition.set(hunter, {
         fatigue: hunter.condition.fatigue + after.fatigueAdded,
+        hunger: hunter.condition.hunger + hungerAdded,
         // Coming home is worth something; being broken on the way costs more than it gains.
-        morale:
-          hunter.condition.morale +
-          after.moraleChange +
-          (result.wiped ? -0.2 : result.retreated ? -0.05 : 0.08),
+        morale: hunter.condition.morale + moraleSwing,
       });
 
       // REQ-ZON-001 decided *whether* a hunter could die out there; this decides what the
@@ -995,6 +1004,7 @@ export class GuildCommands {
           reasonCodes: ['hunter_died', `zone:${region.zoneTier}`],
         });
         this.session.roster.remove(hunter.id);
+        this.session.friendship.forget(hunter.id);
         continue;
       }
 
@@ -1028,6 +1038,9 @@ export class GuildCommands {
 
       this.session.roster.update(hunter);
     }
+
+    // REQ-HUN-012: everyone who came home together knows each other a little better.
+    this.session.friendship.recordShared(result.aftermath.filter((a) => !a.died).map((a) => a.hunterId));
 
     // The frontier notices what the guild did (REQ-WLD-002's reputation axis, now real).
     this.session.reputation.recordExpedition({
@@ -1852,14 +1865,15 @@ export class GuildCommands {
       // Only people actually in town: someone in the field is not resting, and someone
       // injured is already on the slower, state-machine-governed path.
       if (hunter.availability.state !== 'available') continue;
-      if (hunter.condition.fatigue <= 0) continue;
+      // The town feeds its hunters as far as its provisions reach (REQ-ECO-003).
+      const fed = this.session.content.economy.hunger.townReliefPerStep * steps * this.session.food.fedFraction;
+      if (hunter.condition.fatigue <= 0 && (hunter.condition.hunger <= 0 || fed <= 0)) continue;
 
-      const rested = this.session.recovery.restPerStep(hunter) * steps;
-      if (rested <= 0) continue;
-
+      const rested = Math.max(0, this.session.recovery.restPerStep(hunter) * steps);
       this.session.roster.update(
         this.session.condition.set(hunter, {
           fatigue: hunter.condition.fatigue - rested,
+          hunger: hunter.condition.hunger - fed,
           morale: hunter.condition.morale,
         }),
       );

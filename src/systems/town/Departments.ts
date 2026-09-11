@@ -96,6 +96,12 @@ export interface DepartmentsDeps {
   readonly content: DepartmentData;
   readonly jobs: readonly JobDef[];
   readonly hunterOf: (id: HunterId) => Hunter | undefined;
+  /**
+   * A hunter's natural talent for leading, from traits (Inspiring: departmentHeadAptitude).
+   * Added on top of the qualification cap: a natural leader is worth more than the ceiling
+   * that experience alone can reach.
+   */
+  readonly leadershipAptitude?: (hunter: Hunter) => number;
   /** Everyone currently on the town work rota. */
   readonly staffOf: () => readonly StaffedJob[];
   /** Job id -> slots the standing buildings provide. */
@@ -290,9 +296,9 @@ export class Departments {
       (sum, key) => sum + Math.max(0, hunter.attributes[key] - starting),
       0,
     );
-    return Math.min(
-      config.maxBonus,
-      config.perLevel * hunter.level + config.perAttributePoint * invested,
+    return (
+      Math.min(config.maxBonus, config.perLevel * hunter.level + config.perAttributePoint * invested) +
+      (this.deps.leadershipAptitude?.(hunter) ?? 0)
     );
   }
 

@@ -547,8 +547,9 @@ export class HunterAI {
             return (1 - profile.riskPosture) * weight * (1 - healthFraction(view.self));
           }
           if (action.kind === 'rescue') {
-            // A bold hunter attempts rescues a cautious one declines (REQ-CBT-013).
-            return profile.riskPosture * weight * 0.5;
+            // A bold hunter attempts rescues a cautious one declines (REQ-CBT-013), and a
+            // loyal one goes back for a friend a little more readily (allySafety, from traits).
+            return (profile.riskPosture * 0.5 + (profile.allySafety ?? 0)) * weight;
           }
           return 0;
         },

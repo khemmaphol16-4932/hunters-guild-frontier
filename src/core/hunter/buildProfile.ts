@@ -41,4 +41,9 @@ export interface BuildProfile {
   /** How dominant the primary role is. Drives how strictly the AI holds to identity. */
   readonly focus: number;
   readonly shape: IdentityShape;
+  /**
+   * How much a hunter weighs a fallen ally's safety beyond what their risk posture says —
+   * from traits (Loyal: allySafetyWeightShift). Optional so hand-built profiles stay valid.
+   */
+  readonly allySafety?: number;
 }

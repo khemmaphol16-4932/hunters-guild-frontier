@@ -2,6 +2,11 @@
   "$comment": "REQ-ECO-001/002: the economy starts with one trade currency and a deliberately small resource set. Values and starting balances are content, never TypeScript constants.",
   "repairCostScale": 0.25,
   "foodConsumptionPerResidentPerStep": 0.1,
+  "hunger": {
+    "$comment": "REQ-ECO-003: hunger has gameplay effects. Hunters grow hungry in the field (per minute of expedition time) and are fed back down in town, as fast as the town's provisions allow. Condition turns hunger into a stat penalty and a risk-posture shift, and recovery reads it too. PENDING APPROVAL.",
+    "fieldPerMinute": 0.03,
+    "townReliefPerStep": 0.05
+  },
   "expeditionRewards": {
     "blue": { "gold": 90, "food": 8, "materials": 5 },
     "yellow": { "gold": 180, "food": 12, "materials": 9, "extras": { "essence": 1 } },

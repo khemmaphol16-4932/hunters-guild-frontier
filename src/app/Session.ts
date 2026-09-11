@@ -77,6 +77,9 @@ import { Legacy } from '../systems/progression/Legacy.js';
 import { Mentors } from '../systems/progression/Mentors.js';
 import { NewGamePlus, type NewGamePlusOptions } from '../systems/progression/NewGamePlus.js';
 import { EndlessRecords } from '../systems/progression/EndlessRecords.js';
+import { traitMultiplier, traitSum } from '../systems/hunter/traitEffects.js';
+import { Friendship } from '../systems/hunter/Friendship.js';
+import { outgoingMultiplier } from '../systems/combat/outgoing.js';
 import type { Result } from '../core/result.js';
 import type { WorldVariantDef } from '../data/progressionSchema.js';
 
@@ -225,6 +228,8 @@ export class Session {
   readonly mentors: Mentors;
   readonly newGamePlus: NewGamePlus;
   readonly endlessRecords = new EndlessRecords();
+  /** The one relationship hunters have (REQ-HUN-012). */
+  readonly friendship: Friendship;
   private cycleBaseline: CurrentSavePayload;
 
   readonly partyPlanner: PartyPlanner;
@@ -362,11 +367,21 @@ export class Session {
       condition: this.condition,
       equipment: new EquipmentIdentity(itemIdentityDeps),
       cards: new CardIdentity(itemIdentityDeps),
+      traitRiskShift: (hunter) => traitSum(hunter, this.content.traitsById, 'riskPostureShift'),
+      traitAllySafety: (hunter) => traitSum(hunter, this.content.traitsById, 'allySafetyWeightShift'),
     });
     this.chronicle = new Chronicle({
       balance: this.content.balance.chronicle,
       events: this.events,
       currentTick: () => this.clock.tick,
+    });
+    this.friendship = new Friendship({
+      balance: this.content.friendship,
+      events: this.events,
+      gainMultiplier: (id) => {
+        const hunter = this.roster.get(id);
+        return hunter ? traitMultiplier(hunter, this.content.traitsById, 'friendshipGainMultiplier') : 1;
+      },
     });
     this.worldEvents = new WorldEvents({
       boss: this.content.worldBoss,
@@ -453,6 +468,7 @@ export class Session {
       content: this.content.departments,
       jobs: this.content.townJobs.jobs,
       hunterOf: (id) => this.roster.get(id),
+      leadershipAptitude: (hunter) => traitSum(hunter, this.content.traitsById, 'departmentHeadAptitude'),
       staffOf: () => session.townJobs.all(),
       slotsOf: () => session.town.jobSlots(),
       // REQ-DEP-001: departments unlock through Research. Phase 6a stood this in with a
@@ -554,8 +570,18 @@ export class Session {
           profileOf: (hunter) => this.buildIdentity.profileOf(hunter),
           conditionMultiplier: (hunter) => this.condition.statMultiplier(hunter),
           equipmentStats: (hunter) => this.equipment.aggregateStats(hunter),
+          traitStatScale: (hunter) => ({
+            accuracy: 1 + traitSum(hunter, this.content.traitsById, 'reliabilityBonus'),
+          }),
         }),
       monsterCombatant,
+      outgoingMultiplier: (actor, allies, elapsed) =>
+        outgoingMultiplier(actor, allies, elapsed, {
+          traitsById: this.content.traitsById,
+          hunterOf: (id) => this.roster.get(id),
+          areFriends: (a, b) => this.friendship.areFriends(a, b),
+          balance: this.content.friendship,
+        }),
     });
 
     this.defense = new Defense({
@@ -629,8 +655,18 @@ export class Session {
           profileOf: (hunter) => this.buildIdentity.profileOf(hunter),
           conditionMultiplier: (hunter) => this.condition.statMultiplier(hunter),
           equipmentStats: (hunter) => this.equipment.aggregateStats(hunter),
+          traitStatScale: (hunter) => ({
+            accuracy: 1 + traitSum(hunter, this.content.traitsById, 'reliabilityBonus'),
+          }),
         }),
       monsterCombatant,
+      outgoingMultiplier: (actor, allies, elapsed) =>
+        outgoingMultiplier(actor, allies, elapsed, {
+          traitsById: this.content.traitsById,
+          hunterOf: (id) => this.roster.get(id),
+          areFriends: (a, b) => this.friendship.areFriends(a, b),
+          balance: this.content.friendship,
+        }),
       chronicle: this.events,
       events: this.content.events,
       routeOrders: () => routeOrders(session.policy.all().map((c) => c.id)),
@@ -817,6 +853,7 @@ export class Session {
       mentors: this.mentors.snapshot(),
       newGamePlus: this.newGamePlus.snapshot(),
       endlessRecords: this.endlessRecords.snapshot(),
+      friendship: this.friendship.snapshot(),
       worldEvents: this.worldEvents.snapshot(),
     };
   }
@@ -860,6 +897,7 @@ export class Session {
     this.legacy.restore(payload.legacy);
     this.mentors.restore(payload.mentors);
     this.endlessRecords.restore(payload.endlessRecords);
+    this.friendship.restore(payload.friendship);
     this.worldEvents.restore(payload.worldEvents);
     this.townJobs.restore(payload.townJobs);
   }
@@ -867,6 +905,7 @@ export class Session {
   dispose(): void {
     this.chronicle.dispose();
     this.monument.dispose();
+    this.friendship.dispose();
     this.events.clear();
   }
 }
