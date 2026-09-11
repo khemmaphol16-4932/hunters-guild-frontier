@@ -1,0 +1,14 @@
+{
+  "$comment": "REQ-UX-001: teaching through play, with progressive disclosure — no tutorial dump. Each hint belongs to one screen and appears only while its condition holds and until the player dismisses it; a screen shows at most one hint at a time, the first in this list whose condition holds. Conditions are named in code (app/Guidance.ts) and checked at load. PENDING APPROVAL: wording and order.",
+  "hints": [
+    { "id": "first-expedition", "screen": "field", "when": "noExpeditionsYet", "text": "Pick a region and an objective. The Guild AI proposes a party and explains why — you decide, then the hunters act on their own." },
+    { "id": "unspent-points", "screen": "guild", "when": "unspentAttributePoints", "text": "Someone has unspent attribute points. Where you put them decides what kind of hunter they become — and how the AI plays them." },
+    { "id": "compare-builds", "screen": "guild", "when": "sameClassPair", "text": "Shift-click (or Shift+Enter) a second hunter to compare two builds side by side." },
+    { "id": "town-pressure", "screen": "town", "when": "townUnderPressure", "text": "The town is under pressure. The panel names which need is short; a building that answers it relieves it." },
+    { "id": "walls-empty", "screen": "town", "when": "noDefence", "text": "Nothing guards the walls. Attacks come while you are away; a watchtower and someone on gate watch hold them." },
+    { "id": "no-kitchen", "screen": "town", "when": "foodShort", "text": "The stores are running down. A field kitchen or a hunting camp feeds more people than the granary alone." },
+    { "id": "standing-order", "screen": "field", "when": "noStandingOrder", "text": "The guild works while you are away. Set a standing order below if you want expeditions to go out without you." },
+    { "id": "contracts", "screen": "hall", "when": "contractsAvailable", "text": "Clients post work on the contract board. The Guild AI reads each offer; accepting is always yours." },
+    { "id": "legacy", "screen": "hall", "when": "legacyPointsAvailable", "text": "You have Legacy points. They buy options and breadth for this guild and the next, never raw power." }
+  ]
+}

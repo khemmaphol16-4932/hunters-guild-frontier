@@ -945,6 +945,7 @@ export class GuildCommands {
         hunterId: after.hunterId,
         expeditionId: `${regionId}#${this.session.clock.tick}`,
         durationSeconds,
+        regionName: region.name,
       });
     }
 

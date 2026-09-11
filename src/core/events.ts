@@ -45,7 +45,8 @@ export interface DomainEventMap {
   'combat.companionLost': { hunterId: HunterId; lostHunterId: HunterId };
 
   'loot.rareFound': { hunterId: HunterId; itemId: ItemId; rarity: string };
-  'expedition.completed': { hunterId: HunterId; expeditionId: string; durationSeconds: number };
+  /** `regionName` is for anything that writes a sentence about the trip; `expeditionId` is an id. */
+  'expedition.completed': { hunterId: HunterId; expeditionId: string; durationSeconds: number; regionName?: string };
   /** `contractId` is the individual offer; `templateId` is which contract it was (DL-047). */
   'contract.completed': { hunterId: HunterId; contractId: string; templateId: string; name: string; succeeded: boolean };
 

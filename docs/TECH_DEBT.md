@@ -121,3 +121,11 @@ A null object satisfies the compiler but proves nothing about whether the consum
 | Ordinary bosses' card pools are still not rolled | REQ-CRD-* | next loot pass | the world boss rolls its pool with the drop chance, the per-boss guarantee and duplicate conversion (DL-056); region bosses have empty pools and nothing rolls them |
 | Contract, endless and New Game+ catalogues and numbers are defaults | v1.0 §20 | design approval | every one is labelled pending approval in its data file; v1.0 §20 reserves content catalogues, balance curves and New Game+ rules for the design owner |
 | ~~World boss placement~~ | REQ-BOS-003 | **done in Phase 8** | the Drowned Choir is an actionable Ashfall world event with persistence and respawn |
+
+## Waiting for the art phase
+
+| Item | Requirement | Why it waits |
+|---|---|---|
+| Isometric 2.5D pixel-art town and world | REQ-UX-007, `art/ART_DIRECTION.md` | the art phase; the grid town, text reports and the replay are the functional layer it will present |
+| Sounds | Phase 9 audio | `ui/audioCues.json` names a cue for every notice; nothing plays until assets exist |
+| Watching a fight live | REQ-UX-004, §7 | `CombatEncounter.step` and `CombatFacts` are ready for a renderer; the replay reads as a story until one exists |

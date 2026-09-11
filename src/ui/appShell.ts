@@ -21,6 +21,8 @@ import { renderGuildReport } from './reportView.js';
 import type { GuildReport } from '../app/GuildReport.js';
 import { onPreferencesChanged, preferences, setPreference } from './preferences.js';
 import { applyAccessibilityPreferences } from './a11y.js';
+import { hintFor } from '../app/Guidance.js';
+import { playNoticeCue } from './audio.js';
 
 type ViewId = 'guild' | 'town' | 'hall' | 'field';
 
@@ -70,6 +72,7 @@ export class AppShell {
 
     // A critical notice raised by the live tick must interrupt even if nothing re-renders.
     session.notifications.subscribe((notice) => {
+      playNoticeCue(notice.kind);
       if (notice.priority !== 'routine') {
         this.renderNav();
         this.renderAlerts();
@@ -119,6 +122,7 @@ export class AppShell {
       button.onclick = () => {
         this.view = id;
         this.renderNav();
+        this.renderAlerts();
         this.renderBody();
       };
       this.nav.append(button);
@@ -185,6 +189,14 @@ export class AppShell {
       access.append(option);
     }
     panel.append(access);
+
+    const hints = el('button', 'small', 'Show dismissed hints again') as HTMLButtonElement;
+    hints.disabled = prefs.dismissedHints.length === 0;
+    hints.onclick = () => {
+      setPreference('dismissedHints', []);
+      this.renderAlerts();
+    };
+    panel.append(hints);
     return panel;
   }
 
@@ -210,6 +222,21 @@ export class AppShell {
     }
 
     if (this.settingsOpen) this.alerts.append(this.renderSettings());
+
+    // REQ-UX-001: one hint, for this screen, about something that is true right now.
+    const hint = this.report ? undefined : hintFor(this.session, this.view, new Set(preferences().dismissedHints));
+    if (hint) {
+      const box = el('div', 'hint');
+      box.setAttribute('role', 'note');
+      box.append(el('span', undefined, hint.text));
+      const got = el('button', 'small', 'Got it') as HTMLButtonElement;
+      got.onclick = () => {
+        setPreference('dismissedHints', [...preferences().dismissedHints, hint.id]);
+        this.renderAlerts();
+      };
+      box.append(got);
+      this.alerts.append(box);
+    }
 
     if (this.feedOpen) {
       const feed = el('section', 'card notice-feed');

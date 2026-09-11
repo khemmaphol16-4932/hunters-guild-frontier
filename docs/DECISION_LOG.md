@@ -709,3 +709,14 @@ A fight with a death or a boss kill shows its first *why* line in the route repo
 - **Accessibility.** Larger text, higher contrast and reduced motion (which also follows the OS setting). Visible focus rings. Roster rows and route nodes are keyboard-operable, and Shift+Enter compares builds the way Shift-click does. The critical banner is `role="alert"` and the notice feed `role="log"`.
 - **REQ-UX-003.** The hunter dashboard gains a Traits & bonds card: traits (innate and Legacy), condition bars, and friends.
 - **Friendship now has diminishing returns** (each shared hardship closes part of the remaining distance), and the shared-expedition gain is lower. With the live calendar, a flat gain made every pair of hunters best friends within a few hours of standing orders, and a bond everyone has means nothing.
+
+---
+
+## DL-063 — Hints, the guild's Chronicle, and audio hooks without sounds
+
+**Decision.**
+- **REQ-UX-001 — progressive disclosure.** `ui/guidance.json` holds short hints. Each belongs to one screen and names a condition that must be true *now*: no expedition yet, unspent attribute points, empty walls, stores running down, and so on. A screen shows at most one hint, only while its condition holds, until the player dismisses it. Dismissals are a viewer preference and can be reset in Settings. The loader refuses a hint longer than a sentence or two, and the compiler refuses a condition with no evaluator. The Legacy, Mentors and New Game+ cards stay folded into one explanatory card until the guild has earned Legacy, taken a mentor or begun a cycle.
+- **Guild Chronicle.** The Hall shows major and historic entries across every hunter, newest first. An entry the whole party shares is written once, with everyone who was there. This exposed a Phase 3 text bug: the longest-expedition entry printed the internal id ("verdant_reach#15200"). It now names the region.
+- **Audio hooks.** Every notice kind maps to a cue name or to deliberate silence (`ui/audioCues.json`), and a player can be registered to hear them. None is registered: the game ships no sounds until the art and audio pass, and a volume slider for a silent game would be a control that does nothing.
+
+**Not done here:** isometric pixel-art presentation of the town and the world. That is the art phase, where this work stops.

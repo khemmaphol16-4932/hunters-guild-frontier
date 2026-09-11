@@ -202,7 +202,7 @@ export class Chronicle {
       this.record(hunterId, kind, `Recovered ${itemId}.`);
     });
 
-    on('expedition.completed', ({ hunterId, expeditionId, durationSeconds }) => {
+    on('expedition.completed', ({ hunterId, expeditionId, durationSeconds, regionName }) => {
       this.increment(hunterId, 'expeditions', 1);
       const record = this.ensure(hunterId);
       if (durationSeconds > (record.counters['longestExpeditionSeconds'] ?? 0)) {
@@ -210,7 +210,8 @@ export class Chronicle {
         this.record(
           hunterId,
           'rareDiscovery',
-          `Longest expedition yet: ${expeditionId}, ${Math.round(durationSeconds)}s.`,
+          // The id ("verdant_reach#15200") used to be the sentence; a Chronicle is read by people.
+          `Longest expedition yet: ${regionName ?? expeditionId.split('#')[0]!.replace(/_/g, ' ')}, ${Math.round(durationSeconds)}s in the field.`,
         );
       }
     });

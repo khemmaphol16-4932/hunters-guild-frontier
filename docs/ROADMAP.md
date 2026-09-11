@@ -149,7 +149,7 @@ Gold · resources · food · production · crafting · market · contracts · re
 
 Key DoD: `sim/Balance.ts` long-run simulation finds no unbounded resource growth (§141).
 
-## Phase 8 — Progression 🟨 in progress
+## Phase 8 — Progression ✅ (rebirth awaits a design decision, DL-054)
 
 Guild mastery · capability · reputation depth · research depth · legacy · NG+ · generational hunters · mentors · legacy traits · endless scaling.
 
@@ -171,9 +171,13 @@ Review and repair (2026-09-10): New Game+ now founds a new guild in a freshly se
 
 New Game+ complete: an explicit player command resets roster, Chronicle, world knowledge, town, economy, reputation, research, Guild Mastery and Monument while retaining Legacy and only the mentors selected for the next generation. Unlocked starting choices, archetypes and world variants are validated before reset. Save v21 preserves cycle state, and restored RNG streams make resets deterministic.
 
-## Phase 9 — UX / Presentation ⬜
+## Phase 9 — UX / Presentation 🟨 in progress — everything but the art
 
 Progressive UI · build dashboard polish · chronicle · combat timeline · AI explain · guild report · notifications · town and world presentation · **isometric pixel-art** · audio hooks · accessibility.
+
+Delivered (2026-09-11): the town calendar with offline catch-up, standing orders and the Guild Report (DL-058) · importance-ranked notifications (DL-060) · the combat replay built from recorded facts (DL-061) · Easy/Advanced AI views, accessibility settings and the dashboard's Traits & bonds card (DL-062) · progressive-disclosure hints, the Guild Chronicle and audio hooks (DL-063).
+
+**Remaining: the art phase** — isometric 2.5D pixel-art presentation of the town and the world (REQ-UX-007, `art/ART_DIRECTION.md`), and the sounds the audio hooks are waiting for.
 
 ## Phase 10 — Technical Hardening ⬜
 

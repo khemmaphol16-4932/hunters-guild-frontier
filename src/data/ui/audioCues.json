@@ -1,0 +1,20 @@
+{
+  "$comment": "Phase 9 audio hooks: which cue each notice kind would sound. The game ships no sounds yet — that belongs with the art and audio pass — so these are names a player can later be given. Every notice kind must map to a cue or to null (deliberately silent).",
+  "cues": {
+    "hunterDied": "toll",
+    "townBreached": "alarm",
+    "worldBossAppeared": "horn",
+    "legendaryFound": "chime-high",
+    "stageReached": "fanfare",
+    "researchCompleted": "quill",
+    "contractResolved": "seal",
+    "worldBossDefeated": "fanfare",
+    "endlessRecord": "chime",
+    "rareFound": "chime",
+    "frontierEntered": "wind",
+    "townDefended": null,
+    "hunterLeveled": "tick",
+    "rescue": null,
+    "bossDefeated": "drum"
+  }
+}

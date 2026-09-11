@@ -19,10 +19,12 @@ export interface Preferences {
   readonly highContrast: boolean;
   /** No transitions or animated emphasis. */
   readonly reducedMotion: boolean;
+  /** Hints the player has dismissed (REQ-UX-001). */
+  readonly dismissedHints: readonly string[];
 }
 
 const KEY = 'hgf.preferences';
-const DEFAULTS: Preferences = { detail: 'easy', largeText: false, highContrast: false, reducedMotion: false };
+const DEFAULTS: Preferences = { detail: 'easy', largeText: false, highContrast: false, reducedMotion: false, dismissedHints: [] };
 
 let current: Preferences = load();
 const listeners = new Set<(prefs: Preferences) => void>();
@@ -37,6 +39,7 @@ function load(): Preferences {
       largeText: parsed.largeText === true,
       highContrast: parsed.highContrast === true,
       reducedMotion: parsed.reducedMotion === true,
+      dismissedHints: Array.isArray(parsed.dismissedHints) ? parsed.dismissedHints.filter((h): h is string => typeof h === 'string') : [],
     };
   } catch {
     return DEFAULTS;

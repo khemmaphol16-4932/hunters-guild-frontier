@@ -41,6 +41,7 @@ import worldBossJson from './world/worldBoss.json';
 import friendshipJson from './balance/friendship.json';
 import timeJson from './balance/time.json';
 import notificationsJson from './ui/notifications.json';
+import guidanceJson from './ui/guidance.json';
 import { parseEconomy, type EconomyData, type ResourceDef } from './economySchema.js';
 import { parseCrafting, type CraftingData } from './craftingSchema.js';
 import { parseContracts, type ContractData } from './contractSchema.js';
@@ -50,6 +51,7 @@ import { parseWorldBoss, type WorldBossDef } from './worldBossSchema.js';
 import { parseFriendship, type FriendshipBalance } from './friendshipSchema.js';
 import { parseTime, type TimeBalance } from './timeSchema.js';
 import { parseNotifications, type NotificationRules } from './notificationSchema.js';
+import { parseGuidance, type HintDef } from './guidanceSchema.js';
 
 import raritiesJson from './items/rarities.json';
 import itemTypesJson from './items/item-types.json';
@@ -237,6 +239,8 @@ export interface GameContent {
   readonly time: TimeBalance;
   /** Which events interrupt the player, and which only go to the feed (REQ-UX-005). */
   readonly notifications: NotificationRules;
+  /** Contextual hints, one screen at a time (REQ-UX-001). */
+  readonly guidance: readonly HintDef[];
 
   readonly balance: {
     readonly attributes: AttributeBalance;
@@ -739,6 +743,7 @@ export function loadContent(): GameContent {
   const friendship = parseFriendship(friendshipJson);
   const time = parseTime(timeJson);
   const notifications = parseNotifications(notificationsJson);
+  const guidance = parseGuidance(guidanceJson);
   const worldBossMonster = monsters.find((monster) => monster.id === worldBoss.bossId);
   if (!worldBossMonster || worldBossMonster.tier !== 'boss') {
     throw new ContentValidationError('world/worldBoss.json.bossId', `"${worldBoss.bossId}" is not a boss monster`);
@@ -866,6 +871,7 @@ export function loadContent(): GameContent {
     friendship,
     time,
     notifications,
+    guidance,
 
     balance: {
       attributes: parseAttributeBalance(attributeBalanceJson),

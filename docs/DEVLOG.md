@@ -583,3 +583,29 @@ The Drowned Choir now appears as an actionable world event in the Ashfall Barrow
 The Choir now owns the Hollow Choir card pool and a victorious run consults the authored 0.5% boss-card drop rate. The event and respawn schedule persist in save v23 and are visible on the expedition screen.
 
 The checkpoint is green at 599 tests across 34 suites, including placement, card-pool ownership, deduplication, respawn and migration coverage. Rebirth remains the sole Phase 8 blocker because its reset, carry-over, grant and limit rules require the design owner's decision (DL-054).
+
+---
+
+# 2026-09-11 — World-boss fixes, Phase 8's last systems, and Phase 9 up to the art
+
+**Goal.** From "continue till art phase": fix the review findings in the world-boss commit, finish what Phase 8 can finish without a design decision, then build Phase 9 up to — not including — the isometric pixel art.
+
+### Fixed (reproduced first)
+- **The world boss came back 20× too fast** (500 ticks, not 500 steps) and **every world-boss kill counted twice** in each hunter's Chronicle. Respawn is now data in coarse steps; the encounter reports the kill once (DL-056).
+- **The founding town could not feed itself.** Food capacity said "enough for 14", but only staffed kitchen and hunting jobs produced provisions. The starting town has neither, so it starved in about 90 steps and emptied in 200. Food capacity is now production, in one unit (DL-059).
+- **Attack damage was never repaired while the player was away.** A town holding 6,848 gold emptied because its bunkhouses stayed broken. The Guild AI now repairs what it can afford, and reports what it can't (DL-058).
+- **Everyone became best friends within hours** of standing orders; bonds now grow with diminishing returns (DL-062).
+- **Chronicle text printed an internal id** (DL-063).
+
+### Delivered
+- **Phase 8:** every trait effect now does something (seven of eight innate traits were inert), field hunger, and Friendship (DL-057, save v24).
+- **Phase 9a:** a town calendar (live tick plus offline catch-up capped at three days), standing expedition orders with an explicit lethal-zone opt-in, and the Guild Report (DL-058, save v25).
+- **9b:** notifications ranked in data; only critical ones interrupt (DL-060).
+- **9c/d:** a combat replay built from recorded facts (verdict, *why*, key skills, moments, declined rescues); Easy/Advanced AI detail; accessibility settings; the dashboard's Traits & bonds card (DL-061, DL-062).
+- **9e/f:** progressive-disclosure hints, the Guild Chronicle, audio hooks (DL-063).
+
+### What the long runs taught
+Three of today's bugs were invisible at the game's old pace, where the player pressed "Let a season pass" a few times. The live calendar and three-day catch-up run the town for thousands of steps, and each bug surfaced only there: starvation at step 90, the permanently broken town, universal friendship. Two back-to-back three-day absences are now a test.
+
+### Stops here
+Isometric pixel-art presentation of the town and world (REQ-UX-007, `art/ART_DIRECTION.md`) is the art phase. Rebirth still needs the design owner's rules (DL-054).

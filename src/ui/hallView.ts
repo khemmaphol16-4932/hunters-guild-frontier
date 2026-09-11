@@ -59,12 +59,59 @@ export class HallView {
       this.renderInstitution(),
       this.renderContracts(),
       this.renderCrafting(),
+      this.renderChronicle(),
       this.renderMonument(),
-      this.renderLegacy(),
-      this.renderMentors(),
-      this.renderNewGamePlus(),
     );
+    // REQ-UX-001: the Legacy layer is disclosed when the guild has something to spend or
+    // someone to remember — until then, one card says what it is and how it opens.
+    const legacyStarted =
+      this.session.legacy.lifetimePoints > 0 ||
+      this.session.newGamePlus.cycle > 0 ||
+      this.session.mentors.all().length > 0;
+    if (legacyStarted) {
+      grid.append(this.renderLegacy(), this.renderMentors(), this.renderNewGamePlus());
+    } else {
+      const teaser = el('div', 'card');
+      teaser.append(el('h3', undefined, 'Legacy'));
+      teaser.append(
+        el(
+          'p',
+          'subhead',
+          'Historic achievements — a first Red frontier, a new town stage, a world boss, a contract done for the first time — earn Legacy points. ' +
+            'They open new options for this guild and the next: mentors, openings, world variants. Never raw power.',
+        ),
+      );
+      grid.append(teaser);
+    }
     this.host.append(grid);
+  }
+
+  // --- The guild's history, across every hunter (v1.0 §11) -----------------
+
+  private renderChronicle(): HTMLElement {
+    const card = el('div', 'card');
+    card.append(el('h3', undefined, 'Guild Chronicle'));
+    // A party shares its moments, so the same entry appears in each member's Chronicle.
+    // The guild's history says it once, with everyone who was there.
+    const grouped = new Map<string, { tick: number; text: string; level: string; names: string[] }>();
+    for (const record of this.session.chronicle.all()) {
+      const name = this.session.roster.get(record.hunterId)?.name ?? 'a hunter no longer with the guild';
+      for (const entry of record.notable) {
+        if (entry.level === 'minor') continue;
+        const key = `${entry.tick}|${entry.text}`;
+        const group = grouped.get(key) ?? { tick: entry.tick, text: entry.text, level: entry.level, names: [] };
+        group.names.push(name);
+        grouped.set(key, group);
+      }
+    }
+    const entries = [...grouped.values()]
+      .map((g) => ({ tick: g.tick, level: g.level, line: `${listNames(g.names)}: ${g.text}` }))
+      .sort((a, b) => b.tick - a.tick);
+    if (entries.length === 0) card.append(el('p', 'empty', 'Nothing remarkable has happened yet.'));
+    for (const entry of entries.slice(0, 15)) {
+      card.append(el('p', entry.level === 'historic' ? 'points' : 'subhead', entry.line));
+    }
+    return card;
   }
 
   private say(message: string, isError = false): void {
@@ -98,7 +145,9 @@ export class HallView {
     const active = this.session.contracts.active();
     if (active) {
       card.append(el('p', 'name', `Active: ${active.name} for ${active.clientName}`));
-      card.append(el('p', 'subhead', `Send an expedition to ${active.regionId} with the "${active.objective}" objective.`));
+      const regionName = this.session.content.worldRegionsById.get(active.regionId)?.name ?? active.regionId;
+      card.append(el('p', 'subhead', `Send an expedition to ${regionName} with the "${active.objective}" objective.`));
+      if (active.challenge) card.append(el('p', 'err', `Challenge: ${active.challenge.summary}`));
       card.append(
         button('Abandon', () => {
           const result = this.commands.abandonContract();
@@ -348,4 +397,9 @@ export class HallView {
     card.append(begin);
     return card;
   }
+}
+
+function listNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 }

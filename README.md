@@ -6,7 +6,7 @@ An autonomous Hunter Guild management RPG. The player is the Guild Master: they 
 
 The design goal is that a Hunter does not merely *have* a build — they **become** one, through what they actually do. Mastery grows from use, and build identity is what the AI reads when it decides how to act.
 
-**Status:** Phases 0–7 complete, Phase 8 nearly so. The loop runs end to end — a town you build on a grid, departments and a work rota, research, recruitment, an economy with a market, crafting and a contract board that follows your reputation and capability, expeditions (including endless ones with personal records), deterministic combat, and a Legacy layer with mentors, apprentices and New Game+. Rebirth awaits a design decision; presentation (Phase 9) is next.
+**Status:** Phases 0–8 complete (rebirth awaits a design decision), and Phase 9 done up to the art. The guild runs in real time and while you are away, with standing orders, a Guild Report on return, ranked notices, a combat replay that explains itself, Easy/Advanced AI views and accessibility settings. Next: the isometric pixel-art presentation.
 
 ---
 
@@ -88,7 +88,7 @@ If you change its interface, you are changing the thing every later phase depend
 npm test
 ```
 
-596 tests across 33 suites. Beyond ordinary unit coverage, some tests exist to protect design decisions and will fail if a decision is quietly reversed:
+648 tests across 39 suites. Beyond ordinary unit coverage, some tests exist to protect design decisions and will fail if a decision is quietly reversed:
 
 - `tests/architecture.test.ts` — layer violations, unseeded randomness, wall-clock reads, and the absence of both a reaction-skill category and a department budget system
 - `tests/buildIdentity.test.ts` — two hunters of the same class built differently must be *measurably* different

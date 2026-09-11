@@ -258,3 +258,10 @@ html.high-contrast { --muted: #c3ccd8; --line: #6b7b8f; --panel: #0e1116; --pane
 html.high-contrast .subhead, html.high-contrast .empty { color: #d5dde8; }
 html.reduced-motion *, html.reduced-motion *::before, html.reduced-motion *::after { transition: none !important; animation: none !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* --- Hints (REQ-UX-001) -------------------------------------------------- */
+.hint {
+  display: flex; gap: 10px; align-items: center; padding: 6px 18px;
+  background: var(--panel-2); color: var(--accent); border-bottom: 1px solid var(--line);
+}
+.hint button { margin-left: auto; }
