@@ -4,7 +4,8 @@
 
 Every asset group the game needs, anchored to a real content `id` in `src/data/**`.
 Detailed per-asset specifications live in `art/specs/` — all twelve categories are specified,
-plus `specs/00-production-optimization.md`.
+plus `specs/00-production-optimization.md`. Full generation prompts for every asset are in
+`art/prompts/` (357 prompts; `npm run art:prompts -- --check` verifies every content id has one).
 
 **Status vocabulary:** `SPEC` (specified, not produced) · `WIP` · `REVIEW` · `DONE` · `BLOCKED`
 **Priority:** `P0` = the MVP proof cycle · `P1` = first playable frontier · `P2` = depth · `P3` = polish

@@ -52,6 +52,16 @@ skills (`combat/monsters.json`), the 4 statuses (`combat/statuses.json`), telegr
 
 ---
 
+### Category negative prompt
+
+Appended to the master negative in `ART_BIBLE.md` §3 by `art/prompts/build.mjs`.
+
+```
+anime effects, speed lines, lens flare, bloom, glow halo, energy explosion, lightning bolts,
+particle soup, additive blending, full-screen flash, gore, blood spray, smoke filling the frame,
+characters, creatures
+```
+
 ## 2. Asset specifications
 
 ### `VFX_FAMILY_<ID>` — skill effect families
@@ -59,7 +69,7 @@ skills (`combat/monsters.json`), the 4 statuses (`combat/statuses.json`), telegr
 | Family | Frames | Covers (hunter skills) | Covers (monster skills) | Pri |
 |---|---|---|---|---|
 | `impact_light` | 4 | `riposte`, blade hits | `moss_crawler`, `thicket_wasp`, `quarry_hound` attacks, `hamstring` | **P0** |
-| `impact_heavy` | 5 | `shield_bash`, maul hits | `rend`, `sundering_blow`, `ashen_grasp` | **P0** |
+| `impact_heavy` | 5 | `shield_bash`, maul hits | `rend`, `sundering_blow`, `ashen_grasp`, `undertow` | **P0** |
 | `projectile_arrow` | 3 + trail | `piercing_shot`, bow attacks | `cairn_archer` | P1 |
 | `projectile_bolt` | 4 + trail | `ember_lance` (fire) | `molten_arc` (fire, lobbed) | P1 |
 | `chain` | 6 | `frost_chain` (frost) | `binding_silk` (frost) | P1 |

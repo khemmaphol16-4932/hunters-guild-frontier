@@ -37,6 +37,15 @@ There are exactly **8 resources**. None is invented here.
 
 ---
 
+### Category negative prompt
+
+Appended to the master negative in `ART_BIBLE.md` §3 by `art/prompts/build.mjs`.
+
+```
+treasure pile, gold coins spilling, gemstones, loot chest, sparkles, glow halo, rainbow,
+cartoon coin, currency symbol, letters, numbers
+```
+
 ## 1. Assets
 
 ### `RES_<ID>` — per resource · P0 (`gold`, `food`, `materials`), P1 (`iron`, `salvage`), P2 (rest)

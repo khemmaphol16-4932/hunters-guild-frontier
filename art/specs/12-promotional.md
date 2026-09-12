@@ -89,6 +89,15 @@ smooth gradients, depth of field, bokeh
 
 ---
 
+### Category negative prompt
+
+Appended to the master negative in `ART_BIBLE.md` §3 by `art/prompts/build.mjs`.
+
+```
+painterly, digital painting, high resolution illustration, smooth gradients, depth of field,
+bokeh, lens blur, player character, hero pose, logo, title text, interface, horror, gore
+```
+
 ## 3. Order
 
 1. **Now, no new art:** re-export the two existing PNGs as sized WebP (O-11) so they stop costing

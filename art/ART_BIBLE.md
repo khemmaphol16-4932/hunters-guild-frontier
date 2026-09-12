@@ -63,6 +63,17 @@ No text, no numbers, no UI, no frame, no border, no watermark, no signature,
 no drop shadow baked into the sprite.
 ```
 
+### Compact form (token-limited models)
+
+For models that truncate long prompts (CLIP-based, ~77 tokens), put the asset's subject first and
+use this in place of the full style block. The prompt library carries both forms.
+
+```
+isometric pixel art, true 2:1 dimetric, hand-placed pixels, clean readable silhouette,
+soft ambient shading, limited dithering, grounded frontier fantasy, warm lived-in,
+restrained palette, light from upper left, transparent background, no text
+```
+
 ## 3. Master negative prompt
 
 ```
@@ -75,7 +86,8 @@ exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi,
 grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic
 view, side-scroller view, character card, portrait frame, trading card layout,
 background scenery, ground plate, shadow ellipse, text, logo, watermark, signature,
-UI elements, health bar, multiple characters, collage, sprite sheet grid lines
+UI elements, health bar, multiple characters, collage, sprite sheet grid lines,
+soft halo, glow around the silhouette, semi-transparent edge fringe
 ```
 
 **Per-category additions** are defined in each category spec. They never replace this list.
@@ -558,7 +570,9 @@ Every asset, every category. Category specs add to this list; they never subtrac
 ## 14. Category index
 
 Full asset enumeration lives in `art/ASSET_REGISTRY.md`. Detailed per-asset specifications
-live in `art/specs/`.
+live in `art/specs/`. **Complete, copy-paste-ready generation prompts for every asset** live in
+`art/prompts/`, compiled from this file and the specs by `npm run art:prompts` — edit the rules
+here, never the generated prompts.
 
 | # | Category | Spec file | Anchored to |
 |---|---|---|---|

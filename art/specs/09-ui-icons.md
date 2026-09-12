@@ -54,6 +54,15 @@ no frame, no border, no text, no letters, no numbers.
 
 ---
 
+### Category negative prompt
+
+Appended to the master negative in `ART_BIBLE.md` §3 by `art/prompts/build.mjs`.
+
+```
+flat vector icon, material design, emoji, glossy button, 3D icon, gradient, drop shadow,
+letters, numbers, rounded square background, app icon tile, frame, border
+```
+
 ## 2. Icon sets
 
 ### `ICO_CONTROL` — interface controls · **P0**

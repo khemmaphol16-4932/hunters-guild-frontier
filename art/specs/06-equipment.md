@@ -60,6 +60,16 @@ tool, not a shinier one.
 
 ---
 
+### Category negative prompt
+
+Appended to the master negative in `ART_BIBLE.md` §3 by `art/prompts/build.mjs`.
+
+```
+oversized weapon, fantasy greatsword, glowing blade, enchanted glow, magic staff crystal,
+runes, encrusted gems, gold filigree, skulls, dragon motifs, personal heraldry, engraved names,
+trading card, stat block, rarity glow, rainbow colours
+```
+
 ## 2. Asset specifications
 
 ### `EQP_WEAPON_<TYPE>` — world layer · P0 (`bow`, `blade`, `stave`), P1 (`maul`)

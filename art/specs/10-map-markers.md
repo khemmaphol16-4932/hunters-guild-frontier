@@ -36,6 +36,15 @@ knowledge tier and visit count *in text*. These markers add the visual layer on 
 
 ---
 
+### Category negative prompt
+
+Appended to the master negative in `ART_BIBLE.md` §3 by `art/prompts/build.mjs`.
+
+```
+flat vector icon, emoji, map app pin, glossy pin, gradient, drop shadow, letters, numbers,
+arrows with text, rounded square background
+```
+
 ## 1. Families
 
 ### `MRK_ZONE` · **P0** — `regions.json` `zoneTiers`

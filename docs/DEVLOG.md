@@ -693,3 +693,37 @@ does not exist. Two art decisions await approval as DL-068: pixel art over "pain
 
 **Verified:** 662 tests across 41 files pass; TypeScript is clean. The restored hint box was not
 checked in a browser this session.
+
+---
+
+# 2026-09-12 — The art prompt library
+
+`art/prompts/` now holds a complete generation prompt for every asset in the art plan: 357
+prompts, 107 of them P0, each with its master style expanded, a merged negative prompt, and
+reference-image variation prompts. Nothing in it is written by hand. `art/prompts/build.mjs`
+(Node built-ins only, `npm run art:prompts`) reads the master style, compact style and master
+negative from `ART_BIBLE.md` and each category negative from its spec, and the sources in
+`art/prompts/src/` hold only what is unique to an asset. Monsters, buildings, resources, item
+types, statuses, jobs and the rest are read from `src/data`, so a boss phase renamed in
+`monsters.json` renames its prompt. The build also writes `prompts.jsonl`, sorted by priority for
+scripted batch generation; it is gitignored as a build artifact.
+
+Families are generated as one image rather than one per member: the six attribute icons, the
+fifteen item icons, the ten hair styles and the twelve damage decals are each a single sheet with
+every member listed. That is fewer generations and, more to the point, the members share one look,
+which the specs require of every family.
+
+Coverage is enforced: 222 content ids across 30 kinds must each be covered by an asset, and an
+asset covering an id that no longer exists fails the build. The check found a real gap on its
+first run: the Drowned Choir's `undertow` had a telegraph marker but no hit effect in the VFX spec.
+It is now in the heavy-impact family. Blocked assets — the missing wolf, the Emberheart card's
+missing boss, world-boss henchmen — are listed with the reason instead of being papered over.
+
+The first real generations arrived during this work: three tree source candidates in
+`art/generated/trees-source-v1/`, labelled by their author as not shipping sprites. Their main
+defect was soft halos around the silhouette, which the master negative did not name; it now does,
+so every prompt carries it. The library's tree ids were renamed to match the ones those files use
+(`PRP_TREES_<SPECIES>_MEDIUM`). The candidates themselves are not committed here.
+
+**Verified:** `npm run art:prompts -- --check` passes with coverage 222/222; 662 tests pass;
+TypeScript is clean.

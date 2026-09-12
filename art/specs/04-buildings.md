@@ -103,6 +103,17 @@ amount of texture will save it.
 
 ---
 
+### Category negative prompt
+
+Appended to the master negative in `ART_BIBLE.md` §3 by `art/prompts/build.mjs`.
+
+```
+castle, cathedral, fortress, palace, gothic architecture, stone keep, fantasy tavern,
+gingerbread trim, stucco, modern brick, glowing windows, heraldry, banners covering the walls,
+people, characters, neighbouring buildings, surrounding scenery, ground beyond the foundation,
+floating level label, numbers
+```
+
 ## 2. Recipe schema
 
 A building tier-variant is **data, not art**. Recipes live beside the content they describe.
