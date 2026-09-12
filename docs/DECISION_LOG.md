@@ -776,3 +776,16 @@ history for events the player did not watch.
 
 **Reversal.** Give hints a `world` screen of their own in `guidanceSchema.ts` if the combined town-and-field view should teach something neither drawer does.
 
+---
+
+## DL-068 — Art production direction
+
+**Ambiguity.** `art/ART_BIBLE.md` found three conflicts before any production asset is ordered. DL-065 settles the third (no paused-world visual state). Two remain.
+
+**Decision proposed, PENDING APPROVAL.**
+- **AR-1, pixel art.** REQ-UX-007 and `art/ART_DIRECTION.md` lock pixel art; later handoff prompts say "painterly low-poly". Read "painterly" as soft ambient shading inside a hand-placed pixel grid. No asset ships as a painted or 3D render.
+- **AR-2, true 2:1 projection.** `worldView.ts` projects at `(x−y)·33, (x+y)·18`: a 66×36 diamond at 28.6°, which pixel art cannot author cleanly. Lock art to a 64×32 tile and change the constants to `32`/`16`.
+
+**Why conservative.** AR-1 keeps the locked requirement. AR-2 changes one line of code instead of every asset, and must land before production, since each asset authored first would sit about 3% wrong.
+
+**Reversal.** Author to 66×36 instead and accept the pixel-grid cost, or re-open REQ-UX-007.

@@ -2,7 +2,7 @@
 
 **Status:** PROPOSED, 2026-09-12
 **Applies to:** every category in `art/ASSET_REGISTRY.md`
-**Result:** **~2,630 authored files → ~690.** A 74% reduction with no loss of visual variety.
+**Result:** **~2,630 authored files → ~720.** A 73% reduction with no loss of visual variety.
 
 The first registry pass counted assets the naive way: every subject × every state × every
 facing × every tier × every scale, hand-authored. That number is not a plan, it is a warning.
@@ -30,7 +30,7 @@ fail review.
 
 `ART_BIBLE.md` §8.2 requires a separate `_shadow` sprite per grounded asset. The registry
 counted those as authored art. They are not: a contact shadow is a function of the sprite's
-alpha footprint — project the silhouette's bottom 15% to the ground plane, blur, 22% black.
+alpha footprint — project the silhouette's bottom 15% to the ground plane, blur, slate-blue `#3e4a5c` at 35% (`ART_BIBLE.md` §8.2).
 
 - **Saves:** ~300 files.
 - **Cost:** one build-time image step.
@@ -46,7 +46,8 @@ horizontal mirror of its `W` rotation.
 - **Saves:** ~50% of buildings and ~40% of characters and monsters.
 - **Hard exception, non-negotiable:** any subject with an asymmetric read is authored in all
   four. In this project that is `HUN_SKEL_RANGER` (fixed quiver side), `smithy` (chimney and
-  attached forge), `watchtower` (stair side), and `market_stall` (counter face). Mirroring
+  attached forge), `watchtower` (stair side), `market_stall` (counter face), and `guild_hall`
+  (bell tower and entry stair). Mirroring
   those flips the quiver to the wrong shoulder and the forge to the wrong wall.
 
 ### O-4 — Overlay states instead of authoring them
@@ -114,13 +115,13 @@ from it.
 | Equipment | 190 | 54 | **O-7** |
 | Resources | 30 | 24 | — |
 | VFX | 130 | 58 | O-5 |
-| UI icons | 100 | 82 | O-5 |
-| Map markers | 30 | 18 | O-5 |
+| UI icons | 100 | 100 | O-5, O-1 (counted exactly in `specs/09`) |
+| Map markers | 30 | 27 | Runtime composition (counted in `specs/10`) |
 | Promotional | 20 | 14 | — |
-| **Total authored `@2x`** | **~2,630** | **~690** | |
+| **Total authored `@2x`** | **~2,630** | **~720** | |
 | **Plus generated `@1x`** | +2,630 hand | **0 hand** | **O-1** |
 
-**P0 subset: ~700 → ~190 authored files.** That is the difference between a plan that needs
+**P0 subset: ~700 → ~200 authored files.** That is the difference between a plan that needs
 a studio and one a small team can actually finish.
 
 ---

@@ -651,3 +651,45 @@ persistent tick-driven journey state is implemented.
 **Verified:** 653 tests across 40 files pass; TypeScript is clean; the production build succeeds.
 The Living World was opened in the browser and showed the town, road/region connection, and
 frontier together as the default view.
+
+---
+
+# 2026-09-12 — Review fixes, the live clock, and the art production plan
+
+A review of the continuous-world commit found the hint system disconnected. DL-064 replaced the
+four screens with one Living World and dropped the hint box on the way: `hintFor` stayed tested
+but no UI file called it, and "Show dismissed hints again" became a button that could never be
+enabled. Hints now follow the open drawer, and the bare world offers the first live hint from the
+town, then the field (DL-067). No hint, condition or screen changed.
+
+The design owner removed Pause (DL-065). `AppShell.speed` is now `1 | 2 | 4`, so a stopped clock
+cannot be represented. That also closed a save bug: at speed 0 the tick never autosaved, so a
+crash while paused replayed the whole pause as offline time on the next load. The locked
+continuous-world amendment shows the change struck through rather than silently rewritten.
+
+The live clock ran slow in the background. It added a fixed 250 ms per timer fire, and browsers
+throttle hidden tabs to one fire a second, then one a minute — up to 240× slow. `app/LiveClock.ts`
+now measures real elapsed time and scales it by speed; a gap of `absenceSteps` (new in
+`balance/time.json`, ten steps) is an absence and is caught up with a Guild Report, as a reload
+would be (DL-066). The arithmetic is pure, so it is tested directly: throttled fires at one a
+second and one a minute both keep real time, speed scales live time but not absences, partial
+steps carry, and a clock stepping backwards is ignored.
+
+The camera's pan offsets now snap to whole device pixels; fractional translates made the scene
+shimmer while panning.
+
+`art/` gained the production plan: an Art Bible, a registry of every asset anchored to a real
+content id, twelve category specifications and an optimization pass. Reading the data changed the
+plan in ways worth recording. Hunters are generated, not authored, so characters are three
+archetype skeletons plus a paper-doll layer set rather than a cast. The town grid is 12×9 with 37
+building tier-variants, which made a modular building kit clearly right. Telegraph durations are
+data, so one telegraph marker whose fill is driven by `telegraphSeconds` covers all nine
+telegraphed skills. The pass takes the estimate from about 2,630 authored files to about 720.
+
+Two content gaps surfaced and are flagged in the specs rather than papered over: the town-defense
+threat "A wolf pack at the treeline" spawns moss crawlers, and `emberheart_card` names a boss that
+does not exist. Two art decisions await approval as DL-068: pixel art over "painterly", and a true
+2:1 projection.
+
+**Verified:** 662 tests across 41 files pass; TypeScript is clean. The restored hint box was not
+checked in a browser this session.

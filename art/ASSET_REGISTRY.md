@@ -3,7 +3,8 @@
 **Status:** PROPOSED, 2026-09-12. Companion to `art/ART_BIBLE.md`.
 
 Every asset group the game needs, anchored to a real content `id` in `src/data/**`.
-Detailed per-asset specifications live in `art/specs/`.
+Detailed per-asset specifications live in `art/specs/` — all twelve categories are specified,
+plus `specs/00-production-optimization.md`.
 
 **Status vocabulary:** `SPEC` (specified, not produced) · `WIP` · `REVIEW` · `DONE` · `BLOCKED`
 **Priority:** `P0` = the MVP proof cycle · `P1` = first playable frontier · `P2` = depth · `P3` = polish
@@ -55,9 +56,9 @@ Anchored to `src/data/world/regions.json`: 4 regions, 4 zone tiers, 4 node kinds
 | `ENV_WATER` | — | P1 | 12 tiles | Animated 4-frame shoreline + surface |
 | `ENV_COLDWATER_QUARRY` | `coldwater_quarry` | P1 | 24 tiles + 12 props | Yellow. Mineral, exposed |
 | `ENV_ASHFALL_BARROWS` | `ashfall_barrows` | P2 | 24 tiles + 14 props | Black. Violet signal only on threat |
-| `ENV_SUNKEN_CHOIRHOUSE` | `the_sunken_choirhouse` | P2 | 24 tiles + 14 props | Drowned, still |
+| `ENV_SUNKEN_CHOIRHOUSE` | `the_sunken_choirhouse` | P2 | 24 tiles + 14 props | Red. Drowned, still |
 | `ENV_REGION_BORDER` | — | P2 | 6 | Natural-border cuts, `REQ-CW-004` |
-| `ENV_HUNTING_GROUND` | `town/threats.json` | P1 | 8 | Just outside the walls, `REQ-TWN-007` |
+| `ENV_HUNTING_GROUND` | `gate_thickets`, `old_orchard` | P1 | 12 | Just outside the walls, `REQ-TWN-007` |
 | `ENV_WEATHER_OVERLAY` | — | P3 | 6 | Runtime tint/particle, `REQ-CW-013`. Not re-authored terrain |
 
 ---
@@ -93,17 +94,17 @@ Anchored to `src/data/combat/monsters.json` — 11 monsters, tiers `trash` / `el
 
 | ID | Content id | Tier | Region | Priority | Notes |
 |---|---|---|---|---|---|
-| `MON_MOSS_CRAWLER` | `moss_crawler` | trash | Verdant Reach | P0 | Melee, no element. Proof-cycle enemy |
-| `MON_THICKET_WASP` | `thicket_wasp` | trash | Verdant Reach | P0 | Melee, swarms 2–3 |
-| `MON_BRACKEN_STALKER` | `bracken_stalker` | elite | Verdant Reach | P1 | |
-| `MON_CAIRN_ARCHER` | `cairn_archer` | elite | — | P1 | Ranged silhouette must read at distance |
-| `MON_HOLLOW_CHANTER` | `hollow_chanter` | elite | — | P1 | Caster telegraph, `REQ-BOS-001` |
-| `MON_QUARRY_HOUND` | `quarry_hound` | trash | Coldwater Quarry | P1 | |
-| `MON_SLAG_THROWER` | `slag_thrower` | elite | Coldwater Quarry | P2 | |
-| `MON_ROT_SHAMBLER` | `rot_shambler` | elite | — | P2 | |
-| `MON_MIRE_WEAVER` | `mire_weaver` | elite | Sunken Choirhouse | P2 | |
-| `MON_WARDEN_OF_ASH` | `warden_of_ash` | boss | Ashfall Barrows | P2 | 2×2. Phase telegraphs required |
-| `MON_THE_DROWNED_CHOIR` | `the_drowned_choir` | **world boss** | Ashfall Barrows | P2 | 3×3. `REQ-BOS-003`, `REQ-CW-013` |
+| `MON_MOSS_CRAWLER` | `moss_crawler` | trash | Verdant Reach (Blue) | P0 | Melee, no element. Proof-cycle enemy |
+| `MON_THICKET_WASP` | `thicket_wasp` | trash | Verdant Reach (Blue) | P0 | Melee, swarms 2–3 |
+| `MON_QUARRY_HOUND` | `quarry_hound` | trash | Coldwater Quarry (Yellow) | P1 | `hamstring` → slow |
+| `MON_SLAG_THROWER` | `slag_thrower` | elite | Coldwater Quarry (Yellow) | P1 | Ranged fire, `molten_arc` telegraph 1.2 s |
+| `MON_MIRE_WEAVER` | `mire_weaver` | elite | Sunken Choirhouse (Red) | P2 | Frost, `binding_silk` telegraph 1.0 s, self-heal |
+| `MON_ROT_SHAMBLER` | `rot_shambler` | elite | Sunken Choirhouse (Red) | P2 | `sundering_blow` telegraph 0.9 s |
+| `MON_BRACKEN_STALKER` | `bracken_stalker` | elite | Ashfall Barrows (Black) | P2 | `rend` → bleed |
+| `MON_CAIRN_ARCHER` | `cairn_archer` | elite | Ashfall Barrows (Black) | P2 | Ranged silhouette must read at distance |
+| `MON_HOLLOW_CHANTER` | `hollow_chanter` | elite | Ashfall Barrows (Black) | P2 | Frost healer, `mend_kin` |
+| `MON_WARDEN_OF_ASH` | `warden_of_ash` | boss | Ashfall Barrows (Black) | P2 | 2×2. Fire. 2 phases, 2 telegraphs |
+| `MON_THE_DROWNED_CHOIR` | `the_drowned_choir` | **world boss** | Ashfall Barrows (Black) | P2 | 3×3. Frost. 2 phases, 3 telegraphs. `REQ-BOS-003`, `REQ-CW-013` |
 | `MON_HENCHMAN_SET` | `worldBoss.json` | — | Ashfall Barrows | P3 | Region-appropriate henchmen, `REQ-CW-013` |
 
 ---
@@ -237,7 +238,7 @@ Anchored to `src/data/combat/statuses.json` — **only 4 statuses exist**: `burn
 | `VFX_RESCUE` | — | P1 | 6 | `REQ-CBT-013` |
 | `VFX_LOOT_PICKUP` | — | **P0** | 6 | `REQ-CW-011` |
 | `VFX_LEVEL_UP` | — | P1 | 8 | |
-| `VFX_BOSS_TELEGRAPH` | — | P2 | 8 × 3 | `REQ-BOS-001`: **every** important boss skill telegraphs |
+| `VFX_TELEGRAPH_AREA` / `_TARGET` | — | P1 | 2 + 2 | `REQ-BOS-001`. Fill driven by `telegraphSeconds` in code — one asset covers all nine telegraphed skills |
 | `VFX_WORLD_BOSS_ARRIVAL` | `drowned_choir` | P2 | 12 | `REQ-CW-013`. Terrain stays intact |
 | `VFX_BUILD_COMPLETE` | — | P1 | 6 | |
 | `VFX_SELECTION_RING` | — | **P0** | 4 loop | Ground-projected ellipse in true 2:1 |
@@ -253,16 +254,17 @@ while it is happening — there is no combat camera to fall back on.
 |---|---|---|---|
 | `ICO_ATTRIBUTE` | `REQ-HUN-001` STR AGI VIT DEX INT LUK | 6 | **P0** |
 | `ICO_ROLE` | tank healer damage support control | 5 | **P0** |
-| `ICO_RESOURCE` | `economy/resources.json` | 8 | **P0** |
-| `ICO_CONDITION` | hunger fatigue morale friendship | 4 | **P0** |
+| `ICO_RESOURCE` | `economy/resources.json` + residents | 9 | **P0** |
+| `ICO_CONDITION` | hunger fatigue morale (×2) friendship | 5 | **P0** |
 | `ICO_NOTIFICATION` | `ui/notifications.json` — 15 kinds | 15 | P1 |
 | `ICO_JOB` | `town/jobs.json` — 13 jobs | 13 | P1 |
 | `ICO_BUILDING_CATEGORY` | `buildings.json` categories | 10 | P1 |
 | `ICO_DEPARTMENT` | `town/departments.json` | 5 | P2 |
+| `ICO_PERSONALITY` | `personalities.json` | 6 | P2 |
 | `ICO_EQUIPMENT_SLOT` | `item-types.json` slots | 7 | P1 |
 | `ICO_STATUS` | `combat/statuses.json` | 4 | P1 |
 | `ICO_RARITY_FRAME` | `items/rarities.json` | 6 | P1 |
-| `ICO_CONTROL` | speed 1×/2×/4×, camera, notices, settings | 10 | **P0** |
+| `ICO_CONTROL` | world tools, speed 1×/2×/4×, camera, notices, settings, close | 13 | **P0** |
 
 Icons are authored at **48×48 @1x** and downsampled to 32 and 24. They are pixel art on the
 same grid as the world — not a separate flat-vector icon language.
@@ -275,12 +277,14 @@ same grid as the world — not a separate flat-vector icon language.
 | ID | Anchored to | Count | Priority |
 |---|---|---|---|
 | `MRK_ZONE` | `regions.json` `zoneTiers` — blue/yellow/red/black | 4 | **P0** |
-| `MRK_KNOWLEDGE` | Unknown → Rumor → Discovered → Experienced → Mastered | 5 | P1 |
+| `MRK_KNOWLEDGE` | Rumor → Discovered → Experienced → Mastered (Unknown has no marker) | 4 | P1 |
 | `MRK_NODE_KIND` | `nodeKinds` — combat/rest/discovery/event | 4 | P1 |
 | `MRK_REGION` | 4 regions | 4 | P1 |
 | `MRK_PARTY` | Party position on the world map | 3 | **P0** |
 | `MRK_ALERT` | Camera alert-jump targets | 4 | P1 |
 | `MRK_LOCKED` | `REQ-WLD-002` unlock requirements | 2 | P1 |
+| `MRK_QUEUED` | `REQ-CW-015` assignment waiting on recovery | 1 | P1 |
+| `MRK_BOOKMARK` | Camera bookmarks | 1 | P2 |
 
 **Accessibility rule (`ART_BIBLE.md` §12.4):** the four zone markers must differ by
 **silhouette as well as hue**, so danger tier survives colour-blindness. Colour alone is a
@@ -315,7 +319,7 @@ Follows the MVP asset sequence already approved in `ART_DIRECTION.md`. Two of th
 | `PRM_GUILD_HALL_EXTERIOR` | P2 | SPEC | `ART_DIRECTION.md` asset 02 |
 | `PRM_BLACK_ZONE_VISTA` | P2 | SPEC | Real danger, no horror excess |
 | `PRM_TITLE_SCREEN` | P2 | SPEC | Quiet upper-left space for title overlay |
-| `PRM_LOADING_CARDS` | P3 | SPEC | 6. Lore + a real gameplay hint |
+| `PRM_REGION_CARD` | P3 | SPEC | 4, one per region. Place and mood only — **no tips** (`REQ-UX-001`) |
 | `PRM_EQUIPMENT_REVEAL` | P3 | SPEC | `ART_DIRECTION.md` asset 06 |
 
 > **Open issue.** The two shipped anchors are ~3 MB each, 6 MB total, against a 4 MB @1x
@@ -340,13 +344,13 @@ column is the plan. Techniques are specified in `specs/00-production-optimizatio
 | Equipment | 190 | 54 | **O-7 cut what the camera cannot see** |
 | Resources | 30 | 24 | — |
 | VFX | 130 | 58 | O-5 |
-| UI icons | 100 | 82 | O-5 |
-| Map markers | 30 | 18 | O-5 |
+| UI icons | 100 | 100 | O-5, O-1 (counted exactly in `specs/09`) |
+| Map markers | 30 | 27 | Runtime composition (counted in `specs/10`) |
 | Promotional | 20 | 14 | — |
-| **Total authored `@2x`** | **~2,630** | **~690** | **−74%** |
+| **Total authored `@2x`** | **~2,630** | **~720** | **−73%** |
 | `@1x` | +2,630 by hand | **0 by hand** | O-1 build step |
 
-**P0 subset: ~700 → ~190 authored files.**
+**P0 subset: ~700 → ~200 authored files.**
 
 The three largest savings, in order:
 

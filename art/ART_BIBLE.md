@@ -12,14 +12,15 @@ without those is concept art, not a game asset, and does not enter `art/`.
 
 ## 0. Reconciliations and pending approvals
 
-This document resolves three conflicts found while reading the repository. Each resolution
-below is **PENDING APPROVAL** and needs a `DECISION_LOG.md` entry before assets are ordered.
+This document resolves three conflicts found while reading the repository. AR-3 is settled
+(DL-065). AR-1 and AR-2 are recorded as **DL-068, PENDING APPROVAL**, and must be approved before
+assets are ordered.
 
 | # | Conflict | Resolution proposed here |
 |---|---|---|
 | AR-1 | `REQ-UX-007` and `ART_DIRECTION.md` lock **pixel art**. Later handoff language describes **painterly low-poly**. | **Pixel art wins.** The reconciliation is the one `ART_DIRECTION.md` already states: *"premium hand-crafted pixel art with clean readable silhouettes, soft ambient shading"*. Read "painterly" as **soft ambient shading inside a hand-placed pixel grid**, not as brushwork or 3D render. No asset ships as a smooth painted render. |
 | AR-2 | `worldView.ts` projects at `(x−y)·33, (x+y)·18` — a **66×36** tile diamond (28.6°), which is not a standard isometric ratio and not cleanly pixel-authorable. | Lock art to **true 2:1 dimetric, 64×32 tile** (26.565°) and change the projection constants to `32`/`16`. Art is expensive; a projection constant is one line. See §4. |
-| AR-3 | `CONTINUOUS_WORLD_ARCHITECTURE.md` locks time controls as **Pause / 1× / 2× / 4×**; the design owner has since removed Pause. | The amendment needs updating, not the code. Art impact: **no "paused world" visual state** is authored. Every animation loops continuously; there is no frozen-world treatment, vignette, or desaturation pass. |
+| AR-3 | `CONTINUOUS_WORLD_ARCHITECTURE.md` locked time controls as **Pause / 1× / 2× / 4×**; the design owner has since removed Pause. | **Settled by DL-065**; the amendment now shows the change. Art impact: **no "paused world" visual state** is authored. Every animation loops continuously; there is no frozen-world treatment, vignette, or desaturation pass. |
 
 ---
 
@@ -105,14 +106,16 @@ The camera cannot rotate, so the world needs only **four facings**, named by com
 
 `SE` (toward viewer-right-down) · `SW` (viewer-left-down) · `NE` (viewer-right-up) · `NW` (viewer-left-up)
 
-- **Characters and monsters:** author `SE` and `SW`. `NE`/`NW` are authored separately
+- **Characters and monsters:** front and back views are separate work. `NE`/`NW` are authored separately
   (back views differ — packs, hair, quivers, cloaks), **never** produced by horizontal flip
   of the front views. Horizontal mirroring *is* permitted between `SE↔SW` and `NE↔NW`,
   which halves the work: author `SE` and `NE`, mirror for `SW` and `NW`.
   **Exception:** any asset with a deliberately asymmetric read — a sword always on the left
   hip, an eyepatch, a scar — is authored in all four facings and never mirrored.
 - **Buildings:** four rotations, `N`/`E`/`S`/`W`, required by `REQ-CW-006` ("buildings
-  rotate four ways"). Never mirrored — signage, doors, and chimneys must stay correct.
+  rotate four ways"). Bilaterally symmetric buildings author two and mirror two (O-3); any
+  building with a sided feature — chimney, stair, counter, bell tower — is authored in all
+  four, because mirroring would move it. The list is in `specs/04-buildings.md` §1.4.
 - **Props:** one facing unless the prop has a functional front (doors, signs, market stalls).
 
 ### 4.3 What the camera never does
@@ -124,7 +127,7 @@ the same scale as town assets, in the same world, at any zoom in the 0.55–1.8 
 ### 4.4 The 0.55 zoom test
 
 Every character, monster, and prop must pass: **downscale to 55% and the silhouette still
-reads.** For a 96 px hunter this means the sprite must be identifiable at 53 px. This test
+reads.** For a 56 px hunter this means the sprite must be identifiable at 31 px. This test
 is in every acceptance checklist and is the single most common reason to reject an asset.
 
 ---
@@ -215,7 +218,7 @@ cold water `#476a78`, rust `#a6683f`, sparse scrub `#6b7355`.
 bone `#c9c0ae`, ember `#c0563a`, and **violet `#8c5fd6` used sparingly and only as the
 Black-zone signal** — on threat sources, never on terrain.
 
-**The Sunken Choirhouse — drowned, still.** Deep water `#2f4a52`, wet stone `#6d7a76`,
+**The Sunken Choirhouse (Red) — drowned, still.** Deep water `#2f4a52`, wet stone `#6d7a76`,
 pale algae `#8fa58a`, silt `#7a6f5c`.
 
 ### 6.3 Ramp discipline
@@ -266,9 +269,11 @@ Every character and monster must pass **all four**:
 
 ### 8.2 Contact shadow
 
-Shadows are **never baked into the sprite**. Each grounded asset ships a paired shadow
-sprite: a soft ellipse, `#000000` at 22% opacity, width = 0.7 × silhouette width,
-height = 0.35 × width, centred on the pivot. Filename suffix `_shadow`.
+Shadows are **never baked into the sprite**. Each grounded asset gets a paired shadow
+sprite: a soft ellipse in slate-blue shadow `#3e4a5c` at 35% opacity (never black, §6.3), width = 0.7 × silhouette width,
+height = 0.35 × width, centred on the pivot. Filename suffix `_shadow`. These are **generated
+at build time from the sprite's alpha** (O-2), not authored; only hollow-footprint buildings
+get a hand-made one.
 
 This is what lets the same hunter sprite sit correctly on grass, road, stone, and water.
 
@@ -534,7 +539,7 @@ Every asset, every category. Category specs add to this list; they never subtrac
 - [ ] Lands in the §9.3 folder
 - [ ] `@1x` and `@2x` both exported; `@2x` is exactly 2× in both dimensions
 - [ ] Background fully transparent; binary alpha on the silhouette edge
-- [ ] No baked shadow; `_shadow` sprite shipped separately if grounded
+- [ ] No baked shadow (the `_shadow` sprite is generated at build time, O-2)
 - [ ] Colour count within the §6.3 cap
 - [ ] No §6.1 functional hue used decoratively
 - [ ] Shading agrees with `REF_LIGHTING_BALL`
@@ -557,6 +562,7 @@ live in `art/specs/`.
 
 | # | Category | Spec file | Anchored to |
 |---|---|---|---|
+| 00 | Production optimization | `specs/00-production-optimization.md` | Cross-cutting — read before any category |
 | 01 | World environment | `specs/01-world-environment.md` | `src/data/world/regions.json` — 4 regions, 4 zone tiers |
 | 02 | Hunter characters | `specs/02-hunter-characters.md` | `src/data/archetypes.json` — 3 archetypes |
 | 03 | Monsters and bosses | `specs/03-monsters.md` | `src/data/combat/monsters.json` — 11 monsters |

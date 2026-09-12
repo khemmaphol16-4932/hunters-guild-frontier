@@ -49,6 +49,7 @@ The design is locked and documented before it is coded. `docs/` is the source of
 | [DECISION_LOG.md](docs/DECISION_LOG.md) | Every assumption made where the design was ambiguous |
 | [TECH_DEBT.md](docs/TECH_DEBT.md) | Deliberate stubs, values awaiting balance simulation, known limits |
 | [DEVLOG.md](docs/DEVLOG.md) | What happened each session, including what the tests caught |
+| [ART_BIBLE.md](art/ART_BIBLE.md) | How the art is made: style, palette, projection, scale, naming, acceptance. Per-category specs in `art/specs/`, every asset in `art/ASSET_REGISTRY.md` |
 
 ---
 
