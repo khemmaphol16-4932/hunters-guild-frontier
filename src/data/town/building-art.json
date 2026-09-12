@@ -1,0 +1,122 @@
+{
+  "$comment": "Art recipes for every building tier-variant (O-6, art/specs/04-buildings.md). Read only by art/tools/bake-buildings.mjs, never by the simulation. A tier gives the body's wall height in @2x pixels (ART_BIBLE §5.2: T1 56-72, T2 80-112, T3 120-160), a roof, a wall style and features; `inherits` copies a lower tier and `add` appends to its features. Features are placed in the building's own frame: u runs left to right along the front, v runs from the front (0) to the back (1), both as fractions of the footprint. Rotation 0 puts the front on the south-west face, toward the camera; each further 90 degrees turns it clockwise seen from above (90 north-west, 180 north-east, 270 south-east), so at 90 and 180 the player sees the back. tests/buildingArt.test.ts checks that every building and tier has a recipe, that every tier carries its category's identity part, and that no other category uses it: a `flue` is the small, below-the-ridge chimney any building may have; `chimney` is the tall forge chimney that means crafting.",
+  "buildings": {
+    "guild_hall": {
+      "tiers": {
+        "1": { "wall": 64, "roof": "canvas", "walls": "open", "material": "t1", "features": [{ "type": "map_table" }] },
+        "2": { "wall": 96, "roof": "gable", "material": "t2", "features": [{ "type": "door" }, { "type": "windows" }, { "type": "flue", "corner": "back-right" }, { "type": "banner", "corner": "front-left" }, { "type": "map_table" }] },
+        "3": { "wall": 128, "roof": "gable", "material": "t3", "features": [{ "type": "door" }, { "type": "windows" }, { "type": "tower", "corner": "back-left", "rise": 110 }, { "type": "flue", "corner": "back-right" }, { "type": "banner", "corner": "front-left" }, { "type": "trophy" }, { "type": "map_table" }] }
+      }
+    },
+    "bunkhouse": {
+      "tiers": {
+        "1": { "wall": 60, "roof": "gable", "material": "t1", "features": [{ "type": "door" }, { "type": "windows_row" }] },
+        "2": { "inherits": "1", "wall": 84, "material": "t2", "add": [{ "type": "flue", "corner": "back-right" }] }
+      }
+    },
+    "longhouse": {
+      "tiers": {
+        "1": { "wall": 64, "roof": "gable", "material": "t1", "features": [{ "type": "door" }, { "type": "windows_row" }] },
+        "2": { "inherits": "1", "wall": 88, "material": "t2", "add": [{ "type": "flue", "corner": "back-left" }, { "type": "flue", "corner": "back-right" }] }
+      }
+    },
+    "granary": {
+      "tiers": {
+        "1": { "wall": 60, "roof": "gable", "material": "t1", "features": [{ "type": "stilts" }, { "type": "vent" }] },
+        "2": { "inherits": "1", "wall": 84, "material": "t2", "add": [{ "type": "door" }] }
+      }
+    },
+    "field_kitchen": {
+      "tiers": {
+        "1": { "wall": 58, "roof": "gable", "material": "t1", "features": [{ "type": "counter" }, { "type": "vent" }] },
+        "2": { "inherits": "1", "wall": 84, "material": "t2", "add": [{ "type": "flue", "corner": "back-right" }] }
+      }
+    },
+    "well": {
+      "tiers": {
+        "1": { "wall": 24, "roof": "none", "walls": "none", "material": "t1", "features": [{ "type": "well" }] }
+      }
+    },
+    "bathhouse": {
+      "tiers": {
+        "1": { "wall": 60, "roof": "gable", "material": "t1", "features": [{ "type": "door" }, { "type": "vent" }, { "type": "trough" }] },
+        "2": { "inherits": "1", "wall": 84, "material": "t2", "add": [{ "type": "windows" }] }
+      }
+    },
+    "infirmary": {
+      "tiers": {
+        "1": { "wall": 60, "roof": "gable", "material": "t1", "features": [{ "type": "door" }, { "type": "porch" }] },
+        "2": { "inherits": "1", "wall": 88, "material": "t2", "add": [{ "type": "windows" }, { "type": "flue", "corner": "back-left" }] },
+        "3": { "inherits": "2", "wall": 124, "material": "t3" }
+      }
+    },
+    "shrine": {
+      "tiers": {
+        "1": { "wall": 56, "roof": "hip", "walls": "open", "material": "t1", "mass": [0.35, 0.95, 0.35, 0.95], "features": [{ "type": "stone", "corner": "front-left" }, { "type": "brazier" }] }
+      }
+    },
+    "smithy": {
+      "tiers": {
+        "1": { "wall": 62, "roof": "gable", "material": "t1", "features": [{ "type": "door" }, { "type": "chimney", "corner": "back-right", "rise": 64 }, { "type": "forge" }] },
+        "2": { "inherits": "1", "wall": 88, "material": "t2", "add": [{ "type": "windows" }] }
+      }
+    },
+    "tannery": {
+      "tiers": {
+        "1": { "wall": 56, "roof": "gable", "material": "t1", "mass": [0.05, 0.95, 0.4, 0.95], "features": [{ "type": "chimney", "corner": "back-right" }, { "type": "frames" }] }
+      }
+    },
+    "lumber_yard": {
+      "tiers": {
+        "1": { "wall": 58, "roof": "gable", "material": "t1", "mass": [0.05, 0.95, 0.42, 0.95], "features": [{ "type": "platform" }, { "type": "logs" }] },
+        "2": { "inherits": "1", "wall": 84, "material": "t2", "add": [{ "type": "door" }] }
+      }
+    },
+    "quarry_camp": {
+      "tiers": {
+        "1": { "wall": 56, "roof": "gable", "material": "t1", "mass": [0.05, 0.95, 0.42, 0.95], "features": [{ "type": "platform" }, { "type": "stonepile" }] },
+        "2": { "inherits": "1", "wall": 82, "material": "t2", "add": [{ "type": "door" }] }
+      }
+    },
+    "market_stall": {
+      "tiers": {
+        "1": { "wall": 56, "roof": "awning", "walls": "open", "material": "t1", "mass": [0.05, 0.95, 0.45, 0.95], "features": [{ "type": "platform" }, { "type": "crates" }] }
+      }
+    },
+    "research_annex": {
+      "tiers": {
+        "1": { "wall": 64, "roof": "gable", "material": "t1", "features": [{ "type": "door" }, { "type": "lantern" }] },
+        "2": { "inherits": "1", "wall": 92, "material": "t2", "add": [{ "type": "windows" }] }
+      }
+    },
+    "watchtower": {
+      "tiers": {
+        "1": { "wall": 64, "roof": "flat", "material": "t1", "mass": [0.2, 0.8, 0.2, 0.8], "features": [{ "type": "lookout", "rise": 88 }, { "type": "merlons" }, { "type": "stair" }] },
+        "2": { "inherits": "1", "wall": 84, "material": "t2" }
+      }
+    },
+    "palisade": {
+      "tiers": {
+        "1": { "wall": 64, "roof": "none", "walls": "stakes", "material": "t1", "features": [] },
+        "2": { "inherits": "1", "wall": 84, "material": "t2", "add": [{ "type": "merlons" }] }
+      }
+    },
+    "recruitment_hall": {
+      "tiers": {
+        "1": { "wall": 66, "roof": "gable", "material": "t1", "features": [{ "type": "arch" }, { "type": "notice" }, { "type": "windows" }] }
+      }
+    },
+    "drill_yard": {
+      "tiers": {
+        "1": { "wall": 0, "roof": "none", "walls": "none", "material": "t1", "features": [{ "type": "fence" }, { "type": "posts" }, { "type": "rack" }] },
+        "2": { "inherits": "1", "material": "t2" }
+      }
+    },
+    "hunting_camp": {
+      "tiers": {
+        "1": { "wall": 56, "roof": "canvas", "walls": "open", "material": "t1", "mass": [0.3, 0.95, 0.45, 0.95], "features": [{ "type": "platform" }, { "type": "drying_rack" }, { "type": "firepit" }] },
+        "2": { "inherits": "1", "wall": 80, "roof": "gable", "walls": "solid", "material": "t2", "add": [{ "type": "door" }] }
+      }
+    }
+  }
+}

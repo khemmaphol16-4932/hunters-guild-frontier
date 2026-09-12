@@ -3,3 +3,4 @@ dist/
 *.local
 .DS_Store
 art/prompts/prompts.jsonl
+art/buildings/greybox/

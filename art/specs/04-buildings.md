@@ -114,54 +114,67 @@ people, characters, neighbouring buildings, surrounding scenery, ground beyond t
 floating level label, numbers
 ```
 
-## 2. Recipe schema
+## 2. Recipe schema — as built
 
-A building tier-variant is **data, not art**. Recipes live beside the content they describe.
+A building tier-variant is **data, not art**. Recipes live in `src/data/town/building-art.json`,
+beside the content they describe, and are read only by `art/tools/bake-buildings.mjs` — never by
+the simulation.
+
+> **Revised in implementation.** The first draft of this section placed every kit part by hand, at
+> pixel offsets, for all 37 tier-variants. The recipes as built are declarative instead: a tier
+> states its wall height, roof, wall style and features, and the bake step computes placement and
+> all four rotations. That is shorter, cannot drift between rotations, and survives a footprint
+> change in `buildings.json`.
 
 ```jsonc
-// src/data/town/building-art.json
-{
-  "$comment": "Art composition recipes (O-6). One entry per building tier-variant.
-               Parts resolve against art/buildings/kit/. Offsets are in @1x pixels
-               from the building's footprint origin (north corner of the grid rect).",
-  "recipes": {
-    "bunkhouse": {
-      "footprint": { "width": 3, "height": 2 },
-      "rotationsAuthored": 2,
-      "tiers": {
-        "1": {
-          "material": "t1",
-          "parts": [
-            { "part": "FND_FLAT",    "repeat": "footprint" },
-            { "part": "WAL_PLAIN",   "at": [0, 0], "repeat": 3, "axis": "x" },
-            { "part": "WAL_DOOR",    "at": [1, 0] },
-            { "part": "ROF_GABLE_L", "at": [0, 0], "repeat": 3, "axis": "x" },
-            { "part": "IDN_HOUSING", "at": [2, 0] }
-          ]
-        },
-        "2": {
-          "material": "t2",
-          "inherits": "1",
-          "add": [
-            { "part": "DTL_CHIMNEY", "at": [0, 1] },
-            { "part": "DTL_LANTERN", "at": [1, 0] },
-            { "part": "WAL_SHUTTER", "replaces": "WAL_PLAIN" }
-          ]
-        }
-      }
-    }
+"bunkhouse": {
+  "tiers": {
+    "1": { "wall": 60, "roof": "gable", "material": "t1",
+           "features": [{ "type": "door" }, { "type": "windows_row" }] },
+    "2": { "inherits": "1", "wall": 84, "material": "t2",
+           "add": [{ "type": "flue", "corner": "back-right" }] }
   }
 }
 ```
 
-`inherits` + `add` + `replaces` is what makes tiering nearly free: T2 is T1 with a material
-swap and four added parts, expressed in nine lines of JSON.
+| Field | Meaning |
+|---|---|
+| `wall` | Body wall height in `@2x` px — T1 56–72, T2 80–112, T3 120–160 (ART_BIBLE §5.2) |
+| `roof` | `gable` · `hip` · `flat` · `canvas` · `awning` · `none` |
+| `walls` | `solid` · `open` (corner posts) · `stakes` (palisade) · `none` (yards, the well) |
+| `material` | `t1` thatch · `t2` shingle and stone course · `t3` clay tile, stone plinth, lit glazing |
+| `mass` | Optional `[u0, u1, v0, v1]` of the body, as fractions of the footprint |
+| `features` / `add` | Parts placed in the building's own frame; `inherits` + `add` extends a lower tier |
 
-**Build step:** recipes bake to flattened sprites at build time and pack into `atlas_town`
-(O-8). Nothing composites at runtime — a building changes only when it is built, upgraded,
-moved, or damaged.
+**Frame and rotation.** `u` runs left to right along the front and `v` from the front to the back.
+Rotation 0 puts the front on the south-west face, toward the camera; each 90° turns it clockwise
+seen from above, so at 90° and 180° the player sees the back. This matches `TownGrid`, which swaps
+the footprint on the quarter turns.
 
----
+**Identity exclusivity.** Each category owns its identity parts, and `tests/buildingArt.test.ts`
+forbids any other category from using them. That is why an ordinary building's small chimney is a
+`flue`, kept below the ridge, while `chimney` is the tall forge chimney that means crafting; and
+why the watchtower's body is a `lookout` rather than the management `tower`.
+
+**Build step.** `npm run art:bake` writes all 148 sprites (20 buildings, every tier, four
+rotations) and an `index.json` to `art/buildings/greybox/` (gitignored, regenerated in seconds),
+plus QA sheets to `art/qa/greybox/`. Until kit parts are generated, every part is drawn as a lit
+greybox prism in the approved palette. When kit parts arrive, the same recipes place them.
+
+### What the greybox proved
+
+The ten-category line-up test (§1.3) failed on its first run, as §1.3 warned it might. Housing,
+services, crafting, research and recruitment all read as the same shed. Two causes, both fixed:
+
+1. **Identity drawn as decals** — a counter, an arch, a row of windows — vanishes in a silhouette.
+   A black fill shows only the outline, so an identity part must change the outline: housing's
+   cross-gables straddle the ridge, services' steam plume billows above it, research's lantern and
+   vane break it, and recruitment's gate clears it.
+2. **Chimneys on everything** diluted crafting. Hence `flue` and exclusivity.
+
+One projection fact worth keeping: in 2:1 the front of a building sits a tile nearer than its
+ridge, so it projects about 32 px lower on screen. A part at the front must rise that much further
+than a part on the ridge to change the silhouette.
 
 ## 3. Asset specifications
 

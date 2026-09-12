@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "art:prompts": "node art/prompts/build.mjs",
     "art:export": "node art/tools/export.mjs",
-    "art:reference": "node art/tools/reference.mjs"
+    "art:reference": "node art/tools/reference.mjs",
+    "art:bake": "node art/tools/bake-buildings.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.5.0",
