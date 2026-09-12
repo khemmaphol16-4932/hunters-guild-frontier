@@ -778,3 +778,23 @@ and prop ids did not follow the registry groups Codex was already using. Both ar
 
 **Verified:** 669 tests across 42 files pass, including new codec and sprite tests; TypeScript is
 clean; `npm run art:prompts -- --check` passes with coverage 222/222.
+
+---
+
+# 2026-09-12 — DL-069 propagated: soft cute-chibi at about 1:4.5
+
+Codex recorded DL-069 and REQ-UX-008 (humanoids at a soft cute-chibi ratio of about 1:4.5
+head-to-height), stating the design owner's approval. Claude confirmed the approval with the owner
+directly before touching anything, since an approval that arrives through another agent's file is
+not one to act on unchecked. The owner confirmed it.
+
+The Art Bible's §5.1 now sets about 1:4.5: heads, hands and role-bearing gear slightly enlarged on a
+capable, grounded body; about 12 px of head on a 56 px figure. It gives the reason — a 1:6 head was
+too small to carry identity at the 0.55 zoom floor. The master negative no longer bans "chibi"; it
+bans what DL-069 still excludes, extreme 1:3 mascot proportions and baby anatomy. Spec 02 and all
+hunter, NPC, turnaround, scale-line-up and keyframe prompts follow. Humanoid enemies — `slag_thrower`,
+`cairn_archer`, `hollow_chanter` and `rot_shambler` — share the ratio, so both sides read at one
+world scale. Creatures and the two bosses keep form-appropriate proportions. Rebuilding changed every
+prompt, because the master negative is in all of them.
+
+**Verified:** `npm run art:prompts -- --check` passes, 222/222 covered; no file still states 1:6.

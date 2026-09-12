@@ -50,7 +50,7 @@ for (const j of jobs) if (!['hunter_drill', 'escort_duty', 'town_hunting'].inclu
 const sheet = (arche, state, priority, poses, note) => ({
   id: `ANM_${arche.toUpperCase()}_${state.toUpperCase()}`, priority, kind: 'sheet', canvas: CELL, grid: { cols: poses.length },
   out: `art/characters/${arche}/keys/hunter_${arche}_${state}_keys_se@2x.png`,
-  subject: `An animation keyframe reference sheet for an animator: ${LOOK[arche]}, facing south-east, performing "${state.replace(/_/g, ' ')}". The same character in every panel, same scale, feet on one shared baseline, plain neutral clothing so only the pose matters.${note ? ` ${note}` : ''}`,
+  subject: `An animation keyframe reference sheet for an animator: ${LOOK[arche]}, facing south-east, performing "${state.replace(/_/g, ' ')}". The same character in every panel, soft cute-chibi proportions of about 1 to 4.5 head-to-height, same scale, feet on one shared baseline, plain neutral clothing so only the pose matters.${note ? ` ${note}` : ''}`,
   members: poses.map((p, i) => ({ id: `key_${i + 1}`, subject: p })),
 });
 

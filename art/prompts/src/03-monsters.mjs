@@ -44,6 +44,10 @@ const PHASE_LOOK = {
   the_drowned_choir: ['a second figure lifts its head out of the mass', 'every figure faces outward with its mouth open and the water streams faster'],
 };
 
+// DL-069: humanoid enemies share the hunters' soft-chibi ratio so both read at one world scale;
+// creatures and the two bosses keep form-appropriate proportions.
+const HUMANOID = new Set(['slag_thrower', 'cairn_archer', 'hollow_chanter', 'rot_shambler']);
+
 const REGION_OF = Object.fromEntries(
   data('world/regions.json').regions.flatMap((r) => r.encounters.flatMap((e) => e.monsters).map((m) => [m, r.name])),
 );
@@ -60,7 +64,7 @@ function monster(m) {
     priority: ['moss_crawler', 'thicket_wasp'].includes(m.id) ? 'P0' : ['quarry_hound', 'slag_thrower'].includes(m.id) ? 'P1' : 'P2',
     canvas: s.canvas, pivot: s.pivot, covers: [`monster:${m.id}`],
     out: `${dir}/${m.id}/monster_${m.id}_idle_se_01@2x.png`,
-    subject: `${m.name}, a ${label} from ${where}: ${brief}. ${size[0].toUpperCase()}${size.slice(1)}. ${m.element ? ELEMENT[m.element] : ''} Grounded and strange rather than monstrous; no gore. Facing south-east, neutral idle pose.`,
+    subject: `${m.name}, a ${label} from ${where}: ${brief}. ${size[0].toUpperCase()}${size.slice(1)}. ${m.element ? ELEMENT[m.element] : ''}${HUMANOID.has(m.id) ? ' A compact humanoid build of about 1 to 4.5 head-to-height, matching the proportions of the hunters so both read at the same world scale — unsettling, not cute.' : ''} Grounded and strange rather than monstrous; no gore. Facing south-east, neutral idle pose.`,
     negative: EXTRA[m.id],
     dropNegative: m.id === worldBossId ? ['multiple characters'] : [],
     variations: [

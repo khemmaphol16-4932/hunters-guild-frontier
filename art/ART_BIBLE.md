@@ -12,6 +12,9 @@ without those is concept art, not a game asset, and does not enter `art/`.
 
 ## 0. Reconciliations and pending approvals
 
+Character proportions were revised after this table by **DL-069 (approved): soft cute-chibi at
+about 1:4.5** — see §5.1.
+
 This document resolved three conflicts found while reading the repository. AR-3 is settled by
 DL-065; AR-1 and AR-2 were **approved by the design owner on 2026-09-12 as DL-068**. Production
 may begin once the gate reference sheets (§11) are approved.
@@ -79,7 +82,8 @@ restrained palette, light from upper left, transparent background, no text
 ```
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector,
 anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art
-sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO,
+sketch, line art, cel shaded anime, extreme 1:3 mascot proportions, baby anatomy,
+super-deformed, generic fantasy MMO,
 World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere,
 excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy,
 exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi,
@@ -167,9 +171,12 @@ All figures @1x. Author at @2x and export both (see §9.4).
 
 ### 5.1 Human proportion
 
-**Head-to-height ratio 1 : 6.** Not 1:8 (heroic — fails the 0.55 zoom test), not 1:3
-(chibi — contradicts the grounded tone). Head ≈ 9 px at @1x. Eyes are **two pixels, or
-implied by a shadow** — never rendered features. Personality comes from silhouette, stance,
+**Head-to-height ratio about 1 : 4.5 — soft cute-chibi** (DL-069, REQ-UX-008). Not 1:6: at the
+0.55 zoom floor that head became too small to carry identity or condition. Not 1:3: mascot and
+baby anatomy stay excluded. Head ≈ 12 px at @1x on a 56 px figure. Heads, hands and role-bearing
+equipment are slightly enlarged; bodies stay capable and grounded, with practical clothing and
+real wear. Humanoid enemies share the ratio; non-humanoid creatures keep form-appropriate
+proportions. Eyes are **two pixels, or implied by a shadow** — never rendered features. Personality comes from silhouette, stance,
 and kit, per `ART_DIRECTION.md`.
 
 ### 5.2 Building height by tier

@@ -72,7 +72,7 @@ guarantee: **no two hunters in a 40-hunter guild will share an appearance.**
 **Pivot:** `(32, 72)` on a 64 × 80 @1x canvas — bottom-centre of the ground footprint, feet
 on the ground plane, 8 px overhang below.
 
-**Scale:** 56 px standing height @1x. Head-to-height 1:6. Head ≈ 9 px.
+**Scale:** 56 px standing height @1x. Head-to-height about 1:4.5, soft cute-chibi (DL-069). Head ≈ 12 px.
 
 **Palette:** environment palettes from `ART_BIBLE.md` §6.2. The nine functional hues in §6.1
 may appear **only** on the role pip and condition overlay — never on cloth, leather, or skin.
@@ -91,7 +91,8 @@ heroic pose, action pose, dynamic pose, flying cape, wind effects, hero splash a
 character select screen, class icon, oversized weapon, dual wielding for style,
 glowing weapon, enchanted glow, magic aura, energy effects, armour spikes,
 pauldrons larger than the head, high heels, impractical armour, exposed midriff,
-anime proportions, moe, cute mascot, generic RPG adventurer, elf ears, horns, wings
+extreme 1:3 mascot proportions, baby anatomy, moe, cute mascot, generic RPG adventurer, elf ears,
+horns, wings
 ```
 
 ---
@@ -174,7 +175,7 @@ Isometric pixel-art base character rig for a frontier hunter, "vanguard" archety
 Broad-shouldered adult human, weight low and centred, feet planted in a slightly wide
 stance. Built like someone who does heavy physical work and expects to be struck —
 solid, practical, not muscular fantasy. Plain neutral grey undergarment only: this is a
-base body rig, clothing is added as a separate layer. Head-to-body ratio 1 to 6.
+base body rig, clothing is added as a separate layer. Soft cute-chibi proportions, about 1 to 4.5 head-to-height.
 No facial detail beyond two-pixel eyes. Viewed at true 2:1 dimetric from above,
 facing south-east. Neutral standing pose, arms slightly away from the body for
 clean layer separation, ready for rigging. 56 pixels tall on a 64 by 80 canvas,
@@ -237,7 +238,7 @@ Isometric pixel-art base character rig for a frontier hunter, "adept" archetype.
 Tall slender adult human in a plain long robe reaching mid-calf, creating a single
 strong vertical silhouette. Narrow shoulders, hands held forward and clearly visible,
 attentive upright posture. A scholar who walks into dangerous country, not a wizard:
-practical cloth, no ornament, no runes, no glow. Head-to-body ratio 1 to 6.
+practical cloth, no ornament, no runes, no glow. Soft cute-chibi proportions, about 1 to 4.5 head-to-height.
 No facial detail beyond two-pixel eyes. True 2:1 dimetric from above, facing south-east.
 Neutral standing pose, arms slightly away from the body for clean layer separation.
 56 pixels tall on a 64 by 80 canvas, feet on the ground plane at bottom centre.
@@ -286,7 +287,7 @@ Isometric pixel-art base character rig for a frontier hunter, "ranger" archetype
 Lean athletic adult human, deliberately asymmetric silhouette: one shoulder lower,
 weight forward on the balls of the feet, bound sleeves, layered practical travel
 clothing worn soft with use. Reads as someone who has been walking for days.
-Head-to-body ratio 1 to 6. No facial detail beyond two-pixel eyes.
+Soft cute-chibi proportions, about 1 to 4.5 head-to-height. No facial detail beyond two-pixel eyes.
 True 2:1 dimetric from above, facing south-east. Neutral standing pose,
 arms slightly away from the body for clean layer separation.
 56 pixels tall on a 64 by 80 canvas, feet on the ground plane at bottom centre.

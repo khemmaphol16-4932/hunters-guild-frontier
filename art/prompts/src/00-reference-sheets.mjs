@@ -34,8 +34,8 @@ export default {
           subject: 'A scale reference line-up for an isometric pixel-art frontier management game: every subject stands on one shared ground baseline, drawn at true relative scale, plain and unfinished like a blocking pass, in neutral colours.',
           members: [
             { id: 'tile', subject: 'one flat 2:1 ground tile, 128 pixels wide' },
-            { id: 'hunter', subject: 'an adult human hunter, 112 pixels tall' },
-            { id: 'npc', subject: 'a townsperson, 104 pixels tall' },
+            { id: 'hunter', subject: 'an adult human hunter, 112 pixels tall, soft cute-chibi proportions of about 1 to 4.5 head-to-height' },
+            { id: 'npc', subject: 'a townsperson, 104 pixels tall, the same 1 to 4.5 proportions' },
             { id: 'trash', subject: 'a small creature the size of a large dog, 72 pixels long' },
             { id: 'elite', subject: 'a tall thin creature, 112 pixels tall' },
             { id: 'boss', subject: 'a towering guardian, 220 pixels tall, on a 2 by 2 tile footprint' },
@@ -67,7 +67,7 @@ export default {
         },
         {
           id: 'REF_HUNTER_TURNAROUND', priority: 'P0', kind: 'sheet', out: `${dir}/hunter_turnaround.png`, canvas: [128, 160], grid: { cols: 4 },
-          subject: 'A character turnaround sheet for three frontier hunter archetypes in an isometric pixel-art management game. Neutral standing poses, arms slightly away from the body, plain practical clothing, head-to-body ratio 1 to 6, no facial detail beyond two-pixel eyes. Each row is one archetype seen from the four camera-relative facings.',
+          subject: 'A character turnaround sheet for three frontier hunter archetypes in an isometric pixel-art management game. Neutral standing poses, arms slightly away from the body, plain practical clothing, soft cute-chibi proportions of about 1 to 4.5 head-to-height, no facial detail beyond two-pixel eyes. Each row is one archetype seen from the four camera-relative facings.',
           members: [
             ...['south-east', 'south-west', 'north-east', 'north-west'].map((f, i) => ({ id: `vanguard_${i}`, subject: `a broad, grounded vanguard, facing ${f}` })),
             ...['south-east', 'south-west', 'north-east', 'north-west'].map((f, i) => ({ id: `adept_${i}`, subject: `a tall, robed adept, facing ${f}` })),

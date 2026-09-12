@@ -83,7 +83,7 @@ telegraph VFX (`specs/08-vfx.md`) looping over it. Three frames per telegraph in
 ### Category negative prompt
 
 ```
-cute, mascot, cartoon monster, pokemon style, chibi, kawaii, gore, entrails, exposed organs,
+cute, mascot, cartoon monster, pokemon style, extreme 1:3 mascot proportions, kawaii, gore, entrails, exposed organs,
 blood pools, dripping blood, horror body, screaming faces, excessive teeth, excessive eyes,
 glowing eyes everywhere, dragon, demon, generic orc, generic goblin, skeleton warrior,
 zombie, tentacles for no reason, spikes everywhere, armour on animals, text, UI, health bar

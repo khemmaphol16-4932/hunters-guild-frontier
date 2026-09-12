@@ -22,7 +22,7 @@ const SKELETON_EXTRA = {
 const skeleton = (id) => ({
   id: `HUN_SKEL_${id.toUpperCase()}`, priority: 'P0', canvas: CELL, pivot: PIVOT, covers: [`archetype:${id}`],
   out: `${dir}/${id}/hunter_${id}_skel_idle_se_01@2x.png`,
-  subject: `Base character rig for a frontier hunter of the "${id}" archetype: a ${BODY[id]}. Plain neutral grey undergarment only — this is a base body rig, clothing is added as separate layers. Head-to-body ratio 1 to 6, standing 112 pixels tall. No facial detail beyond two-pixel eyes. Facing south-east, neutral standing pose with the arms slightly away from the body for clean layer separation.`,
+  subject: `Base character rig for a frontier hunter of the "${id}" archetype: a ${BODY[id]}. Plain neutral grey undergarment only — this is a base body rig, clothing is added as separate layers. Soft cute-chibi proportions of about 1 to 4.5 head-to-height (a slightly enlarged head and hands on a capable, grounded body), standing 112 pixels tall. No facial detail beyond two-pixel eyes. Facing south-east, neutral standing pose with the arms slightly away from the body for clean layer separation.`,
   negative: SKELETON_EXTRA[id],
   variations: [
     'the facing, to north-east — a back three-quarter view; do not mirror the front view.',
@@ -133,7 +133,7 @@ export default {
         ['service_worker', 'a cook in a plain apron carrying a covered pot'],
       ].map(([id, desc]) => ({
         id: `NPC_${id.toUpperCase()}`, priority: 'P1', canvas: CELL, pivot: [64, 148], out: `${dir}/npc/npc_${id}_idle_se_01@2x.png`,
-        subject: `A frontier townsperson sprite: ${desc}. Slightly smaller than a hunter at 104 pixels tall, head-to-body ratio 1 to 6, no facial detail beyond two-pixel eyes, facing south-east in a neutral working pose.`,
+        subject: `A frontier townsperson sprite: ${desc}. Slightly smaller than a hunter at 104 pixels tall, the same soft cute-chibi proportions of about 1 to 4.5 head-to-height, no facial detail beyond two-pixel eyes, facing south-east in a neutral working pose.`,
         variations: ['the facing, to north-east.', 'a working pose — mid-task, in the middle of their trade.'],
       })),
     },
