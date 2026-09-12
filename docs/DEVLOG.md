@@ -831,7 +831,7 @@ this session did not make them. `AGENTS.md` now asks each agent to commit under 
 
 # 2026-09-12 — Buildings on a canvas; the town stops rebuilding itself every tick
 
- ran on every autonomous tick. Each run re-parsed the landscape SVG, recreated
+`worldView.renderScene()` ran on every autonomous tick. Each run re-parsed the landscape SVG, recreated
 94 tree elements and rebuilt every building from seven styled spans: about 120 DOM nodes torn down
 and rebuilt whether anything had changed or not. Now the landscape and trees are built once, and
 buildings draw as baked sprites on a single canvas that redraws only when the town's layout key
@@ -839,20 +839,26 @@ changes: a placement, tier, rotation or damage flag. Each building keeps a real 
 sprite, so clicks, keyboard focus and screen-reader labels behave as before. A building with no baked
 sprite falls back to the old CSS building.
 
-Where each sprite goes is a pure module, , so it is tested without a
+Where each sprite goes is a pure module, `src/ui/world/sceneModel.ts`, so it is tested without a
 browser. The tests use the real founded town and real baked sprites. They check that pivots sit on
 footprint centres on whole pixels, that drawing is back to front, and that a sprite baked for a
-different footprint is refused.  composes the town into
-; the Small Camp renders coherently.
+different footprint is refused. `WRITE_TOWN_PREVIEW=1` composes the town into
+`art/qa/town/town_preview.png`; the Small Camp renders coherently.
 
 Measurement caught a real cost. Vite inlines images under 4 KB into the JavaScript as base64, so
-globbing the sprites doubled the bundle from 533 KB to 1,056 KB. Loading them with brings it to 571 KB — the extra 38 KB is the sprite index — and each sprite downloads only when a
-building on screen needs it.  and  now bake the greybox first.
+globbing the sprites doubled the bundle from 533 KB to 1,056 KB. Loading them with `?no-inline`
+brings it to 571 KB — the extra 38 KB is the sprite index — and each sprite downloads only when a
+building on screen needs it. `npm run dev` and `npm run build` now bake the greybox first.
 
 Codex answered the rig review with v2 rigs, ran the exporter itself, and committed under its own
 name. The rigs pass: distinct archetype silhouettes at 0.55 and plain grey paper-doll bases.
 
 **Verified:** 682 tests pass; TypeScript is clean; the production build succeeds with no inlined
 sprites. **Not verified in a browser** — the dev server could not be started from this session, and
- failed on the owner's machine because PowerShell blocks  and it was run
+`npm run dev` failed on the owner's machine because PowerShell blocks `npm.ps1` and it was run
 from the wrong folder.
+
+A process note: the first version of this entry was committed with seven terms missing. It was
+written inside a double-quoted shell string, so the shell tried to run each backtick-quoted term as a
+command. Every one failed at once — no server started, no file changed — but the terms dropped out
+of the text. Entries are now written with the file editor, not through the shell.
