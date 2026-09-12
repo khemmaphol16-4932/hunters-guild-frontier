@@ -739,3 +739,16 @@ tick-driven journey state is explicitly the next simulation migration.
 **Why preserve the replay.** Recorded combat facts, seeded randomness, audit explanations, and
 offline equivalence remain valuable. Live observation will consume those rules; reports remain
 history for events the player did not watch.
+
+---
+
+## DL-065 — The world always runs: time controls are 1×, 2× and 4×
+
+**Ambiguity.** `CONTINUOUS_WORLD_ARCHITECTURE.md` locked the time controls as Pause / 1× / 2× / 4×. The design owner has since ruled that there is no paused state.
+
+**Decision.** Pause is removed. `AppShell.speed` is typed `1 | 2 | 4`, so a stopped clock cannot be represented at all rather than merely being unreachable. The locked amendment keeps its original text visible, struck through, with a pointer here.
+
+**Why conservative.** It is the design owner's explicit direction, and removing a state is the smaller change. It also closed a real defect: at speed 0 the tick loop never autosaved, so a crash while paused replayed the whole paused duration through offline catch-up on the next load.
+
+**Reversal.** Widen the type back to `0 | 1 | 2 | 4` and make the live clock autosave on a timer independent of steps, or paused time will again be replayed as offline time.
+

@@ -53,7 +53,8 @@ follow, bookmarks, and alert jumps. It never auto-frames combat. Region borders 
 while preserving the journey. Entering buildings leaves the camera outside. If a followed
 hunter is downed or dies, the camera returns to town.
 
-Time controls are Pause / 1× / 2× / 4×. Combat honors the current speed and does not pause the
+Time controls are ~~Pause /~~ 1× / 2× / 4×. **Amended by DL-065:** there is no Pause — the world
+always runs. Combat honors the current speed and does not pause the
 world. Far-away agents use the same decision rules at a lower update frequency.
 
 ## Migration from the current prototype
