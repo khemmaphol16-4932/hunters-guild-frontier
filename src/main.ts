@@ -13,6 +13,7 @@ import { DebugConsole } from './debug/commands.js';
 import { AppShell } from './ui/appShell.js';
 import { BrowserStorage } from './save/SaveGame.js';
 import type { GuildReport } from './app/GuildReport.js';
+import { LiveClock } from './app/LiveClock.js';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('main: #root is missing from index.html');
@@ -57,19 +58,23 @@ const shell = new AppShell(root, session, commands);
 shell.mount();
 if (offlineReport) shell.showReport(offlineReport);
 
-// The town's live calendar: one step per `realSecondsPerStep` of real time, autosaved each
-// step so closing the tab loses at most one step (REQ-TEC-004). Before this the town only
-// moved when the player pressed "Let a season pass".
+// The town's live calendar: one step per `realSecondsPerStep` of real time at the chosen
+// speed, autosaved each step so closing the tab loses at most one step (REQ-TEC-004).
+// LiveClock measures real elapsed time, so a throttled background tab keeps pace; a gap long
+// enough to be an absence is caught up with a Guild Report, as a reload would be.
 const autosave = (): void => { session.save.autoSave(session.snapshot()); };
 autosave();
-let elapsed = 0;
+const clock = new LiveClock(Date.now(), session.content.time);
 setInterval(() => {
-  elapsed += 250 * shell.speed;
-  const stepDuration = session.content.time.realSecondsPerStep * 1000;
-  if (elapsed < stepDuration) return;
-  const steps = Math.floor(elapsed / stepDuration);
-  elapsed -= steps * stepDuration;
-  commands.passTime(steps);
+  const tick = clock.tick(Date.now(), shell.speed);
+  if (tick.kind === 'wait') return;
+  if (tick.kind === 'absence') {
+    const report = commands.catchUpOffline(tick.elapsedMs);
+    autosave();
+    if (report.steps > 0) shell.showReport(report);
+    return;
+  }
+  commands.passTime(tick.steps);
   autosave();
   shell.refresh();
 }, 250);

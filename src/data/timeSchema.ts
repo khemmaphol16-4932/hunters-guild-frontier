@@ -5,6 +5,8 @@ export interface TimeBalance {
   readonly realSecondsPerStep: number;
   readonly maxOfflineHours: number;
   readonly catchUpChunkSteps: number;
+  /** A live-clock gap at least this many steps long is an absence, caught up with a report. */
+  readonly absenceSteps: number;
 }
 
 const FILE = 'balance/time.json';
@@ -22,5 +24,7 @@ export function parseTime(raw: unknown): TimeBalance {
   }
   const chunk = positive('catchUpChunkSteps');
   if (!Number.isInteger(chunk)) throw new ContentValidationError(`${FILE}.catchUpChunkSteps`, 'must be a whole number of steps');
-  return { realSecondsPerStep: positive('realSecondsPerStep'), maxOfflineHours, catchUpChunkSteps: chunk };
+  const absence = positive('absenceSteps');
+  if (!Number.isInteger(absence)) throw new ContentValidationError(`${FILE}.absenceSteps`, 'must be a whole number of steps');
+  return { realSecondsPerStep: positive('realSecondsPerStep'), maxOfflineHours, catchUpChunkSteps: chunk, absenceSteps: absence };
 }

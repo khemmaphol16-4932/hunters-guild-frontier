@@ -752,3 +752,15 @@ history for events the player did not watch.
 
 **Reversal.** Widen the type back to `0 | 1 | 2 | 4` and make the live clock autosave on a timer independent of steps, or paused time will again be replayed as offline time.
 
+---
+
+## DL-066 — The live clock measures real time; a long gap is an absence
+
+**Ambiguity.** The live tick added a fixed 250 ms per timer fire. Browsers throttle a hidden tab's timers to once a second, and after five minutes to once a minute, so the town ran up to 240× slow whenever the player looked away. REQ-OFF-001 says the guild keeps working while the player is away; it did not say what a long gap *inside* one session is.
+
+**Decision.** `app/LiveClock.ts` measures real elapsed time (the wall clock is still read only in `main.ts`, per DL-003) and scales it by the chosen speed. A single gap of `absenceSteps` or more (`balance/time.json`, 10 steps = five minutes) is treated as an absence: caught up at 1× through `catchUpOffline`, with a Guild Report — exactly what a reload after the same gap produces.
+
+**Why conservative.** It makes an open-but-hidden tab behave like a closed one, which is the behaviour players already get and REQ-OFF-001 already specifies, instead of inventing a third mode. Speed does not apply to the absence because the player was not watching; offline catch-up has always run at 1×. Throttled ticks stay under the threshold, so ordinary background play stays live and uninterrupted. PENDING APPROVAL: the ten-step threshold.
+
+**Reversal.** Raise `absenceSteps` to make long gaps silent live time, or lower it to surface reports sooner.
+
