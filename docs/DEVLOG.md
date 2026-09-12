@@ -627,3 +627,27 @@ The same scene now projects the real TownJobs rota as small role-coloured hunter
 The Field received its first world-presentation pass. A new Verdant Reach vista anchors a responsive frontier map whose four region markers read directly from region availability and WorldKnowledge. Danger colour, locked requirements, knowledge tier, visit count and current selection remain accessible in text; unlocked markers select the same planner state as the existing region control. No route, unlock or expedition logic moved into the UI.
 
 Combat presentation now has a battlefield layer. Expedition node reports retain the immutable `CombatFacts` that already power their story, and the first encounter opens automatically after a run. Guild and enemy combatants animate over the region vista while their force bars resolve to the recorded outcome; screen readers receive the ending force state and the existing verdict, causes, key skills and moments remain immediately below. This is the replay renderer foundation; stepping town hunts and defenses through it remains the next combat-presentation slice.
+
+---
+
+# 2026-09-12 — Continuous-world architecture update
+
+The design owner replaced the separate Town/Field/Expedition presentation with one continuous
+autonomous world: persistent hunters live in the city, travel through connected regions, fight
+where encounters occur, return, sell personal loot, recover, and grow while the rest of the
+world keeps running.
+
+The locked amendment is now `CONTINUOUS_WORLD_ARCHITECTURE.md`, with fifteen testable REQ-CW
+requirements and the ten follow-up decisions on shops, retreat, Guild liquidity, injury queues,
+loot presentation, off-screen combat, world-boss henchmen, knowledge, and gear choice.
+`DESIGN_BIBLE.md` and README point to it.
+
+The first implementation step replaces the separate Town and Field navigation entries with one
+Living World surface. It keeps the isometric town and connected frontier in the same scrollable
+world context, while Guild and Hall remain management views. The screen states the honest
+migration boundary: expeditions still resolve synchronously into recorded replays until
+persistent tick-driven journey state is implemented.
+
+**Verified:** 653 tests across 40 files pass; TypeScript is clean; the production build succeeds.
+The Living World was opened in the browser and showed the town, road/region connection, and
+frontier together as the default view.

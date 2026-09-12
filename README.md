@@ -6,7 +6,7 @@ An autonomous Hunter Guild management RPG. The player is the Guild Master: they 
 
 The design goal is that a Hunter does not merely *have* a build — they **become** one, through what they actually do. Mastery grows from use, and build identity is what the AI reads when it decides how to act.
 
-**Status:** Phases 0–8 complete, including the approved five-rank Hunter rebirth system, with Phase 9 presentation in progress. The guild runs in real time and while you are away, with standing orders, a Guild Report on return, ranked notices, an animated fact-driven combat replay that explains itself, Easy/Advanced AI views and accessibility settings. The real town grid has an isometric presentation with visible working hunters, and the Field has a state-driven visual region map; live town-combat rendering and production audio remain.
+**Status:** Phases 0–8 complete, including the approved five-rank Hunter rebirth system, with the continuous-world migration and Phase 9 presentation in progress. The guild runs in real time and while you are away, with standing orders, a Guild Report on return, ranked notices, an animated fact-driven combat replay that explains itself, Easy/Advanced AI views and accessibility settings. The real town grid and frontier now share one **Living World** surface. The current expedition engine still resolves journeys into a state-driven replay; persistent travel, live field combat rendering, follow-camera behavior, and production audio remain. The locked migration is specified in `docs/CONTINUOUS_WORLD_ARCHITECTURE.md`.
 
 ---
 
@@ -40,6 +40,7 @@ The design is locked and documented before it is coded. `docs/` is the source of
 | Document | What it is |
 |---|---|
 | [DESIGN_BIBLE.md](docs/DESIGN_BIBLE.md) | The locked design restated as ~150 testable requirement IDs. **Start here.** |
+| [CONTINUOUS_WORLD_ARCHITECTURE.md](docs/CONTINUOUS_WORLD_ARCHITECTURE.md) | The authoritative amendment connecting town, travel, expeditions, and combat into one persistent simulation. |
 | [SYSTEM_MAP.md](docs/SYSTEM_MAP.md) | Every system, its layer, module and owner |
 | [DEPENDENCY_GRAPH.md](docs/DEPENDENCY_GRAPH.md) | How imports may flow, and why the graph is acyclic |
 | [CONFLICT_AUDIT.md](docs/CONFLICT_AUDIT.md) | Design conflicts and the architecture enforcing each resolution |

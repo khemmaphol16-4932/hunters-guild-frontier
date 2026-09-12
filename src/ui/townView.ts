@@ -83,6 +83,12 @@ export class TownView {
     this.host.append(grid);
   }
 
+  inspect(instanceId: string): void {
+    this.state.selected = instanceId;
+    this.state.placing = undefined;
+    this.render();
+  }
+
   private renderMarket(): HTMLElement {
     const card = el('div', 'card');
     card.append(el('h3', undefined, 'Market'));

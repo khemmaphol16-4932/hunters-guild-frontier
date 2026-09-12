@@ -1,6 +1,6 @@
 # Hunter’s Guild: Frontier — Design Bible
 
-> **Amended by Master Build Specification v1.0.** Several requirements below were superseded by the later v1.0 handoff document. Amended requirements are marked **[v1.0]** and carry the new rule; the superseded text is kept alongside so the change is visible rather than silent. `SPEC_RECONCILIATION.md` is the full item-by-item audit, and is the place to look first when this document and v1.0 appear to disagree.
+> **Amended by Master Build Specification v1.0 and the locked Continuous World Architecture.** Several requirements below were superseded by later handoffs. Amended requirements carry the new rule; superseded text stays visible rather than changing silently. Read `SPEC_RECONCILIATION.md` and `CONTINUOUS_WORLD_ARCHITECTURE.md` when requirements appear to disagree.
 
 **Status:** LOCKED. Derived from the 350-decision master specification, amended by Master Build Specification v1.0.
 
@@ -20,6 +20,8 @@ Section numbers in parentheses (§n) reference the master specification.
 | REQ-PRIME-004 | A Hunter becomes its build through what it actually does — mastery and behavior memory grow from use. (§3, §15) |
 | REQ-PRIME-005 | There is no universally perfect party; only the right party for a situation. (§25, §88) |
 | REQ-PRIME-006 | The town is a physical, observable place — never a menu stack. (§6, §59, §129) |
+| REQ-PRIME-007 | **Town, travel, wilderness, expeditions, and combat are one continuous autonomous simulation.** The REQ-CW requirements supersede separate-mode presentation. |
+| REQ-PRIME-008 | Important systems are represented through observable world behavior before being reduced to menus; menus retain deep management, builds, policies, pricing, research, and statistics. |
 
 ### Anti-goals (§129) — guardrails, tested where possible
 
@@ -188,9 +190,9 @@ Target tone: **casual tycoon + RPG flavor**. Death matters; the game stays appro
 
 | ID | Requirement |
 |---|---|
-| REQ-EXP-001 | World structure is a fixed world map with procedural expedition routes. (§49, §50) |
+| REQ-EXP-001 **[continuous world]** | World structure is connected large regions with natural transitions. Procedural route content describes journeys through those regions; it is not a separate expedition map or mode. |
 | REQ-EXP-002 | Expeditions have branching routes, events, combat, exploration, loot, bosses, decisions and environmental situations. (§49) |
-| REQ-EXP-003 | Maximum expedition duration is 10 minutes; different expeditions may be shorter. (§49) |
+| REQ-EXP-003 **[continuous world]** | Expeditions take real simulated travel time through the connected world. The former ten-minute resolution target is a prototype pacing reference, not a separate-mode limit. |
 | REQ-EXP-004 | Continue/Retreat is a major tension mechanic driven by expedition policy, party policy, hunter condition, events, danger checkpoints, AI evaluation and player risk policy. Hard Constraints always win. (§47) |
 | REQ-WLD-001 | The world map is persistent; exploration information is permanent and remembered by the Guild. (§50, §90) |
 | REQ-WLD-002 | Regions unlock through combinations of level, reputation, story, capability and player choice, and must feel clearly different. (§50) |

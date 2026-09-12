@@ -720,3 +720,22 @@ A fight with a death or a boss kill shows its first *why* line in the route repo
 - **Audio hooks.** Every notice kind maps to a cue name or to deliberate silence (`ui/audioCues.json`), and a player can be registered to hear them. None is registered: the game ships no sounds until the art and audio pass, and a volume slider for a silent game would be a control that does nothing.
 
 **Not done here:** isometric pixel-art presentation of the town and the world. That is the art phase, where this work stops.
+
+---
+
+## DL-064 — Town and Field become one Living World
+
+**Superseding direction.** The design owner locked the game as one continuous autonomous world
+simulation. Town, roads, wilderness, expeditions, and combat are places and activities in that
+simulation rather than separate modes. The player may follow a persistent hunter from daily
+town life into travel and field combat without a battle scene or automatic camera change.
+
+**Decision.** `CONTINUOUS_WORLD_ARCHITECTURE.md` is the authoritative amendment. The top-level
+UI now exposes one Living World surface containing the physical town and connected frontier;
+the Guild and Hall remain contextual management surfaces. This first presentation change does
+not claim the existing synchronous expedition resolver is persistent. Its replacement with
+tick-driven journey state is explicitly the next simulation migration.
+
+**Why preserve the replay.** Recorded combat facts, seeded randomness, audit explanations, and
+offline equivalence remain valuable. Live observation will consume those rules; reports remain
+history for events the player did not watch.

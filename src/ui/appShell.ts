@@ -13,18 +13,13 @@
 
 import type { Session } from '../app/Session.js';
 import type { GuildCommands } from '../app/GuildCommands.js';
-import { BuildDashboard } from './buildDashboard.js';
-import { ExpeditionView } from './expeditionView.js';
-import { TownView } from './townView.js';
-import { HallView } from './hallView.js';
+import { WorldView } from './worldView.js';
 import { renderGuildReport } from './reportView.js';
 import type { GuildReport } from '../app/GuildReport.js';
 import { onPreferencesChanged, preferences, setPreference } from './preferences.js';
 import { applyAccessibilityPreferences } from './a11y.js';
-import { hintFor } from '../app/Guidance.js';
 import { playNoticeCue } from './audio.js';
 
-type ViewId = 'guild' | 'town' | 'hall' | 'field';
 
 const el = (tag: string, className?: string, text?: string): HTMLElement => {
   const node = document.createElement(tag);
@@ -34,14 +29,11 @@ const el = (tag: string, className?: string, text?: string): HTMLElement => {
 };
 
 export class AppShell {
-  private view: ViewId = 'guild';
+  speed: 0 | 1 | 2 | 4 = 1;
   private readonly body: HTMLElement;
   private readonly nav: HTMLElement;
   private readonly alerts: HTMLElement;
-  private readonly dashboard: BuildDashboard;
-  private readonly town: TownView;
-  private readonly hall: HallView;
-  private readonly expedition: ExpeditionView;
+  private readonly world: WorldView;
   private report: GuildReport | undefined;
   private feedOpen = false;
   private settingsOpen = false;
@@ -61,10 +53,7 @@ export class AppShell {
     this.body = document.createElement('main');
     this.body.id = 'view-body';
 
-    this.dashboard = new BuildDashboard(this.body, session, commands);
-    this.town = new TownView(this.body, session, commands);
-    this.hall = new HallView(this.body, session, commands);
-    this.expedition = new ExpeditionView(this.body, session, commands);
+    this.world = new WorldView(this.body, session, commands);
 
     applyAccessibilityPreferences();
     // Easy/Advanced changes what every screen says, so a change re-renders the current one.
@@ -120,22 +109,28 @@ export class AppShell {
 
   private renderNav(): void {
     this.nav.replaceChildren();
+    const brand = el('div', 'guild-brand');
+    brand.append(el('span', 'guild-crest', '⚑'), el('span', undefined, 'HUNTER’S GUILD'), el('small', undefined, 'FRONTIER'));
+    this.nav.append(brand);
     for (const [id, label] of [
-      ['guild', 'The Guild'],
-      ['town', 'The Town'],
-      ['hall', 'The Hall'],
-      ['field', 'The Field'],
+      ['guild', 'Hunters'],
+      ['hall', 'Guild affairs'],
     ] as const) {
-      const button = el('button', this.view === id ? 'active' : '', label) as HTMLButtonElement;
-      if (this.view === id) button.setAttribute('aria-current', 'page');
+      const button = el('button', '', label) as HTMLButtonElement;
       button.onclick = () => {
-        this.view = id;
-        this.renderNav();
-        this.renderAlerts();
-        this.renderBody();
+        this.world.open(id);
       };
       this.nav.append(button);
     }
+    const time = el('div', 'time-controls');
+    time.setAttribute('aria-label', 'Simulation speed');
+    for (const speed of [0, 1, 2, 4] as const) {
+      const b = el('button', speed === this.speed ? 'active' : '', speed === 0 ? 'Pause' : `${speed}×`) as HTMLButtonElement;
+      b.setAttribute('aria-pressed', String(speed === this.speed));
+      b.onclick = () => { this.speed = speed; this.renderNav(); };
+      time.append(b);
+    }
+    this.nav.append(time);
 
     const count = this.session.notifications.badgeCount();
     const notices = el('button', `notices${this.feedOpen ? ' active' : ''}`, count > 0 ? `Notices (${count})` : 'Notices') as HTMLButtonElement;
@@ -233,19 +228,8 @@ export class AppShell {
     if (this.settingsOpen) this.alerts.append(this.renderSettings());
 
     // REQ-UX-001: one hint, for this screen, about something that is true right now.
-    const hint = this.report ? undefined : hintFor(this.session, this.view, new Set(preferences().dismissedHints));
-    if (hint) {
-      const box = el('div', 'hint');
-      box.setAttribute('role', 'note');
-      box.append(el('span', undefined, hint.text));
-      const got = el('button', 'small', 'Got it') as HTMLButtonElement;
-      got.onclick = () => {
-        setPreference('dismissedHints', [...preferences().dismissedHints, hint.id]);
-        this.renderAlerts();
-      };
-      box.append(got);
-      this.alerts.append(box);
-    }
+    // The Living World owns the former town and field surfaces. Lead with the frontier hint;
+    // contextual guidance inside each view remains unchanged.
 
     if (this.feedOpen) {
       const feed = el('section', 'card notice-feed');
@@ -270,8 +254,8 @@ export class AppShell {
   }
 
   private renderBody(): void {
-    this.body.replaceChildren();
     if (this.report) {
+      this.body.replaceChildren();
       const report = this.report;
       this.body.append(
         renderGuildReport(
@@ -286,9 +270,6 @@ export class AppShell {
       );
       return;
     }
-    if (this.view === 'guild') this.dashboard.mount();
-    else if (this.view === 'town') this.town.render();
-    else if (this.view === 'hall') this.hall.render();
-    else this.expedition.render();
+    this.world.render();
   }
 }

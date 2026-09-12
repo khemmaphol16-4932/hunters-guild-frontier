@@ -62,11 +62,17 @@ if (offlineReport) shell.showReport(offlineReport);
 // moved when the player pressed "Let a season pass".
 const autosave = (): void => { session.save.autoSave(session.snapshot()); };
 autosave();
+let elapsed = 0;
 setInterval(() => {
-  commands.passTime(1);
+  elapsed += 250 * shell.speed;
+  const stepDuration = session.content.time.realSecondsPerStep * 1000;
+  if (elapsed < stepDuration) return;
+  const steps = Math.floor(elapsed / stepDuration);
+  elapsed -= steps * stepDuration;
+  commands.passTime(steps);
   autosave();
   shell.refresh();
-}, session.content.time.realSecondsPerStep * 1000);
+}, 250);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') autosave();
 });

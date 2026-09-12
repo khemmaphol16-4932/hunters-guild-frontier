@@ -66,6 +66,12 @@ export class BuildDashboard {
     this.render();
   }
 
+  select(hunterId: HunterId): void {
+    this.state.selected = hunterId;
+    this.state.compareWith = undefined;
+    this.render();
+  }
+
   private notify(message: string, isError = false): void {
     this.state.message = message;
     this.state.messageIsError = isError;
