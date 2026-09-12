@@ -110,7 +110,7 @@ const md = [
   '',
   '# REF_PALETTE_MASTER',
   '',
-  `**Status: PENDING APPROVAL** (gate sheet, ART_BIBLE.md §11). ${rows.length} material ramps × 5 steps + ${FUNCTIONAL_HUES.length} functional hues = **${total} colours**.`,
+  `**Status: APPROVED by the design owner, 2026-09-12** (gate sheet, ART_BIBLE.md §11). ${rows.length} material ramps × 5 steps + ${FUNCTIONAL_HUES.length} functional hues = **${total} colours**. Regenerating after a change to ART_BIBLE §6.2 changes the palette, and the changed palette needs approving again.`,
   '',
   'Bases are read from ART_BIBLE.md §6.2; each ramp shifts cooler toward blue in the shadows and warmer toward yellow in the highlights (§6.3). The nine functional hues (§6.1) sit in their own band, unramped: they are signal, not material, and may not be used decoratively.',
   '',

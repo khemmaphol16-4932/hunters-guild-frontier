@@ -1,0 +1,48 @@
+{
+  "batch": "town-props-source-v2",
+  "source": "art/generated/town-props-source-v2",
+  "jobs": [
+    {
+      "file": "handcart_se.png",
+      "id": "PRP_TOWN_BASIC_HANDCART",
+      "variant": "01",
+      "height": 44,
+      "review": "Claude: pass — reads at 0.55; fits the 1×1 canvas after export. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
+    },
+    {
+      "file": "bench_se.png",
+      "id": "PRP_TOWN_BASIC_BENCH",
+      "variant": "01",
+      "height": 30,
+      "review": "Claude: pass — reads at 100 %; small but recognisable at 0.55. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
+    },
+    {
+      "file": "woodpile.png",
+      "id": "PRP_TOWN_BASIC_WOODPILE",
+      "variant": "01",
+      "height": 40,
+      "review": "Claude: pass — reads at 0.55; four posts instead of the requested two, acceptable. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
+    },
+    {
+      "file": "firepit_frame01.png",
+      "id": "PRP_TOWN_BASIC_FIREPIT",
+      "variant": "01",
+      "height": 34,
+      "review": "Claude: pass — reads at 0.55; usable as the reduced-motion frame 01. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
+    },
+    {
+      "file": "weapon_rack.png",
+      "id": "PRP_TOWN_BASIC_WEAPON_RACK",
+      "variant": "01",
+      "height": 72,
+      "review": "Claude: pass — reads at 0.55; exported at 72 px so it stays under hunter shoulder height. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
+    },
+    {
+      "file": "washing_line_se.png",
+      "id": "PRP_TOWN_BASIC_WASHING_LINE",
+      "variant": "01",
+      "height": 64,
+      "review": "Claude: pass — reads at 0.55; garment blue-grey is clear of the functional blue. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
+    }
+  ]
+}

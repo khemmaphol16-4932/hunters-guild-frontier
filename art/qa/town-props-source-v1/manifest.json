@@ -7,21 +7,21 @@
       "id": "PRP_TOWN_BASIC_BARREL",
       "variant": "01",
       "height": 40,
-      "review": "Claude: pass — reads at 0.55. Not promoted: gate sheets (ART_BIBLE §11) await owner approval."
+      "review": "Claude: pass — reads at 0.55. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
     },
     {
       "file": "crate.png",
       "id": "PRP_TOWN_BASIC_CRATE",
       "variant": "01",
       "height": 38,
-      "review": "Claude: pass — cube silhouette reads; detail busy at 0.55 but acceptable. Not promoted: gate sheets (ART_BIBLE §11) await owner approval."
+      "review": "Claude: pass — cube silhouette reads; detail busy at 0.55 but acceptable. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
     },
     {
       "file": "sack.png",
       "id": "PRP_TOWN_BASIC_SACK",
       "variant": "01",
       "height": 36,
-      "review": "Claude: pass — reads at 0.55. Not promoted: gate sheets (ART_BIBLE §11) await owner approval."
+      "review": "Claude: pass — reads at 0.55. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
     }
   ]
 }
