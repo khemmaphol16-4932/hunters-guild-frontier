@@ -9,6 +9,7 @@
  * Everything hangs off one world seed, so an entire guild is reproducible (REQ-TEC-005).
  */
 
+import { Journeys } from '../sim/expedition/Journey.js';
 import { loadContent, type GameContent } from '../data/loader.js';
 import type { Role } from '../data/schema.js';
 import { EventBus } from '../core/events.js';
@@ -230,6 +231,8 @@ export class Session {
   readonly mentors: Mentors;
   readonly newGamePlus: NewGamePlus;
   readonly endlessRecords = new EndlessRecords();
+  /** Expeditions out in the world, saved so a journey survives a reload (DL-070). */
+  readonly journeys = new Journeys();
   /** The one relationship hunters have (REQ-HUN-012). */
   readonly friendship: Friendship;
   /** What the guild does on its own while the player is away (REQ-OFF-001..004). */
@@ -864,6 +867,7 @@ export class Session {
       friendship: this.friendship.snapshot(),
       standingOrders: this.standingOrders.snapshot(),
       worldEvents: this.worldEvents.snapshot(),
+      journeys: this.journeys.snapshot(),
     };
   }
 
@@ -898,6 +902,7 @@ export class Session {
     this.crafting.restore(payload.crafting);
     this.market.restore(payload.market);
     this.contracts.restore(payload.contracts);
+    this.journeys.restore(payload.journeys);
     this.factions.restore(payload.factions);
     this.guildMastery.restore(payload.guildMastery);
     this.monument.restore(payload.monument);

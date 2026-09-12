@@ -99,8 +99,8 @@ still resolve synchronously into a replay.
 
 | # | Item | Lane | Owner | Status |
 |---|---|---|---|---|
-| 9 | Persistent journey/activity state owned by the simulation | Code | | ⬜ |
-| 10 | Travel, encounter, combat, return, recovery and selling advance on fixed ticks | Code | | ⬜ |
+| 9 | Persistent journey/activity state owned by the simulation | Code | Claude | ✅ journeys, save v27 (DL-070) |
+| 10 | Travel, encounter, combat, return, recovery and selling advance on fixed ticks | Code | Claude | 🔨 travel and return are on the tick; node-by-node resolution, retreat and carried loot next |
 | 11 | Region loading and camera observation as consumers of that state | Code | | ⬜ |
 | 12 | Keep seeded combat facts and the audit trail for off-screen fidelity | Code | | ⬜ |
 | 13 | Live observation primary; reports for history and missed events | Code | | ⬜ |

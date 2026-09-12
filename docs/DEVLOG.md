@@ -862,3 +862,32 @@ A process note: the first version of this entry was committed with seven terms m
 written inside a double-quoted shell string, so the shell tried to run each backtick-quoted term as a
 command. Every one failed at once — no server started, no file changed — but the terms dropped out
 of the text. Entries are now written with the file editor, not through the shell.
+
+---
+
+# 2026-09-12 — Journeys: expeditions take time in the world (DL-070)
+
+The first step of the continuous-world migration. `departExpedition` resolves a route at the gate
+with the same rules engine and seeded fork as the instant path, and stores it as a journey that the
+simulation owns and the save keeps (v27). The party is away until `passTime` brings it home, and the
+consequences land on that step, through the same code the instant path runs. `dispatch` is split
+into `planDispatch` and `applyDispatch`, so there is still one copy of each consequence.
+
+Two things were caught before any player saw them. The first was a unit error in the timetable. A
+town step is twenty clock ticks, and journey times were being added to ticks as if they were steps,
+which would have brought every party home twenty times too fast; the tests now pin the timing to the
+clock's step ratio. The second was offline drift. `passTime` catches up in chunks of ten steps, so a
+party checked once per chunk would have come home up to ten steps late offline and on time live.
+The chunk now splits exactly at each return.
+
+The tests hold the migration to its promises: the journey's route is byte-identical to the instant
+path's; nothing is applied at departure; an away hunter is never sent twice; experience and levels on
+return equal the instant path's; the return reaches the Guild Report; offline and live come home on
+the same step; and a save taken mid-journey resumes to the same result. A probe confirmed the tests
+are not vacuous: a four-node Blue run, six steps long, with experience landing only on return.
+
+This is step 1 of five. The route is still resolved in full at the gate, mid-journey retreat and
+personal carried loot do not exist yet, and the expedition screen and standing orders still use the
+instant path — all recorded in DL-070 as the next slices.
+
+**Verified:** 689 tests pass; TypeScript is clean.

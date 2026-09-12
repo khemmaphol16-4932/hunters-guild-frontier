@@ -504,6 +504,16 @@ const v25ToV26: Migration = {
   },
 };
 
+const v26ToV27: Migration = {
+  from: 26,
+  to: 27,
+  describe: 'persist expeditions that are out in the world',
+  migrate(payload: unknown): unknown {
+    // Before v27 every expedition resolved the moment it left, so no save has one out.
+    return { ...asRecord(payload, 26), journeys: { next: 1, active: [] } };
+  },
+};
+
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -530,6 +540,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v23ToV24,
   v24ToV25,
   v25ToV26,
+  v26ToV27,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

@@ -46,6 +46,7 @@ import type { RefineResult } from '../systems/items/Refinement.js';
 import { REASON } from '../core/audit.js';
 import type { ObjectiveId, PartyProposal } from '../systems/party/Party.js';
 import type { ExpeditionResult } from '../sim/expedition/Expedition.js';
+import { timetable, type JourneyRecord } from '../sim/expedition/Journey.js';
 import type { KnowledgeTier, RegionDef as WorldRegionDef } from '../data/combatSchema.js';
 import { KNOWLEDGE_TIERS } from '../data/combatSchema.js';
 import type { Rotation, TownDepartmentId } from '../data/townSchema.js';
@@ -74,6 +75,16 @@ import { OBJECTIVES } from '../systems/party/Party.js';
 /** Knowledge tiers are ordered, so "at least this well known" is a rank comparison. */
 function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean {
   return KNOWLEDGE_TIERS.indexOf(actual) >= KNOWLEDGE_TIERS.indexOf(needed);
+}
+
+/** A route resolved at the gate and not yet applied (DL-070). */
+interface DispatchPlan {
+  readonly regionId: string;
+  readonly region: WorldRegionDef;
+  readonly proposal: PartyProposal;
+  readonly endless: EndlessObjectiveDef | undefined;
+  readonly worldBoss: WorldBossEvent | undefined;
+  readonly result: ExpeditionResult;
 }
 
 export interface ExpeditionOutcome {
@@ -879,6 +890,63 @@ export class GuildCommands {
     return this.dispatch(regionId, objective, party, undefined, undefined);
   }
 
+  /**
+   * Send a party out into the world (CONTINUOUS_WORLD_ARCHITECTURE.md §Migration, DL-070).
+   *
+   * The route is resolved now, by the same rules engine and seeded fork as `sendExpedition`, so
+   * the outcome is identical — but nothing is applied until the party returns. Until then its
+   * hunters are away: assigned to the journey, out of the town rota, and unavailable to any
+   * other party. `passTime` brings them home.
+   */
+  departExpedition(regionId: string, objective: ObjectiveId, party?: PartyProposal): Result<JourneyRecord, string> {
+    const plan = this.planDispatch(regionId, objective, party, undefined, undefined);
+    if (isErr(plan)) return plan;
+    const { region, proposal, result } = plan.value;
+    const tick = this.session.clock.tick;
+    const times = timetable(tick, region.zoneTier, result.reachedNode, this.session.content.journey, this.session.clock.coarseStepRatio);
+    const journey = this.session.journeys.depart({
+      regionId,
+      hunterIds: proposal.members.map((m) => m.hunterId),
+      departedAtTick: tick,
+      ...times,
+      proposal,
+      result,
+    });
+    for (const member of proposal.members) {
+      const hunter = this.session.roster.require(member.hunterId);
+      this.session.townJobs.release(hunter.id);
+      this.session.roster.update(
+        withAvailability(hunter, { state: 'assigned', assignment: journey.id, readyAtTick: journey.returnsAtTick, recallCompletesAtTick: undefined }),
+      );
+    }
+    this.session.audit.record({
+      actor: { kind: 'system', name: 'guild-ai' },
+      system: 'expedition',
+      sourceEvent: journey.id,
+      outcome: `${proposal.members.length} hunters left for ${region.name}, back in ${(journey.returnsAtTick - tick) / this.session.clock.coarseStepRatio} steps`,
+      reasonCodes: ['journey_departed', `region:${regionId}`],
+      inputs: { objective: proposal.objective.id, returnsAtTick: journey.returnsAtTick },
+    });
+    return ok(journey);
+  }
+
+  /** Apply every journey that is home by now, exactly as the instant path would have (DL-070). */
+  private completeJourneys(recorder: ReportRecorder): void {
+    for (const journey of this.session.journeys.takeReturned(this.session.clock.tick)) {
+      const baseRegion = this.session.content.worldRegionsById.get(journey.regionId);
+      if (!baseRegion) continue;
+      const region = journey.worldBoss ? { ...baseRegion, boss: journey.worldBoss.bossId } : baseRegion;
+      // A hunter who left the roster while away (never expected, but a save can be edited)
+      // is dropped from the aftermath rather than crashing the return.
+      const result = { ...journey.result, aftermath: journey.result.aftermath.filter((a) => this.session.roster.get(a.hunterId) !== undefined) };
+      const outcome = this.applyDispatch({ regionId: journey.regionId, region, proposal: journey.proposal, endless: undefined, worldBoss: journey.worldBoss, result });
+      recorder.noteExpedition(
+        { regionName: region.name, summary: outcome.result.summary, completed: outcome.result.completed, wiped: outcome.result.wiped },
+        outcome.result.aftermath,
+      );
+    }
+  }
+
   worldBossEvent(): WorldBossEvent | undefined {
     return this.session.worldEvents.currentWorldBoss(this.session.clock.tick);
   }
@@ -953,6 +1021,21 @@ export class GuildCommands {
     endless: EndlessObjectiveDef | undefined,
     worldBoss: WorldBossEvent | undefined,
   ): Result<ExpeditionOutcome, string> {
+    const plan = this.planDispatch(regionId, objective, party, endless, worldBoss);
+    return isErr(plan) ? plan : ok(this.applyDispatch(plan.value));
+  }
+
+  /**
+   * Everything that happens at the gate: the region is open, the party is chosen, and the route
+   * is resolved by the deterministic rules engine. Nothing is applied yet (DL-070).
+   */
+  private planDispatch(
+    regionId: string,
+    objective: ObjectiveId,
+    party: PartyProposal | undefined,
+    endless: EndlessObjectiveDef | undefined,
+    worldBoss: WorldBossEvent | undefined,
+  ): Result<DispatchPlan, string> {
     const baseRegion = this.session.content.worldRegionsById.get(regionId);
     if (!baseRegion) return err(`unknown region "${regionId}"`);
     const region = worldBoss ? { ...baseRegion, boss: worldBoss.bossId } : baseRegion;
@@ -986,6 +1069,16 @@ export class GuildCommands {
         ...(worldBoss ? { worldBossId: worldBoss.bossId } : {}),
       },
     );
+    return ok({ regionId, region, proposal, endless, worldBoss, result });
+  }
+
+  /**
+   * Every consequence of a resolved route. The instant path applies it the moment the plan is
+   * made; a journey applies it on the step the party walks back through the gate (DL-070).
+   */
+  private applyDispatch(plan: DispatchPlan): ExpeditionOutcome {
+    const { regionId, region, proposal, endless, worldBoss, result } = plan;
+    const endlessConfig = this.session.content.endless;
     this.session.guildMastery.record('expedition', Math.max(1, result.reachedNode) * this.masteryPoints.expeditionPerNode);
 
     for (const decision of result.decisions) {
@@ -1238,7 +1331,7 @@ export class GuildCommands {
 
     const record = endless && result.endless ? this.recordEndless(region, endless, result.endless.deepestDepth, depthsCleared, proposal) : undefined;
 
-    return ok({ result, party: proposal, loot, levelledUp, resources, ...(record ? { record } : {}) });
+    return { result, party: proposal, loot, levelledUp, resources, ...(record ? { record } : {}) };
   }
 
   private recordEndless(
@@ -1296,13 +1389,19 @@ export class GuildCommands {
     let remaining = Math.max(0, Math.floor(steps));
     while (remaining > 0) {
       this.runStandingOrder(recorder);
-      const n = Math.min(chunk, remaining);
+      // Split the chunk exactly at the next journey's return, so a party comes home on the same
+      // step offline as live (REQ-OFF-002) rather than up to a chunk late.
+      const nextReturn = this.session.journeys.nextReturnTick();
+      // Journey times are clock ticks; advanceTown counts town steps of coarseStepRatio ticks each.
+      const untilReturn = nextReturn === undefined ? Infinity : Math.max(1, Math.ceil((nextReturn - this.session.clock.tick) / this.session.clock.coarseStepRatio));
+      const n = Math.min(chunk, remaining, untilReturn);
       const result = this.advanceTown(n);
       recorder.addSteps(n);
       recorder.noteHunts(result.hunts);
       recorder.noteRecovered(result.recovered.length);
       recorder.noteCrafted(result.completedCrafts.map((item) => item.name));
       if (result.defense) recorder.noteDefense(result.defense.summary, result.defense.held);
+      this.completeJourneys(recorder);
       if (this.session.standingOrders.autoRepair) this.repairDamaged(recorder);
       // Asking is what lets the world boss appear on schedule (and announce itself).
       this.worldBossEvent();

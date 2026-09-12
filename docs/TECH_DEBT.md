@@ -129,3 +129,13 @@ A null object satisfies the compiler but proves nothing about whether the consum
 | Isometric 2.5D pixel-art town and world | REQ-UX-007, `art/ART_DIRECTION.md` | the art phase; the grid town, text reports and the replay are the functional layer it will present |
 | Sounds | Phase 9 audio | `ui/audioCues.json` names a cue for every notice; nothing plays until assets exist |
 | Watching a fight live | REQ-UX-004, §7 | `CombatEncounter.step` and `CombatFacts` are ready for a renderer; the replay reads as a story until one exists |
+
+## Journeys — step 1 of the continuous-world migration (DL-070)
+
+| Limit | Consequence | Next step |
+|---|---|---|
+| The route is resolved in full at departure | Nothing that happens in the world during a journey can change its outcome | Step 2: resolve node by node on the tick |
+| The whole `ExpeditionResult`, combat facts included, is stored in the save | A save grows by one expedition's worth of combat facts per party out; fine for a handful, not for many | Store only what apply and the replay need, or re-derive from the seed |
+| No mid-journey retreat | REQ-CW-010 is unmet for journeys; the Guild AI's in-route continue/retreat still works | The resolver gains "stop after node N" |
+| No personal carried loot | REQ-CW-008 and -011 are unmet; loot goes to the armoury on return | Hunter inventories, then sale to the Guild on return |
+| Expedition screen, standing orders, endless and world-boss runs use the instant path | Players cannot yet start a journey from the UI | Switch them to `departExpedition` |

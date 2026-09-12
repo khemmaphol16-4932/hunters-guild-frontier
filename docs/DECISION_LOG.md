@@ -816,3 +816,41 @@ reconciled before a humanoid asset is promoted.
 
 **Reversal.** Restore 1:6 in REQ-UX-008, the Art Bible and character specs, then regenerate
 the reference turnaround and scale lineup before producing further humanoid sprites.
+
+---
+
+## DL-070 — Expeditions take time in the world: journeys, step 1 of the migration
+
+**Ambiguity.** `CONTINUOUS_WORLD_ARCHITECTURE.md` §Migration orders the work: persistent journey state
+first, then travel, encounter, combat, return, recovery and selling on fixed ticks. It does not say
+how to make the first step without disturbing the deterministic rules engine that 680 tests, offline
+catch-up and the combat replay all stand on.
+
+**Decision.** A new `departExpedition` resolves the route at the gate with the same
+`Expedition.run` and the same seeded fork as the instant path, then stores it as a **journey** —
+state the simulation owns and the save keeps (save v27). The party is away: assigned to the journey,
+out of the town rota, unavailable to any other party. `passTime` brings it home on schedule, and the
+consequences land on that step — experience, injury, recovery, loot, resources, contracts, chronicle
+and report — through the very code the instant path runs. `dispatch` is split into `planDispatch`
+(everything at the gate) and `applyDispatch` (every consequence), so there is one copy of each.
+Journey timing is content (`balance/journey.json`): travel each way by zone tier and steps per node
+reached. A four-node Blue run takes six steps, three minutes at 1×.
+
+**Why conservative.** The rules engine is untouched, so a journey's outcome is provably the instant
+path's (a test compares them byte for byte). Offline and live bring a party home on the same step
+because `passTime` splits its catch-up chunks exactly at each return. A save taken mid-journey
+resumes to the identical result. The instant path keeps working unchanged.
+
+**Not done yet, and why.** This is step 1 of five, not the continuous world.
+- The route is still resolved in full at the gate. The world during the journey — a new threat, a
+  retreat order — cannot change it yet. That is step 2: resolving node by node on the tick.
+- Mid-journey retreat (REQ-CW-010) needs the resolver to stop after a given node; it is the next slice.
+- Personal carried loot (REQ-CW-008, -011) does not exist on hunters yet; loot still goes to the
+  armoury on return.
+- The expedition screen, standing orders, endless runs and world-boss runs still use the instant
+  path. Switching them is a presentation change for the next slice.
+
+PENDING APPROVAL: the journey timings in `balance/journey.json`.
+
+**Reversal.** Remove `departExpedition` and the journey registry; `sendExpedition` never stopped
+working. Saves at v27 migrate forward only, so a reversal keeps the `journeys` field and ignores it.

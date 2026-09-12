@@ -40,6 +40,7 @@ import endlessJson from './balance/endless.json';
 import worldBossJson from './world/worldBoss.json';
 import friendshipJson from './balance/friendship.json';
 import timeJson from './balance/time.json';
+import journeyJson from './balance/journey.json';
 import notificationsJson from './ui/notifications.json';
 import guidanceJson from './ui/guidance.json';
 import { parseEconomy, type EconomyData, type ResourceDef } from './economySchema.js';
@@ -50,6 +51,7 @@ import { parseEndless, type EndlessData } from './endlessSchema.js';
 import { parseWorldBoss, type WorldBossDef } from './worldBossSchema.js';
 import { parseFriendship, type FriendshipBalance } from './friendshipSchema.js';
 import { parseTime, type TimeBalance } from './timeSchema.js';
+import { parseJourney, type JourneyBalance } from './journeySchema.js';
 import { parseNotifications, type NotificationRules } from './notificationSchema.js';
 import { parseGuidance, type HintDef } from './guidanceSchema.js';
 
@@ -237,6 +239,8 @@ export interface GameContent {
   readonly friendship: FriendshipBalance;
   /** The town's calendar: live rate and offline cap (REQ-OFF-001). */
   readonly time: TimeBalance;
+  /** How long an expedition takes in the world (DL-070). */
+  readonly journey: JourneyBalance;
   /** Which events interrupt the player, and which only go to the feed (REQ-UX-005). */
   readonly notifications: NotificationRules;
   /** Contextual hints, one screen at a time (REQ-UX-001). */
@@ -746,6 +750,7 @@ export function loadContent(): GameContent {
   const worldBoss = parseWorldBoss(worldBossJson);
   const friendship = parseFriendship(friendshipJson);
   const time = parseTime(timeJson);
+  const journey = parseJourney(journeyJson);
   const notifications = parseNotifications(notificationsJson);
   const guidance = parseGuidance(guidanceJson);
   const worldBossMonster = monsters.find((monster) => monster.id === worldBoss.bossId);
@@ -874,6 +879,7 @@ export function loadContent(): GameContent {
     worldBoss,
     friendship,
     time,
+    journey,
     notifications,
     guidance,
 

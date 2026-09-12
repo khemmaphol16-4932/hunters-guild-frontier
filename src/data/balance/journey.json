@@ -1,0 +1,10 @@
+{
+  "$comment": "How long an expedition takes in the world, in simulation steps (CONTINUOUS_WORLD_ARCHITECTURE.md §Migration, DL-070). A journey travels out, spends stepsPerNode at each node of its route, and travels back. Travel each way lengthens with the zone's danger, because riskier regions lie further from the gate. At the default 30 s a step, a four-node Blue run takes 1 + 4 + 1 = 6 steps, three minutes at 1x. PENDING APPROVAL: all values.",
+  "stepsPerNode": 1,
+  "travelSteps": {
+    "blue": 1,
+    "yellow": 2,
+    "red": 3,
+    "black": 4
+  }
+}
