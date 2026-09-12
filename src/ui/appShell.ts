@@ -29,7 +29,7 @@ const el = (tag: string, className?: string, text?: string): HTMLElement => {
 };
 
 export class AppShell {
-  speed: 0 | 1 | 2 | 4 = 1;
+  speed: 1 | 2 | 4 = 1;
   private readonly body: HTMLElement;
   private readonly nav: HTMLElement;
   private readonly alerts: HTMLElement;
@@ -124,8 +124,8 @@ export class AppShell {
     }
     const time = el('div', 'time-controls');
     time.setAttribute('aria-label', 'Simulation speed');
-    for (const speed of [0, 1, 2, 4] as const) {
-      const b = el('button', speed === this.speed ? 'active' : '', speed === 0 ? 'Pause' : `${speed}×`) as HTMLButtonElement;
+    for (const speed of [1, 2, 4] as const) {
+      const b = el('button', speed === this.speed ? 'active' : '', `${speed}×`) as HTMLButtonElement;
       b.setAttribute('aria-pressed', String(speed === this.speed));
       b.onclick = () => { this.speed = speed; this.renderNav(); };
       time.append(b);
