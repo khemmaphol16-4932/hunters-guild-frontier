@@ -782,10 +782,12 @@ history for events the player did not watch.
 
 **Ambiguity.** `art/ART_BIBLE.md` found three conflicts before any production asset is ordered. DL-065 settles the third (no paused-world visual state). Two remain.
 
-**Decision proposed, PENDING APPROVAL.**
+**Decision — APPROVED by the design owner, 2026-09-12.**
 - **AR-1, pixel art.** REQ-UX-007 and `art/ART_DIRECTION.md` lock pixel art; later handoff prompts say "painterly low-poly". Read "painterly" as soft ambient shading inside a hand-placed pixel grid. No asset ships as a painted or 3D render.
 - **AR-2, true 2:1 projection.** `worldView.ts` projects at `(x−y)·33, (x+y)·18`: a 66×36 diamond at 28.6°, which pixel art cannot author cleanly. Lock art to a 64×32 tile and change the constants to `32`/`16`.
 
 **Why conservative.** AR-1 keeps the locked requirement. AR-2 changes one line of code instead of every asset, and must land before production, since each asset authored first would sit about 3% wrong.
+
+**Applied.** `worldView.ts` now projects with named constants `TILE_HALF_W = 32`, `TILE_HALF_H = 16`. The build drawer's own grid diagram in `townView.ts` (48 × 24) was already 2:1 and is a diagram, not art scale, so it is unchanged.
 
 **Reversal.** Author to 66×36 instead and accept the pixel-grid cost, or re-open REQ-UX-007.

@@ -19,6 +19,10 @@ const button = (label: string, action: () => void, cls = ''): HTMLButtonElement 
 };
 type Panel = 'build' | 'frontier' | 'hall' | 'guild' | undefined;
 
+/** True 2:1 dimetric: a 64 × 32 tile at @1x, so art authors on a clean pixel grid (DL-068). */
+const TILE_HALF_W = 32;
+const TILE_HALF_H = 16;
+
 /**
  * Which guidance screens (REQ-UX-001) the player is looking at. The four former screens now
  * live as drawers over one world, so an open drawer is its screen, and the bare world shows
@@ -175,7 +179,7 @@ export class WorldView {
       tree.setAttribute('aria-hidden', 'true'); this.scene.append(tree);
     }
     const town = this.session.town;
-    const project = (x: number, y: number) => ({ x: 740 + (x-y) * 33, y: 300 + (x+y) * 18 });
+    const project = (x: number, y: number) => ({ x: 740 + (x - y) * TILE_HALF_W, y: 300 + (x + y) * TILE_HALF_H });
     for (const p of town.grid.all()) {
       const r = town.grid.rectFor(p); if (!r) continue;
       const def = town.definition(p.buildingId); const point = project(r.x + r.width / 2, r.y + r.height / 2);

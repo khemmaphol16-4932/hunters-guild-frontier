@@ -12,9 +12,9 @@ without those is concept art, not a game asset, and does not enter `art/`.
 
 ## 0. Reconciliations and pending approvals
 
-This document resolves three conflicts found while reading the repository. AR-3 is settled
-(DL-065). AR-1 and AR-2 are recorded as **DL-068, PENDING APPROVAL**, and must be approved before
-assets are ordered.
+This document resolved three conflicts found while reading the repository. AR-3 is settled by
+DL-065; AR-1 and AR-2 were **approved by the design owner on 2026-09-12 as DL-068**. Production
+may begin once the gate reference sheets (§11) are approved.
 
 | # | Conflict | Resolution proposed here |
 |---|---|---|
@@ -109,8 +109,8 @@ soft halo, glow around the silhouette, semi-transparent edge fringe
 | Camera rotation | **None.** The camera never rotates. |
 | Camera zoom range | `0.55 – 1.8` (from `worldView.ts` `changeZoom` clamp) |
 
-> **Code change required (AR-2):** `worldView.ts` currently uses `33`/`18`. Change to
-> `32`/`16`. Until that lands, every authored asset will sit ~3% wrong on the horizontal.
+> **Applied (AR-2, DL-068):** `worldView.ts` projects with `TILE_HALF_W = 32` and
+> `TILE_HALF_H = 16` — the old `33`/`18` would have put every asset ~3% off the grid.
 
 ### 4.2 Facing
 

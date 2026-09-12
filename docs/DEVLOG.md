@@ -727,3 +727,20 @@ so every prompt carries it. The library's tree ids were renamed to match the one
 
 **Verified:** `npm run art:prompts -- --check` passes with coverage 222/222; 662 tests pass;
 TypeScript is clean.
+
+---
+
+# 2026-09-12 — DL-068 approved; coordinating with Codex
+
+The design owner approved DL-068: pixel art rather than "painterly", on a true 2:1, 64 × 32 tile.
+`worldView.ts` now projects with named constants (`TILE_HALF_W = 32`, `TILE_HALF_H = 16`) instead
+of the old `33`/`18`, which would have put every authored asset about 3% off the grid. The build
+drawer's own 48 × 24 diagram in `townView.ts` was already 2:1 and is unchanged.
+
+This repository is shared with a second agent, OpenAI Codex, often in the same working tree.
+`AGENTS.md` at the root (which Codex reads automatically, and `CLAUDE.md` imports) now holds the
+lanes, the rules for a shared tree — stage by explicit path, never touch the other agent's
+uncommitted work, claim before starting — and the work board of what is left.
+
+**Verified:** 662 tests pass; TypeScript is clean. The new projection has not been checked in a
+browser.
