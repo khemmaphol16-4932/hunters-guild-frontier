@@ -32,6 +32,26 @@ The low six-legged silhouette, stone back, and moss mass read well at a glance. 
 
 > Use case: stylized-concept. Asset type: MON_MOSS_CRAWLER idle southeast source candidate for Hunter's Guild: Frontier. One dog-sized low moss crawler from the safe Verdant Reach: squat six-legged forest scavenger with a broad stone-like back covered in clumped moss, small alert head, sturdy short legs, friendly-readable silhouette but clearly a wild combat creature. No horns, skull face or gore. True 2:1 dimetric southeast facing, same world camera used for town and combat. Handcrafted low-resolution pixel art, crisp square pixel clusters, hard local-dark outline, restrained <=32-color intent, Verdant greens #4e6b45 and #82905b, stone #8d8a80, slate shadow #3e4a5c, warm upper-left light. Intended 128x128 @2x canvas, about 72px long, bottom-center ground pivot. Fully transparent background, no ground, shadow, scenery, text, UI, halo, glow, particles, smooth painting, chibi mascot face or 3D render.
 
+## `ranger_idle_se_candidate.png`
+
+**Status:** Source candidate for Claude QA and later manual pixel cleanup.
+
+The lean silhouette, tied-back hair, practical under-layer, and alert stance distinguish the ranger while preserving the shared adult chibi body language. It still requires camera, authored-size, palette, alpha, and pivot validation.
+
+**Exact generation prompt**
+
+> Use case: stylized-concept. Asset type: HUN_SKEL_RANGER idle southeast source candidate for Hunter's Guild: Frontier. One adult androgynous frontier ranger base rig for modular paper-doll equipment, soft cute-chibi proportion exactly about 1:4.5 head-to-height. Lean compact silhouette with a slightly forward alert stance, capable rather than heroic, no visible muscle definition. Wear only a modest moss-grey short frontier under-tunic over close plain trousers and soft ankle boots; no exposed midriff, no modern sportswear, no armor, no weapon, no bow, no quiver, no accessories. Plain short tied-back hair that does not obscure equipment sockets, tiny two-pixel eyes, nearly featureless calm face, no makeup or personality-specific markings. Arms slightly away from torso, empty hands visible. Strict true 2:1 dimetric three-quarter southeast view aligned to the shared town/road/combat camera. Handcrafted low-resolution pixel art, crisp square pixel clusters, hard local-dark outline, restrained <=32-color intent, warm upper-left light and faint cool fill. Intended 128x160 @2x canvas, standing height about 112px, feet aligned to bottom-center pivot 64,144. Fully transparent background, no floor, shadow or scenery. No text, UI, card frame, halo, glow, anime eyes, baby anatomy, extreme 1:3 mascot proportions, exaggerated curves, detailed face, smooth painting, antialiasing or 3D render.
+
+## `adept_idle_se_candidate.png`
+
+**Status:** Source candidate for Claude QA and later manual pixel cleanup.
+
+The longer blue-grey under-tunic and quieter balanced stance distinguish the adept without relying on magic effects or equipment. It still requires camera, authored-size, palette, alpha, and pivot validation.
+
+**Exact generation prompt**
+
+> Use case: stylized-concept. Asset type: HUN_SKEL_ADEPT idle southeast source candidate for Hunter's Guild: Frontier. One adult androgynous frontier adept base rig for modular paper-doll equipment, soft cute-chibi proportion exactly about 1:4.5 head-to-height. Slender compact silhouette with relaxed balanced stance and clear hands, scholarly and capable without a hero pose. Wear only a modest muted-blue-grey long frontier under-tunic over close plain trousers and simple shoes; no exposed midriff, no modern sportswear, no robe sleeves that hide the hands, no armor, no staff, no spell, no jewelry or accessories. Plain jaw-length hair kept clear of shoulders and equipment sockets, tiny two-pixel eyes, nearly featureless calm face, no makeup or personality-specific markings. Arms slightly away from torso, empty hands visible. Strict true 2:1 dimetric three-quarter southeast view aligned to the shared town/road/combat camera. Handcrafted low-resolution pixel art, crisp square pixel clusters, hard local-dark outline, restrained <=32-color intent, warm upper-left light and faint cool fill. Intended 128x160 @2x canvas, standing height about 112px, feet aligned to bottom-center pivot 64,144. Fully transparent background, no floor, shadow or scenery. No text, UI, card frame, halo, glow, magic particles, anime eyes, baby anatomy, extreme 1:3 mascot proportions, exaggerated curves, detailed face, smooth painting, antialiasing or 3D render.
+
 ## Promotion rules
 
 - Treat every PNG here as source material only.
