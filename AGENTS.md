@@ -89,8 +89,8 @@ Status: ⬜ open · 🔨 claimed · ✅ done · ⛔ blocked on the owner. Claim 
 | 4a | Deterministic export + validation of candidates (`art/tools/`, reports in `art/qa/`) | Code | Claude | ✅ six candidates pass — promotion waits on the gates |
 | 5 | Building kit: `src/data/town/building-art.json` schema and bake step (O-6) | Code | Claude | ✅ `npm run art:bake` — greybox for all 37 tiers × 4 rotations; kit parts next (Art) |
 | 6 | P0 art for the proof cycle — 107 P0 prompts in `art/prompts/`, starting with `REF_HUNTER_TURNAROUND` | Art | Codex | 🔨 |
-| 7 | Canvas world renderer and paper-doll cache (O-9, O-10); atlas packing (O-8) | Code | Claude | 🔨 after 5 |
-| 8 | Verify the restored hints and the 2:1 projection in a browser | Code | | ⬜ |
+| 7 | Canvas world renderer and paper-doll cache (O-9, O-10); atlas packing (O-8) | Code | Claude | ✅ buildings on canvas, redrawn only on layout change; paper-doll cache waits for promoted hunters |
+| 8 | Verify the restored hints, the 2:1 projection and the building canvas in a browser — `npm.cmd run dev` from this folder (PowerShell blocks `npm.ps1`) | Code | Claude | ⛔ needs a running dev server |
 
 ### Game — the continuous-world migration
 

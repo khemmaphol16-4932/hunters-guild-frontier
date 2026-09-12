@@ -8,7 +8,7 @@
       "variant": "02",
       "height": 112,
       "matte": 40,
-      "review": "Codex: candidate — broad, low and planted; bald neutral-grey paper-doll base with no baked outfit. Awaiting Claude QA and owner silhouette approval."
+      "review": "Codex: candidate — broad, low and planted; bald neutral-grey paper-doll base with no baked outfit. Claude QA: PASS as a rig — distinct archetype silhouette at 0.55 in black fill, and a plain grey base with no baked outfit, fixing both round-1 failures. Note: soften the sculpted muscle definition — ART_BIBLE asks for solid and practical, not muscular fantasy. Awaiting owner silhouette approval."
     },
     {
       "file": "adept_idle_se.png",
@@ -16,7 +16,7 @@
       "variant": "02",
       "height": 112,
       "matte": 40,
-      "review": "Codex: candidate after dark-matte cleanup — narrow, upright and vertical; bald neutral-grey paper-doll base with no baked outfit. Awaiting Claude QA and owner silhouette approval."
+      "review": "Codex: candidate after dark-matte cleanup — narrow, upright and vertical; bald neutral-grey paper-doll base with no baked outfit. Claude QA: PASS as a rig — distinct archetype silhouette at 0.55 in black fill, and a plain grey base with no baked outfit, fixing both round-1 failures. Awaiting owner silhouette approval."
     },
     {
       "file": "ranger_idle_se.png",
@@ -24,7 +24,7 @@
       "variant": "02",
       "height": 112,
       "matte": 40,
-      "review": "Codex: candidate — lean, forward and asymmetric; bald neutral-grey paper-doll base with no baked outfit. Awaiting Claude QA and owner silhouette approval."
+      "review": "Codex: candidate — lean, forward and asymmetric; bald neutral-grey paper-doll base with no baked outfit. Claude QA: PASS as a rig — distinct archetype silhouette at 0.55 in black fill, and a plain grey base with no baked outfit, fixing both round-1 failures. Note: clean the brownish patch on the leg, which looks like residual matte. Awaiting owner silhouette approval."
     }
   ]
 }

@@ -5,7 +5,9 @@
   "type": "module",
   "description": "Hunter's Guild: Frontier — autonomous Hunter Guild management RPG",
   "scripts": {
+    "predev": "node art/tools/bake-buildings.mjs",
     "dev": "vite",
+    "prebuild": "node art/tools/bake-buildings.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",

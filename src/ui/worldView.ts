@@ -8,6 +8,8 @@ import { ExpeditionView } from './expeditionView.js';
 import { HallView } from './hallView.js';
 import { BuildDashboard } from './buildDashboard.js';
 import type { GuidanceScreen } from '../data/guidanceSchema.js';
+import { buildDrawList, layoutKey, projectTile, type DrawItem, type PlacedBuilding } from './world/sceneModel.js';
+import { buildingArtIndex, spriteImage } from './world/buildingArt.js';
 
 const el = (tag: string, cls = '', text?: string): HTMLElement => {
   const n = document.createElement(tag); n.className = cls;
@@ -19,9 +21,10 @@ const button = (label: string, action: () => void, cls = ''): HTMLButtonElement 
 };
 type Panel = 'build' | 'frontier' | 'hall' | 'guild' | undefined;
 
-/** True 2:1 dimetric: a 64 × 32 tile at @1x, so art authors on a clean pixel grid (DL-068). */
-const TILE_HALF_W = 32;
-const TILE_HALF_H = 16;
+/** The scene is 1600 × 1000 at @1x; the canvas backs it at @2x so @2x sprites draw 1:1 (DL-068). */
+const SCENE_W = 1600;
+const SCENE_H = 1000;
+const SCENE_SCALE = 2;
 
 /**
  * Which guidance screens (REQ-UX-001) the player is looking at. The four former screens now
@@ -53,6 +56,13 @@ export class WorldView {
   private readonly hall: HallView;
   private readonly guild: BuildDashboard;
   private readonly layout = el('div', 'world-workspace');
+  // The static backdrop — landscape and trees — is built once. It never changes, and rebuilding it
+  // on every autonomous tick (as the scene used to) cost ~120 DOM nodes a tick for nothing.
+  private readonly canvas = document.createElement('canvas');
+  private readonly buildingLayer = el('div', 'building-layer');
+  private readonly townLabel = el('div', 'map-town-label');
+  private sceneKey = '';
+  private drawList: DrawItem[] = [];
   private returnFocus: HTMLElement | null = null;
   private panel: Panel;
 
@@ -109,6 +119,7 @@ export class WorldView {
     this.layout.append(this.viewport, location, this.resourceBar, tools, camera, guide, this.roster, this.inspector, this.drawer);
     this.drawer.hidden = true; this.inspector.hidden = true;
     this.layout.addEventListener('keydown', (e) => { if (e.key === 'Escape') { this.close(); this.selected = undefined; this.renderInspector(); } });
+    this.buildStaticScene();
   }
 
   render(): void {
@@ -166,34 +177,86 @@ export class WorldView {
   }
   private changeZoom(delta: number): void { this.zoom = Math.min(1.8, Math.max(.55, this.zoom + delta)); this.transform(); }
 
-  private renderScene(): void {
-    this.scene.replaceChildren();
+  /** Landscape, trees, the building canvas and its hit layer: created once, never rebuilt. */
+  private buildStaticScene(): void {
     const land = el('div', 'landscape');
     // Authored scenery is presentation only: no decorative NPCs or pretend simulated roads.
     land.innerHTML = `<svg viewBox="0 0 1600 1000" aria-hidden="true"><defs><pattern id="grass" width="60" height="40" patternUnits="userSpaceOnUse"><path d="M8 16l3-4 2 4M39 29l2-4 3 4" stroke="#82905b" stroke-width="1" fill="none" opacity=".32"/></pattern><linearGradient id="land" x2=".3" y2="1"><stop stop-color="#415845"/><stop offset="1" stop-color="#859061"/></linearGradient></defs><rect width="1600" height="1000" fill="url(#land)"/><rect width="1600" height="1000" fill="url(#grass)"/><path d="M1280 -50C1150 180 1530 210 1340 380S1140 580 1400 760L1610 1010" stroke="#a1baa4" stroke-width="110" fill="none"/><path d="M1280 -50C1150 180 1530 210 1340 380S1140 580 1400 760L1610 1010" stroke="#4c8589" stroke-width="86" fill="none"/><path d="M1280 -50C1150 180 1530 210 1340 380S1140 580 1400 760L1610 1010" stroke="#86b1ad" stroke-width="2" fill="none"/><ellipse cx="725" cy="512" rx="360" ry="210" fill="#869267" opacity=".55"/></svg>`;
     this.scene.append(land);
+    this.canvas.className = 'building-canvas';
+    this.canvas.width = SCENE_W * SCENE_SCALE;
+    this.canvas.height = SCENE_H * SCENE_SCALE;
+    this.canvas.setAttribute('aria-hidden', 'true');
+    this.scene.append(this.canvas);
     for (let i = 0; i < 94; i++) {
       const x = (i * 173 + 37) % 1540, y = (i * 97 + 53) % 940;
       if (x > 350 && x < 1130 && y > 255 && y < 755 || x > 1250) continue;
       const tree = el('div', `scenery-tree tree-${i % 3}`); tree.style.left = `${x}px`; tree.style.top = `${y}px`; tree.style.zIndex = String(y);
       tree.setAttribute('aria-hidden', 'true'); this.scene.append(tree);
     }
+    this.scene.append(this.buildingLayer);
+    this.scene.append(button('The Verdant Reach ↗', () => this.open('frontier'), 'frontier-sign'), this.townLabel);
+  }
+
+  /** Cheap when nothing changed: the canvas and hit layer rebuild only when the town's layout does. */
+  private renderScene(): void {
     const town = this.session.town;
-    const project = (x: number, y: number) => ({ x: 740 + (x - y) * TILE_HALF_W, y: 300 + (x + y) * TILE_HALF_H });
+    this.townLabel.textContent = town.stage().name.toUpperCase();
+    const placed: PlacedBuilding[] = [];
     for (const p of town.grid.all()) {
-      const r = town.grid.rectFor(p); if (!r) continue;
-      const def = town.definition(p.buildingId); const point = project(r.x + r.width / 2, r.y + r.height / 2);
-      const b = button('', () => { this.open('build'); this.town.inspect(p.instanceId); }, `map-building category-${def?.category ?? 'management'} ${p.damaged ? 'damaged' : ''}`);
-      const name = def?.tiers.find(t => t.tier === p.tier)?.name ?? def?.name ?? p.buildingId;
-      b.setAttribute('aria-label', `${name}, tier ${p.tier}${p.damaged ? ', damaged' : ''}. Manage building`);
-      b.style.left = `${point.x}px`; b.style.top = `${point.y}px`; b.style.zIndex = String(Math.round(point.y));
-      b.style.setProperty('--building-width', `${38 + r.width * 20}px`);
-      b.append(el('span', 'building-shadow'), el('span', 'building-wall'), el('span', 'building-roof'), el('span', 'building-door'), el('span', 'building-windows'), el('span', 'building-label', name), el('span', 'building-level', `T${p.tier}`));
-      this.scene.append(b);
+      const rect = town.grid.rectFor(p);
+      if (rect) placed.push({ instanceId: p.instanceId, buildingId: p.buildingId, tier: p.tier, rotation: p.rotation, damaged: p.damaged === true, rect });
     }
-    const sign = button('The Verdant Reach ↗', () => this.open('frontier'), 'frontier-sign'); this.scene.append(sign);
-    const townLabel = el('div', 'map-town-label', town.stage().name.toUpperCase()); this.scene.append(townLabel);
+    const key = layoutKey(placed);
+    if (key !== this.sceneKey) {
+      this.sceneKey = key;
+      const { items, missing } = buildDrawList(placed, buildingArtIndex);
+      this.drawList = items;
+      this.renderBuildingButtons(placed, items, new Set(missing));
+      this.drawBuildings();
+    }
     this.transform();
+  }
+
+  /** One real button per building: clicks, keyboard focus and screen readers, over the sprite. */
+  private renderBuildingButtons(placed: readonly PlacedBuilding[], items: readonly DrawItem[], missing: ReadonlySet<string>): void {
+    const town = this.session.town;
+    const drawn = new Map(items.map((d) => [d.instanceId, d]));
+    this.buildingLayer.replaceChildren();
+    for (const p of placed) {
+      const def = town.definition(p.buildingId);
+      const name = def?.tiers.find((t) => t.tier === p.tier)?.name ?? def?.name ?? p.buildingId;
+      const sprite = drawn.get(p.instanceId);
+      const b = button('', () => { this.open('build'); this.town.inspect(p.instanceId); }, `map-building ${sprite ? 'sprite-hit' : ''} category-${def?.category ?? 'management'} ${p.damaged ? 'damaged' : ''}`);
+      b.setAttribute('aria-label', `${name}, tier ${p.tier}${p.damaged ? ', damaged' : ''}. Manage building`);
+      if (sprite) {
+        b.style.left = `${sprite.dx}px`; b.style.top = `${sprite.dy}px`; b.style.width = `${sprite.dw}px`; b.style.height = `${sprite.dh}px`;
+        b.style.zIndex = String(Math.round(sprite.dy + sprite.dh));
+        b.append(el('span', 'building-label', name), el('span', 'building-level', `T${p.tier}`));
+      } else if (missing.has(p.instanceId)) {
+        // No baked sprite for this building yet: fall back to the CSS building.
+        const point = projectTile(p.rect.x + p.rect.width / 2, p.rect.y + p.rect.height / 2);
+        b.style.left = `${point.x}px`; b.style.top = `${point.y}px`; b.style.zIndex = String(Math.round(point.y));
+        b.style.setProperty('--building-width', `${38 + p.rect.width * 20}px`);
+        b.append(el('span', 'building-shadow'), el('span', 'building-wall'), el('span', 'building-roof'), el('span', 'building-door'), el('span', 'building-windows'), el('span', 'building-label', name), el('span', 'building-level', `T${p.tier}`));
+      }
+      this.buildingLayer.append(b);
+    }
+  }
+
+  /** Execute the draw list. Re-run when a sprite finishes loading, never per tick. */
+  private drawBuildings(): void {
+    const ctx = this.canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    for (const d of this.drawList) {
+      const img = spriteImage(d.file, () => this.drawBuildings());
+      if (!img) continue;
+      ctx.filter = d.damaged ? 'grayscale(0.7) brightness(0.9)' : 'none';
+      ctx.drawImage(img, d.dx * SCENE_SCALE, d.dy * SCENE_SCALE, d.dw * SCENE_SCALE, d.dh * SCENE_SCALE);
+    }
+    ctx.filter = 'none';
   }
 
   private renderRoster(): void {
