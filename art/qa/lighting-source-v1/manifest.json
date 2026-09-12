@@ -1,0 +1,27 @@
+{
+  "batch": "lighting-source-v1",
+  "source": "art/generated/lighting-source-v1",
+  "jobs": [
+    {
+      "file": "lantern_post_frame01.png",
+      "id": "PRP_LIGHTING_LANTERN_POST",
+      "variant": "01",
+      "height": 136,
+      "review": "Claude: pass — reads at 0.55; light contained in the glass, no halo. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
+    },
+    {
+      "file": "hanging_lamp_frame01.png",
+      "id": "PRP_LIGHTING_HANGING_LAMP",
+      "variant": "01",
+      "height": 72,
+      "review": "Claude: pass — reads at 0.55; light contained, no halo. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
+    },
+    {
+      "file": "brazier_frame01.png",
+      "id": "PRP_LIGHTING_BRAZIER",
+      "variant": "01",
+      "height": 64,
+      "review": "Claude: pass — reads at 0.55; fire contained, no halo. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
+    }
+  ]
+}

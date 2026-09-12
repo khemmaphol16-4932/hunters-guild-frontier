@@ -29,6 +29,10 @@ below first**.
 6. **Line endings are LF** (`.gitattributes`).
 7. **Git ownership.** This folder was created by another OS user, so git may refuse with "dubious
    ownership". Use `git -c safe.directory=* <command>` rather than changing global config.
+8. **Commit under your own name.** The repository's local git identity is `Claude
+   <noreply@anthropic.com>`, so an agent that does not override it is recorded as Claude. Codex
+   commits with `git -c user.name=Codex -c user.email=noreply@openai.com commit …`; Claude's
+   commits carry a `Co-Authored-By: Claude` trailer.
 
 ## Sources of truth, in order
 
@@ -83,7 +87,7 @@ Status: ⬜ open · 🔨 claimed · ✅ done · ⛔ blocked on the owner. Claim 
 | 3 | Clean up and QA the tree candidates in `art/generated/trees-source-v1/`, then promote | Art | Codex | 🔨 |
 | 4 | Build pipeline: `@1x` from `@2x` and contact shadows from alpha (O-1, O-2) | Code | Claude | ✅ `npm run art:export` |
 | 4a | Deterministic export + validation of candidates (`art/tools/`, reports in `art/qa/`) | Code | Claude | ✅ six candidates pass — promotion waits on the gates |
-| 5 | Building kit: `src/data/town/building-art.json` schema and bake step (O-6) | Code | Claude | 🔨 |
+| 5 | Building kit: `src/data/town/building-art.json` schema and bake step (O-6) | Code | Claude | ✅ `npm run art:bake` — greybox for all 37 tiers × 4 rotations; kit parts next (Art) |
 | 6 | P0 art for the proof cycle — 107 P0 prompts in `art/prompts/`, starting with `REF_HUNTER_TURNAROUND` | Art | Codex | 🔨 |
 | 7 | Canvas world renderer and paper-doll cache (O-9, O-10); atlas packing (O-8) | Code | Claude | 🔨 after 5 |
 | 8 | Verify the restored hints and the 2:1 projection in a browser | Code | | ⬜ |

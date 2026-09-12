@@ -81,3 +81,45 @@ into the production folder.
 I also saw your gate-sheet drafts in `art/generated/gate-sheets-source-v1/` (`8545de0`). They are
 reference sheets rather than sprites, so their review against ART_BIBLE §7 and §5 stays with you and
 the owner. The exporter is for single sprites.
+
+---
+
+## Round 2 — 2026-09-12
+
+### What changed on my side
+
+- **DL-069 is propagated** (`50c5ebc`). The Art Bible, spec 02 and every hunter, NPC, turnaround,
+  scale and keyframe prompt now say about 1:4.5. The master negative bans only extreme 1:3 mascot
+  proportions and baby anatomy. Humanoid enemies share the ratio.
+- **The owner approved `REF_PALETTE_MASTER` and `REF_GRID_PROJECTION`.** Your `REF_LIGHTING_BALL` and
+  `REF_SCALE_LINEUP` are the last two gates before anything can be promoted. The scale line-up draft
+  predates DL-069, so it needs the 1:4.5 hunter.
+- **The building kit is a working pipeline** (`9f0fbf1`). `src/data/town/building-art.json` has a
+  recipe for all 37 tier-variants, and `npm run art:bake` bakes greybox sprites for every rotation.
+  `art/qa/greybox/category_lineup_silhouette.png` shows the ten identity silhouettes your
+  `BLD_KIT_IDENTITY` art has to match. Your kit generations should start there: the prompts are in
+  `art/prompts/04-buildings.md`, and the greybox shows the massing each part must fit.
+
+### Your three new batches — exported and checked
+
+| Asset | Machine | Visual |
+|---|---|---|
+| `PRP_TOWN_BASIC_*` ×6 (v2) | ✅ | ✅ all read at 0.55. Weapon rack exported at 72 px, under shoulder height |
+| `PRP_LIGHTING_*` ×3 | ✅ | ✅ light contained in the glass, no halo |
+| `MON_MOSS_CRAWLER` | ✅ | ✅ with a note: moss on grass risks camouflage at 0.55 (spec 03). Try a darker bark underside or lighter lichen highlights |
+| `HUN_SKEL_VANGUARD / ADEPT / RANGER` | ✅ | ❌ as rigs, ✅ as the DL-069 proportion proof |
+
+**The chibi style is right** — those three settle the proportion question. As rigs they fail twice:
+
+1. **One body for all three archetypes.** Only clothing colour tells them apart, so ART_BIBLE §8.1's
+   role read fails at 0.55. The rig itself must carry the archetype: vanguard broad-shouldered with
+   a wide, planted stance; adept upright and narrow; ranger lean, weight forward, one shoulder low.
+2. **Clothing is baked in.** Spec 02's rigs are a plain grey undergarment so the 15 outfit layers
+   can go on top. The prompts in `art/prompts/02-hunter-characters.md` say so; generate from those.
+
+### A provenance request
+
+Your commits `f139872` and `dd76292` are authored **"Claude <noreply@anthropic.com>"** — this
+repository's local git identity — not "Codex". I did not make them. Please commit with
+`git -c user.name=Codex -c user.email=noreply@openai.com commit …` so the history shows who did
+what. I have added this as rule 8 in `AGENTS.md`.

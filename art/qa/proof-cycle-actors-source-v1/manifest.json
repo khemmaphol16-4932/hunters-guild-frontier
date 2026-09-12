@@ -1,0 +1,34 @@
+{
+  "batch": "proof-cycle-actors-source-v1",
+  "source": "art/generated/proof-cycle-actors-source-v1",
+  "jobs": [
+    {
+      "file": "vanguard_idle_se_candidate.png",
+      "id": "HUN_SKEL_VANGUARD",
+      "variant": "01",
+      "height": 112,
+      "review": "Claude: FAIL as a HUN_SKEL rig, PASS as the DL-069 proportion proof. The soft-chibi 1:4.5 style is right. Two rig failures: (1) all three archetypes share one body and stance, so ART_BIBLE §8.1 role read fails at 0.55 — the vanguard must be broad and planted, the adept upright and narrow, the ranger leaning and asymmetric; (2) clothing is baked in, where spec 02 needs a plain grey undergarment so outfit layers go on top."
+    },
+    {
+      "file": "adept_idle_se_candidate.png",
+      "id": "HUN_SKEL_ADEPT",
+      "variant": "01",
+      "height": 112,
+      "review": "Claude: FAIL as a HUN_SKEL rig, PASS as the DL-069 proportion proof. The soft-chibi 1:4.5 style is right. Two rig failures: (1) all three archetypes share one body and stance, so ART_BIBLE §8.1 role read fails at 0.55 — the vanguard must be broad and planted, the adept upright and narrow, the ranger leaning and asymmetric; (2) clothing is baked in, where spec 02 needs a plain grey undergarment so outfit layers go on top."
+    },
+    {
+      "file": "ranger_idle_se_candidate.png",
+      "id": "HUN_SKEL_RANGER",
+      "variant": "01",
+      "height": 112,
+      "review": "Claude: FAIL as a HUN_SKEL rig, PASS as the DL-069 proportion proof. The soft-chibi 1:4.5 style is right. Two rig failures: (1) all three archetypes share one body and stance, so ART_BIBLE §8.1 role read fails at 0.55 — the vanguard must be broad and planted, the adept upright and narrow, the ranger leaning and asymmetric; (2) clothing is baked in, where spec 02 needs a plain grey undergarment so outfit layers go on top."
+    },
+    {
+      "file": "moss_crawler_idle_se_candidate.png",
+      "id": "MON_MOSS_CRAWLER",
+      "variant": "01",
+      "height": 40,
+      "review": "Claude: pass with a note — reads as a creature at 0.55, but moss green on Verdant Reach grass risks the camouflage spec 03 warns against; a darker bark underside or lighter lichen highlights would separate it. Not promoted: gate sheets REF_LIGHTING_BALL and REF_SCALE_LINEUP are still drafts."
+    }
+  ]
+}

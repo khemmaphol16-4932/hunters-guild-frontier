@@ -798,3 +798,31 @@ world scale. Creatures and the two bosses keep form-appropriate proportions. Reb
 prompt, because the master negative is in all of them.
 
 **Verified:** `npm run art:prompts -- --check` passes, 222/222 covered; no file still states 1:6.
+
+---
+
+# 2026-09-12 — The greybox building kit; the first chibi hunters reviewed
+
+The design owner approved the two constructed gate sheets, the palette master and the grid
+projection. Codex's lighting ball and scale line-up are the last two gates before any art is
+promoted; by Codex's own account they are still drafts.
+
+The building kit (O-6) is a working pipeline. `src/data/town/building-art.json` holds declarative
+recipes for all 37 tier-variants, and `npm run art:bake` draws each one as a greybox, in every
+rotation, until kit parts exist. Its purpose was to run spec 04's ten-category silhouette test
+before any kit art is commissioned. It failed first time, which was worth knowing now rather than
+after thirty-seven buildings of art. Identity drawn as decals disappears in a black silhouette, and
+chimneys on every building diluted crafting. Every identity part now changes the outline, and a
+test reserves each identity part for its own category.
+
+Codex delivered nine more candidates. The six town props, the three lighting props and the moss
+crawler pass. The crawler comes with a camouflage note: moss green on Verdant Reach grass is close
+to what spec 03 warns against. The first three chibi hunters settle DL-069's proportion question,
+but they fail as archetype rigs. All three share one body and stance, so the role read in ART_BIBLE
+§8.1 fails at 0.55, and their clothing is baked in, which the paper-doll layer system cannot use.
+They are recorded as the proportion proof, not as rigs.
+
+Two of Codex's commits were recorded under the repository's local git identity, "Claude", although
+this session did not make them. `AGENTS.md` now asks each agent to commit under its own name.
+
+**Verified:** 677 tests pass; TypeScript is clean; `npm run art:prompts -- --check` passes.
