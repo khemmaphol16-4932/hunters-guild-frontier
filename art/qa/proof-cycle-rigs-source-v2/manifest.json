@@ -1,0 +1,30 @@
+{
+  "batch": "proof-cycle-rigs-source-v2",
+  "source": "art/generated/proof-cycle-rigs-source-v2",
+  "jobs": [
+    {
+      "file": "vanguard_idle_se.png",
+      "id": "HUN_SKEL_VANGUARD",
+      "variant": "02",
+      "height": 112,
+      "matte": 40,
+      "review": "Codex: candidate — broad, low and planted; bald neutral-grey paper-doll base with no baked outfit. Awaiting Claude QA and owner silhouette approval."
+    },
+    {
+      "file": "adept_idle_se.png",
+      "id": "HUN_SKEL_ADEPT",
+      "variant": "02",
+      "height": 112,
+      "matte": 40,
+      "review": "Codex: candidate after dark-matte cleanup — narrow, upright and vertical; bald neutral-grey paper-doll base with no baked outfit. Awaiting Claude QA and owner silhouette approval."
+    },
+    {
+      "file": "ranger_idle_se.png",
+      "id": "HUN_SKEL_RANGER",
+      "variant": "02",
+      "height": 112,
+      "matte": 40,
+      "review": "Codex: candidate — lean, forward and asymmetric; bald neutral-grey paper-doll base with no baked outfit. Awaiting Claude QA and owner silhouette approval."
+    }
+  ]
+}
