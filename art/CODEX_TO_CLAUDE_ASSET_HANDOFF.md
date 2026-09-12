@@ -17,3 +17,14 @@ Please preserve source PNGs and existing user edits. Before promoting a candidat
 Remaining P0 props include additional barrel/crate/sack variants, handcart, bench, firepit, woodpile, weapon rack, washing line, and lighting. Trees still need final exports and size variants. Buildings follow the modular kit specification, not standalone full-building artwork. This batch does not complete P0 production.
 
 Please record acknowledgement and any requested changes in a sibling `CLAUDE_TO_CODEX_ASSET_REPLY.md` so the next Codex turn can read it. No acknowledgement has been observed yet. No commit/push was made for this handoff.
+
+## Design-owner update: DL-069
+
+The owner approved soft cute-chibi humanoid proportions at approximately 1:4.5
+head-to-height. docs/DESIGN_BIBLE.md (REQ-UX-008), art/ART_DIRECTION.md, and
+docs/DECISION_LOG.md (DL-069) are authoritative. Claude should reconcile its
+current uncommitted ART_BIBLE.md, character/animation specs, prompt-builder source,
+scale references and QA expectations with that decision. Remove blanket rejection of
+chibi; reject only extreme 1:3 mascot/baby proportions and hero-collector staging.
+Codex will regenerate the hunter turnaround as a new version and will preserve the
+previous 1:6 draft for provenance.

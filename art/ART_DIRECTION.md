@@ -7,6 +7,15 @@ place worth protecting; wilderness beyond it is beautiful, uncanny, and
 dangerous. The player is never shown as an avatar—the Guild, its hunters, and
 its accumulated history own the frame.
 
+## Character proportion lock
+
+Humanoid characters use a **soft cute-chibi proportion of approximately 1:4.5
+head-to-height** (DL-069). Heads, hands and role-bearing equipment are slightly
+enlarged so identity and activity read at normal and 0.55 world zoom. Bodies stay
+capable and grounded: practical frontier clothing, visible wear and real danger.
+Avoid extreme 1:3 mascot or baby anatomy, oversized decorative weapons, glossy
+hero-collector staging and separate combat-only character designs.
+
 ## MVP asset sequence
 
 1. **Guild Town overview** — the anchor image and palette reference.

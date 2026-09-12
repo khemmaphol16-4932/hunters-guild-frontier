@@ -791,3 +791,28 @@ history for events the player did not watch.
 **Applied.** `worldView.ts` now projects with named constants `TILE_HALF_W = 32`, `TILE_HALF_H = 16`. The build drawer's own grid diagram in `townView.ts` (48 × 24) was already 2:1 and is a diagram, not art scale, so it is unchanged.
 
 **Reversal.** Author to 66×36 instead and accept the pixel-grid cost, or re-open REQ-UX-007.
+
+---
+
+## DL-069 — Soft cute-chibi humanoid proportions
+
+**Decision — APPROVED by the design owner, 2026-09-12.** Hunters, service NPCs and
+humanoid enemies use a soft cute-chibi pixel-art proportion of approximately **1:4.5
+head-to-height**. Enlarged heads, hands and role-bearing equipment make persistent agents
+easier to recognize while walking, working and fighting at the same world-camera scale.
+
+The style remains grounded frontier fantasy. Clothing, tools, injury, fatigue and danger
+retain physical weight. Extreme 1:3 mascot proportions, baby anatomy, glossy hero-collector
+presentation and separate combat sprites remain excluded. Non-humanoid creatures keep
+form-appropriate proportions.
+
+**Why.** The design owner prefers a cute, approachable simulation. At the 0.55 zoom floor,
+the former 1:6 human head became too small to carry identity or readable condition cues.
+The 1:4.5 target improves legibility without turning the cast into collectible mascots.
+
+**Propagation.** REQ-UX-008 and art/ART_DIRECTION.md now carry this lock. The Art Bible,
+character specs, scale sheet, generated prompt library and source candidates must be
+reconciled before a humanoid asset is promoted.
+
+**Reversal.** Restore 1:6 in REQ-UX-008, the Art Bible and character specs, then regenerate
+the reference turnaround and scale lineup before producing further humanoid sprites.

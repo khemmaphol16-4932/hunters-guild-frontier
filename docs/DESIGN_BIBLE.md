@@ -300,6 +300,7 @@ Target tone: **casual tycoon + RPG flavor**. Death matters; the game stays appro
 | REQ-UX-005 | Notifications are importance-prioritized; only important events interrupt. (§111) |
 | REQ-UX-006 | On return from offline, a Guild Report summarizes expeditions, deaths, injuries, rare loot, discoveries, contracts, attacks, chronicle events, reputation changes, research completion and economic changes. (§112) |
 | REQ-UX-007 | Camera is isometric / 3D top-down with pixel-art direction. (§6) |
+| REQ-UX-008 **[Art lock, 2026-09-12]** | Hunters, service NPCs and humanoid enemies use a **soft cute-chibi pixel-art proportion of approximately 1:4.5 head-to-height**. Enlarged heads and compact bodies improve identity, condition and role readability at world zoom while clothing, equipment and danger remain grounded frontier fantasy. Avoid extreme 1:3 mascot proportions, baby anatomy and hero-collector card staging. Non-humanoid creatures keep form-appropriate proportions. (DL-069) |
 
 ---
 
