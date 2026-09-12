@@ -15,7 +15,7 @@ One prop per MONUMENT_KINDS entry (src/data/progressionSchema.ts). Each appears 
 | | |
 |---|---|
 | Priority | P2 |
-| Output | `art/props/prp_history_world_boss_trophy_01@2x.png` |
+| Output | `art/props/history/prp_history_world_boss_trophy_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 | Covers | `monument:worldBossVictory` |
 
@@ -48,7 +48,7 @@ Use the attached, approved PRP_HISTORY_WORLD_BOSS_TROPHY image as the exact refe
 | | |
 |---|---|
 | Priority | P2 |
-| Output | `art/props/prp_history_survey_stone_01@2x.png` |
+| Output | `art/props/history/prp_history_survey_stone_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 | Covers | `monument:frontierDiscovery` |
 
@@ -81,7 +81,7 @@ Use the attached, approved PRP_HISTORY_SURVEY_STONE image as the exact reference
 | | |
 |---|---|
 | Priority | P2 |
-| Output | `art/props/prp_history_display_case_01@2x.png` |
+| Output | `art/props/history/prp_history_display_case_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 | Covers | `monument:legendaryFind` |
 
@@ -114,7 +114,7 @@ Use the attached, approved PRP_HISTORY_DISPLAY_CASE image as the exact reference
 | | |
 |---|---|
 | Priority | P2 |
-| Output | `art/props/prp_history_contract_board_01@2x.png` |
+| Output | `art/props/history/prp_history_contract_board_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 | Covers | `monument:historicContract` |
 
@@ -147,7 +147,7 @@ Use the attached, approved PRP_HISTORY_CONTRACT_BOARD image as the exact referen
 | | |
 |---|---|
 | Priority | P2 |
-| Output | `art/props/prp_history_hunter_post_01@2x.png` |
+| Output | `art/props/history/prp_history_hunter_post_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 | Covers | `monument:legendaryHunter` |
 
@@ -180,7 +180,7 @@ Use the attached, approved PRP_HISTORY_HUNTER_POST image as the exact reference.
 | | |
 |---|---|
 | Priority | P2 |
-| Output | `art/props/prp_history_stage_banner_01@2x.png` |
+| Output | `art/props/history/prp_history_stage_banner_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 | Covers | `monument:townMilestone` |
 
@@ -213,7 +213,7 @@ Use the attached, approved PRP_HISTORY_STAGE_BANNER image as the exact reference
 | | |
 |---|---|
 | Priority | P2 |
-| Output | `art/props/prp_history_brass_instrument_01@2x.png` |
+| Output | `art/props/history/prp_history_brass_instrument_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 | Covers | `monument:researchBreakthrough` |
 
@@ -246,7 +246,7 @@ Use the attached, approved PRP_HISTORY_BRASS_INSTRUMENT image as the exact refer
 | | |
 |---|---|
 | Priority | P2 |
-| Output | `art/props/prp_history_cornerstone_01@2x.png` |
+| Output | `art/props/history/prp_history_cornerstone_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 | Covers | `monument:foundersFacade` |
 
@@ -279,7 +279,7 @@ Use the attached, approved PRP_HISTORY_CORNERSTONE image as the exact reference.
 | | |
 |---|---|
 | Priority | P2 |
-| Output | `art/props/prp_history_depth_post_01@2x.png` |
+| Output | `art/props/history/prp_history_depth_post_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 | Covers | `monument:endlessRecord` |
 
@@ -309,20 +309,20 @@ Use the attached, approved PRP_HISTORY_DEPTH_POST image as the exact reference. 
 
 ## Town dressing
 
-### `PRP_BARREL`
+### `PRP_TOWN_BASIC_BARREL`
 
 | | |
 |---|---|
 | Priority | P0 |
-| Output | `art/props/prp_barrel_01@2x.png` |
-| Canvas | 64 × 80 px `@2x` · pivot 32, 68 |
+| Output | `art/props/town_basic/prp_town_basic_barrel_01@2x.png` |
+| Canvas | 128 × 96 px `@2x` · pivot 64, 84 |
 
 **Prompt**
 
 ```text
 Hand-crafted isometric pixel art for a 2.5D management RPG, in the style of premium modern pixel art: crisp hand-placed pixels on a strict grid, clean readable silhouette first, soft ambient shading with limited dithering, no anti-aliasing on the outer silhouette edge. True 2:1 dimetric projection, camera fixed, viewed from above at 26.565 degrees. Grounded frontier fantasy: timber, stone, leather, iron, wool, rope. Lived-in and practical, warm and inhabited rather than heroic or ornate. Restrained palette, strong value separation between silhouette and ground. Fully transparent background. Single subject, centred, feet or footprint aligned to the ground plane. No text, no numbers, no UI, no frame, no border, no watermark, no signature, no drop shadow baked into the sprite.
 
-A wooden barrel with iron hoops, lid on. Draw it on a 64 by 80 pixel canvas, with the point where it meets the ground at pixel 32, 68.
+A wooden barrel with iron hoops, lid on. Draw it on a 128 by 96 pixel canvas, with the point where it meets the ground at pixel 64, 84.
 ```
 
 **Negative prompt**
@@ -334,27 +334,27 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_BARREL image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: an open barrel of grain. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_BARREL image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: an open barrel of grain. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_BARREL image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a barrel on its side. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_BARREL image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a barrel on its side. Fully transparent background, no text.
 ```
 
-### `PRP_CRATE`
+### `PRP_TOWN_BASIC_CRATE`
 
 | | |
 |---|---|
 | Priority | P0 |
-| Output | `art/props/prp_crate_01@2x.png` |
-| Canvas | 64 × 80 px `@2x` · pivot 32, 68 |
+| Output | `art/props/town_basic/prp_town_basic_crate_01@2x.png` |
+| Canvas | 128 × 96 px `@2x` · pivot 64, 84 |
 
 **Prompt**
 
 ```text
 Hand-crafted isometric pixel art for a 2.5D management RPG, in the style of premium modern pixel art: crisp hand-placed pixels on a strict grid, clean readable silhouette first, soft ambient shading with limited dithering, no anti-aliasing on the outer silhouette edge. True 2:1 dimetric projection, camera fixed, viewed from above at 26.565 degrees. Grounded frontier fantasy: timber, stone, leather, iron, wool, rope. Lived-in and practical, warm and inhabited rather than heroic or ornate. Restrained palette, strong value separation between silhouette and ground. Fully transparent background. Single subject, centred, feet or footprint aligned to the ground plane. No text, no numbers, no UI, no frame, no border, no watermark, no signature, no drop shadow baked into the sprite.
 
-A plank crate with rope handles. Draw it on a 64 by 80 pixel canvas, with the point where it meets the ground at pixel 32, 68.
+A plank crate with rope handles. Draw it on a 128 by 96 pixel canvas, with the point where it meets the ground at pixel 64, 84.
 ```
 
 **Negative prompt**
@@ -366,27 +366,27 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_CRATE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: an open crate of produce. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_CRATE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: an open crate of produce. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_CRATE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: two crates stacked. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_CRATE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: two crates stacked. Fully transparent background, no text.
 ```
 
-### `PRP_SACK`
+### `PRP_TOWN_BASIC_SACK`
 
 | | |
 |---|---|
 | Priority | P0 |
-| Output | `art/props/prp_sack_01@2x.png` |
-| Canvas | 64 × 64 px `@2x` · pivot 32, 52 |
+| Output | `art/props/town_basic/prp_town_basic_sack_01@2x.png` |
+| Canvas | 128 × 96 px `@2x` · pivot 64, 84 |
 
 **Prompt**
 
 ```text
 Hand-crafted isometric pixel art for a 2.5D management RPG, in the style of premium modern pixel art: crisp hand-placed pixels on a strict grid, clean readable silhouette first, soft ambient shading with limited dithering, no anti-aliasing on the outer silhouette edge. True 2:1 dimetric projection, camera fixed, viewed from above at 26.565 degrees. Grounded frontier fantasy: timber, stone, leather, iron, wool, rope. Lived-in and practical, warm and inhabited rather than heroic or ornate. Restrained palette, strong value separation between silhouette and ground. Fully transparent background. Single subject, centred, feet or footprint aligned to the ground plane. No text, no numbers, no UI, no frame, no border, no watermark, no signature, no drop shadow baked into the sprite.
 
-A tied hessian sack of grain. Draw it on a 64 by 64 pixel canvas, with the point where it meets the ground at pixel 32, 52.
+A tied hessian sack of grain. Draw it on a 128 by 96 pixel canvas, with the point where it meets the ground at pixel 64, 84.
 ```
 
 **Negative prompt**
@@ -398,19 +398,19 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_SACK image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: three sacks piled. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_SACK image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: three sacks piled. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_SACK image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a slumped half-empty sack. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_SACK image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a slumped half-empty sack. Fully transparent background, no text.
 ```
 
-### `PRP_HANDCART`
+### `PRP_TOWN_BASIC_HANDCART`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_handcart_01@2x.png` |
+| Output | `art/props/town_basic/prp_town_basic_handcart_01@2x.png` |
 | Canvas | 128 × 96 px `@2x` · pivot 64, 84 |
 
 **Prompt**
@@ -430,19 +430,19 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_HANDCART image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the facing, to south-west. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_HANDCART image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the facing, to south-west. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_HANDCART image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the cart loaded with timber. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_HANDCART image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the cart loaded with timber. Fully transparent background, no text.
 ```
 
-### `PRP_BENCH`
+### `PRP_TOWN_BASIC_BENCH`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_bench_01@2x.png` |
+| Output | `art/props/town_basic/prp_town_basic_bench_01@2x.png` |
 | Canvas | 128 × 80 px `@2x` · pivot 64, 68 |
 
 **Prompt**
@@ -462,23 +462,23 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_BENCH image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the facing, to south-west. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_BENCH image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the facing, to south-west. Fully transparent background, no text.
 ```
 
-### `PRP_FIREPIT`
+### `PRP_TOWN_BASIC_FIREPIT`
 
 | | |
 |---|---|
 | Priority | P0 |
-| Output | `art/props/prp_firepit_01@2x.png` |
-| Canvas | 96 × 80 px `@2x` · pivot 48, 68 |
+| Output | `art/props/town_basic/prp_town_basic_firepit_01@2x.png` |
+| Canvas | 128 × 96 px `@2x` · pivot 64, 84 |
 
 **Prompt**
 
 ```text
 Hand-crafted isometric pixel art for a 2.5D management RPG, in the style of premium modern pixel art: crisp hand-placed pixels on a strict grid, clean readable silhouette first, soft ambient shading with limited dithering, no anti-aliasing on the outer silhouette edge. True 2:1 dimetric projection, camera fixed, viewed from above at 26.565 degrees. Grounded frontier fantasy: timber, stone, leather, iron, wool, rope. Lived-in and practical, warm and inhabited rather than heroic or ornate. Restrained palette, strong value separation between silhouette and ground. Fully transparent background. Single subject, centred, feet or footprint aligned to the ground plane. No text, no numbers, no UI, no frame, no border, no watermark, no signature, no drop shadow baked into the sprite.
 
-A stone-ringed firepit with a small low fire. Draw it on a 96 by 80 pixel canvas, with the point where it meets the ground at pixel 48, 68.
+A stone-ringed firepit with a small low fire. Draw it on a 128 by 96 pixel canvas, with the point where it meets the ground at pixel 64, 84.
 ```
 
 **Negative prompt**
@@ -490,27 +490,27 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_FIREPIT image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 2 of 4 of the fire. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_FIREPIT image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 2 of 4 of the fire. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_FIREPIT image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 3 of 4. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_FIREPIT image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 3 of 4. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_FIREPIT image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 4 of 4. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_FIREPIT image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 4 of 4. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_FIREPIT image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the firepit cold, ash only. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_FIREPIT image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the firepit cold, ash only. Fully transparent background, no text.
 ```
 
-### `PRP_WOODPILE`
+### `PRP_TOWN_BASIC_WOODPILE`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_woodpile_01@2x.png` |
+| Output | `art/props/town_basic/prp_town_basic_woodpile_01@2x.png` |
 | Canvas | 128 × 96 px `@2x` · pivot 64, 84 |
 
 **Prompt**
@@ -530,15 +530,15 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_WOODPILE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a smaller, half-used woodpile. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_WOODPILE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a smaller, half-used woodpile. Fully transparent background, no text.
 ```
 
-### `PRP_WEAPON_RACK`
+### `PRP_TOWN_BASIC_WEAPON_RACK`
 
 | | |
 |---|---|
 | Priority | P2 |
-| Output | `art/props/prp_weapon_rack_01@2x.png` |
+| Output | `art/props/town_basic/prp_town_basic_weapon_rack_01@2x.png` |
 | Canvas | 128 × 112 px `@2x` · pivot 64, 100 |
 
 **Prompt**
@@ -558,15 +558,15 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_WEAPON_RACK image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the facing, to south-west. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_WEAPON_RACK image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the facing, to south-west. Fully transparent background, no text.
 ```
 
-### `PRP_WASHING_LINE`
+### `PRP_TOWN_BASIC_WASHING_LINE`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_washing_line_01@2x.png` |
+| Output | `art/props/town_basic/prp_town_basic_washing_line_01@2x.png` |
 | Canvas | 160 × 112 px `@2x` · pivot 80, 100 |
 
 **Prompt**
@@ -586,19 +586,19 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_WASHING_LINE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the facing, to south-west. Fully transparent background, no text.
+Use the attached, approved PRP_TOWN_BASIC_WASHING_LINE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the facing, to south-west. Fully transparent background, no text.
 ```
 
 ## Lighting
 
 Light sources are the only props allowed self-illumination: a hand-authored halo of 2–3 ramp steps, never additive glow.
 
-### `PRP_LANTERN_POST`
+### `PRP_LIGHTING_LANTERN_POST`
 
 | | |
 |---|---|
 | Priority | P0 |
-| Output | `art/props/prp_lantern_post_01@2x.png` |
+| Output | `art/props/lighting/prp_lighting_lantern_post_01@2x.png` |
 | Canvas | 64 × 160 px `@2x` · pivot 32, 148 |
 
 **Prompt**
@@ -618,23 +618,23 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_LANTERN_POST image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 2 of 4: the flame one pixel lower. Fully transparent background, no text.
+Use the attached, approved PRP_LIGHTING_LANTERN_POST image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 2 of 4: the flame one pixel lower. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_LANTERN_POST image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 3 of 4: the flame leaning left. Fully transparent background, no text.
+Use the attached, approved PRP_LIGHTING_LANTERN_POST image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 3 of 4: the flame leaning left. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_LANTERN_POST image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 4 of 4: the flame leaning right. Fully transparent background, no text.
+Use the attached, approved PRP_LIGHTING_LANTERN_POST image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 4 of 4: the flame leaning right. Fully transparent background, no text.
 ```
 
-### `PRP_HANGING_LAMP`
+### `PRP_LIGHTING_HANGING_LAMP`
 
 | | |
 |---|---|
 | Priority | P0 |
-| Output | `art/props/prp_hanging_lamp_01@2x.png` |
+| Output | `art/props/lighting/prp_lighting_hanging_lamp_01@2x.png` |
 | Canvas | 64 × 96 px `@2x` · pivot 32, 84 |
 
 **Prompt**
@@ -654,23 +654,23 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_HANGING_LAMP image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 2 of 4. Fully transparent background, no text.
+Use the attached, approved PRP_LIGHTING_HANGING_LAMP image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 2 of 4. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_HANGING_LAMP image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 3 of 4. Fully transparent background, no text.
+Use the attached, approved PRP_LIGHTING_HANGING_LAMP image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 3 of 4. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_HANGING_LAMP image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 4 of 4. Fully transparent background, no text.
+Use the attached, approved PRP_LIGHTING_HANGING_LAMP image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frame 4 of 4. Fully transparent background, no text.
 ```
 
-### `PRP_BRAZIER`
+### `PRP_LIGHTING_BRAZIER`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_brazier_01@2x.png` |
+| Output | `art/props/lighting/prp_lighting_brazier_01@2x.png` |
 | Canvas | 80 × 112 px `@2x` · pivot 40, 100 |
 
 **Prompt**
@@ -690,7 +690,7 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_BRAZIER image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frames 2 to 6 of a six-frame fire loop, one per image. Fully transparent background, no text.
+Use the attached, approved PRP_LIGHTING_BRAZIER image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: animation frames 2 to 6 of a six-frame fire loop, one per image. Fully transparent background, no text.
 ```
 
 ## Trees
@@ -702,7 +702,7 @@ Replaces the CSS scenery trees in worldView.renderScene() one for one, keeping i
 | | |
 |---|---|
 | Priority | P0 |
-| Output | `art/props/trees/prp_trees_broadleaf_medium@2x.png` |
+| Output | `art/props/trees/prp_trees_broadleaf_medium_01@2x.png` |
 | Canvas | 192 × 256 px `@2x` · pivot 96, 244 |
 
 **Prompt**
@@ -734,7 +734,7 @@ Use the attached, approved PRP_TREES_BROADLEAF_MEDIUM image as the exact referen
 | | |
 |---|---|
 | Priority | P0 |
-| Output | `art/props/trees/prp_trees_conifer_medium@2x.png` |
+| Output | `art/props/trees/prp_trees_conifer_medium_01@2x.png` |
 | Canvas | 192 × 256 px `@2x` · pivot 96, 244 |
 
 **Prompt**
@@ -766,7 +766,7 @@ Use the attached, approved PRP_TREES_CONIFER_MEDIUM image as the exact reference
 | | |
 |---|---|
 | Priority | P0 |
-| Output | `art/props/trees/prp_trees_birch_medium@2x.png` |
+| Output | `art/props/trees/prp_trees_birch_medium_01@2x.png` |
 | Canvas | 192 × 256 px `@2x` · pivot 96, 244 |
 
 **Prompt**
@@ -797,12 +797,12 @@ Use the attached, approved PRP_TREES_BIRCH_MEDIUM image as the exact reference. 
 
 Placeable decoration (REQ-CW-006). Flowers use warm earthy colours only; blue, violet and red are functional signal colours.
 
-### `PRP_HEDGE`
+### `PRP_LANDSCAPING_HEDGE`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_hedge_01@2x.png` |
+| Output | `art/props/landscaping/prp_landscaping_hedge_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 
 **Prompt**
@@ -822,15 +822,15 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_HEDGE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a hedge corner. Fully transparent background, no text.
+Use the attached, approved PRP_LANDSCAPING_HEDGE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a hedge corner. Fully transparent background, no text.
 ```
 
-### `PRP_FENCE`
+### `PRP_LANDSCAPING_FENCE`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_fence_01@2x.png` |
+| Output | `art/props/landscaping/prp_landscaping_fence_01@2x.png` |
 | Canvas | 128 × 128 px `@2x` · pivot 64, 116 |
 
 **Prompt**
@@ -850,23 +850,23 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_FENCE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a fence corner. Fully transparent background, no text.
+Use the attached, approved PRP_LANDSCAPING_FENCE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a fence corner. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_FENCE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a fence end post. Fully transparent background, no text.
+Use the attached, approved PRP_LANDSCAPING_FENCE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a fence end post. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_FENCE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a fence gate. Fully transparent background, no text.
+Use the attached, approved PRP_LANDSCAPING_FENCE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a fence gate. Fully transparent background, no text.
 ```
 
-### `PRP_PLANTER`
+### `PRP_LANDSCAPING_PLANTER`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_planter_01@2x.png` |
+| Output | `art/props/landscaping/prp_landscaping_planter_01@2x.png` |
 | Canvas | 96 × 80 px `@2x` · pivot 48, 68 |
 
 **Prompt**
@@ -883,12 +883,12 @@ A timber planter box of herbs. Draw it on a 96 by 80 pixel canvas, with the poin
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_FLOWERBED`
+### `PRP_LANDSCAPING_FLOWERBED`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_flowerbed_01@2x.png` |
+| Output | `art/props/landscaping/prp_landscaping_flowerbed_01@2x.png` |
 | Canvas | 128 × 80 px `@2x` · pivot 64, 68 |
 
 **Prompt**
@@ -905,12 +905,12 @@ A small bordered flowerbed of cream, gold and ochre flowers only. Draw it on a 1
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery, blue flowers, purple flowers, red flowers, violet flowers
 ```
 
-### `PRP_PATH_EDGING`
+### `PRP_LANDSCAPING_PATH_EDGING`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_path_edging_01@2x.png` |
+| Output | `art/props/landscaping/prp_landscaping_path_edging_01@2x.png` |
 | Canvas | 128 × 64 px `@2x` · pivot 64, 52 |
 
 **Prompt**
@@ -927,12 +927,12 @@ A line of set edging stones along a path. Draw it on a 128 by 64 pixel canvas, w
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_STONE_MARKER`
+### `PRP_LANDSCAPING_STONE_MARKER`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_stone_marker_01@2x.png` |
+| Output | `art/props/landscaping/prp_landscaping_stone_marker_01@2x.png` |
 | Canvas | 64 × 96 px `@2x` · pivot 32, 84 |
 
 **Prompt**
@@ -949,12 +949,12 @@ A small upright stone waymarker. Draw it on a 64 by 96 pixel canvas, with the po
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_NOTICE_BOARD`
+### `PRP_SIGNAGE_NOTICE_BOARD`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_notice_board_01@2x.png` |
+| Output | `art/props/signage/prp_signage_notice_board_01@2x.png` |
 | Canvas | 96 × 128 px `@2x` · pivot 48, 116 |
 
 **Prompt**
@@ -974,15 +974,15 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_NOTICE_BOARD image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the facing, to south-west. Fully transparent background, no text.
+Use the attached, approved PRP_SIGNAGE_NOTICE_BOARD image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the facing, to south-west. Fully transparent background, no text.
 ```
 
-### `PRP_GUILD_BANNER`
+### `PRP_SIGNAGE_GUILD_BANNER`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_guild_banner_01@2x.png` |
+| Output | `art/props/signage/prp_signage_guild_banner_01@2x.png` |
 | Canvas | 64 × 192 px `@2x` · pivot 32, 180 |
 
 **Prompt**
@@ -999,12 +999,12 @@ A tall guild banner on a pole, muted cloth with a simple pennant shape and no le
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_SHOP_SIGN`
+### `PRP_SIGNAGE_SHOP_SIGN`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_shop_sign_01@2x.png` |
+| Output | `art/props/signage/prp_signage_shop_sign_01@2x.png` |
 | Canvas | 96 × 112 px `@2x` · pivot 48, 100 |
 
 **Prompt**
@@ -1024,19 +1024,19 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_SHOP_SIGN image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the pictogram changed to a hammer. Fully transparent background, no text.
+Use the attached, approved PRP_SIGNAGE_SHOP_SIGN image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the pictogram changed to a hammer. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_SHOP_SIGN image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the pictogram changed to a bottle. Fully transparent background, no text.
+Use the attached, approved PRP_SIGNAGE_SHOP_SIGN image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: the pictogram changed to a bottle. Fully transparent background, no text.
 ```
 
-### `PRP_GATE_SIGN`
+### `PRP_SIGNAGE_GATE_SIGN`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_gate_sign_01@2x.png` |
+| Output | `art/props/signage/prp_signage_gate_sign_01@2x.png` |
 | Canvas | 160 × 192 px `@2x` · pivot 80, 180 |
 
 **Prompt**
@@ -1057,12 +1057,12 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 
 Knowledge made visible (REQ-CW-014): these appear along a region's routes as its knowledge tier rises, and one prop marks each route event where it happens.
 
-### `PRP_TRAIL_BLAZE`
+### `PRP_FIELD_CAMP_TRAIL_BLAZE`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_trail_blaze_01@2x.png` |
+| Output | `art/props/field_camp/prp_field_camp_trail_blaze_01@2x.png` |
 | Canvas | 96 × 160 px `@2x` · pivot 48, 148 |
 
 **Prompt**
@@ -1079,12 +1079,12 @@ A tree trunk with a fresh axe blaze cut into the bark — the first sign a place
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_CAIRN`
+### `PRP_FIELD_CAMP_CAIRN`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_cairn_01@2x.png` |
+| Output | `art/props/field_camp/prp_field_camp_cairn_01@2x.png` |
 | Canvas | 64 × 80 px `@2x` · pivot 32, 68 |
 
 **Prompt**
@@ -1101,12 +1101,12 @@ A small stacked-stone trail cairn. Draw it on a 64 by 80 pixel canvas, with the 
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_CAMPSITE`
+### `PRP_FIELD_CAMP_CAMPSITE`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_campsite_01@2x.png` |
+| Output | `art/props/field_camp/prp_field_camp_campsite_01@2x.png` |
 | Canvas | 160 × 112 px `@2x` · pivot 80, 100 |
 
 **Prompt**
@@ -1123,12 +1123,12 @@ A cleared campsite: a cold firepit ringed with stones and two log seats. Draw it
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_ROPE_LINE`
+### `PRP_FIELD_CAMP_ROPE_LINE`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_rope_line_01@2x.png` |
+| Output | `art/props/field_camp/prp_field_camp_rope_line_01@2x.png` |
 | Canvas | 160 × 96 px `@2x` · pivot 80, 84 |
 
 **Prompt**
@@ -1145,12 +1145,12 @@ A rope line strung between two stakes across a crossing. Draw it on a 160 by 96 
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_SUPPLY_CACHE`
+### `PRP_FIELD_CAMP_SUPPLY_CACHE`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_supply_cache_01@2x.png` |
+| Output | `art/props/field_camp/prp_field_camp_supply_cache_01@2x.png` |
 | Canvas | 96 × 80 px `@2x` · pivot 48, 68 |
 
 **Prompt**
@@ -1167,12 +1167,12 @@ A guild supply cache: a covered crate under oilcloth, weighted with stones. Draw
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_WAYMARK_POST`
+### `PRP_FIELD_CAMP_WAYMARK_POST`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_waymark_post_01@2x.png` |
+| Output | `art/props/field_camp/prp_field_camp_waymark_post_01@2x.png` |
 | Canvas | 64 × 128 px `@2x` · pivot 32, 116 |
 
 **Prompt**
@@ -1189,12 +1189,12 @@ A waymarked route post with a painted band, no text. Draw it on a 64 by 128 pixe
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_LEAN_TO`
+### `PRP_FIELD_CAMP_LEAN_TO`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_lean_to_01@2x.png` |
+| Output | `art/props/field_camp/prp_field_camp_lean_to_01@2x.png` |
 | Canvas | 160 × 128 px `@2x` · pivot 80, 116 |
 
 **Prompt**
@@ -1216,7 +1216,7 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_event_abandoned_cache_01@2x.png` |
+| Output | `art/props/event/prp_event_abandoned_cache_01@2x.png` |
 | Canvas | 96 × 80 px `@2x` · pivot 48, 68 |
 | Covers | `event:abandoned_cache` |
 
@@ -1239,7 +1239,7 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_event_collapsed_passage_01@2x.png` |
+| Output | `art/props/event/prp_event_collapsed_passage_01@2x.png` |
 | Canvas | 160 × 128 px `@2x` · pivot 80, 116 |
 | Covers | `event:collapsed_passage` |
 
@@ -1262,7 +1262,7 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_event_wounded_stranger_01@2x.png` |
+| Output | `art/props/event/prp_event_wounded_stranger_01@2x.png` |
 | Canvas | 128 × 80 px `@2x` · pivot 64, 68 |
 | Covers | `event:wounded_stranger` |
 
@@ -1285,7 +1285,7 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_event_defensible_ground_01@2x.png` |
+| Output | `art/props/event/prp_event_defensible_ground_01@2x.png` |
 | Canvas | 160 × 128 px `@2x` · pivot 80, 116 |
 | Covers | `event:defensible_ground` |
 
@@ -1303,12 +1303,12 @@ A dry rocky corner with one way in and a small firepit — defensible ground. Dr
 photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector, anti-aliased soft edges, blurry, airbrushed, oil painting, watercolour, concept art sketch, line art, cel shaded anime, chibi, super-deformed, generic fantasy MMO, World of Warcraft style, glossy plate armour, chrome, neon, glowing runes everywhere, excessive ornament, filigree, spikes, oversized pauldrons, heroic superhero anatomy, exaggerated muscles, cleavage, modern clothing, zippers, denim, guns, sci-fi, grim-dark, horror gore, blood spatter, top-down 90-degree view, front-on orthographic view, side-scroller view, character card, portrait frame, trading card layout, background scenery, ground plate, shadow ellipse, text, logo, watermark, signature, UI elements, health bar, multiple characters, collage, sprite sheet grid lines, soft halo, glow around the silhouette, semi-transparent edge fringe, magic items, glowing objects, treasure chest, gold coins pile, potions, crystals, fantasy runes, modern objects, plastic, signage with readable text, letters, numbers, ornate carving, gilded, multiple objects collage, scenery
 ```
 
-### `PRP_RUBBLE`
+### `PRP_RUBBLE_PILE`
 
 | | |
 |---|---|
 | Priority | P1 |
-| Output | `art/props/prp_rubble_01@2x.png` |
+| Output | `art/props/rubble/prp_rubble_pile_01@2x.png` |
 | Canvas | 128 × 96 px `@2x` · pivot 64, 84 |
 
 **Prompt**
@@ -1328,21 +1328,21 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 **Variations** — attach the approved image as the reference:
 
 ```text
-Use the attached, approved PRP_RUBBLE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a smaller rubble pile. Fully transparent background, no text.
+Use the attached, approved PRP_RUBBLE_PILE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a smaller rubble pile. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_RUBBLE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: scorched rubble. Fully transparent background, no text.
+Use the attached, approved PRP_RUBBLE_PILE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: scorched rubble. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_RUBBLE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a fallen beam alone. Fully transparent background, no text.
+Use the attached, approved PRP_RUBBLE_PILE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a fallen beam alone. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_RUBBLE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: scattered stones alone. Fully transparent background, no text.
+Use the attached, approved PRP_RUBBLE_PILE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: scattered stones alone. Fully transparent background, no text.
 ```
 
 ```text
-Use the attached, approved PRP_RUBBLE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a broken door on the ground. Fully transparent background, no text.
+Use the attached, approved PRP_RUBBLE_PILE image as the exact reference. Keep the same subject, proportions, silhouette, palette, 1-pixel outline, pixel density, lighting from the upper left and 2:1 dimetric angle. Change only this: a broken door on the ground. Fully transparent background, no text.
 ```

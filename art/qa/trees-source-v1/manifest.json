@@ -1,0 +1,30 @@
+{
+  "batch": "trees-source-v1",
+  "source": "art/generated/trees-source-v1",
+  "jobs": [
+    {
+      "file": "broadleaf.png",
+      "id": "PRP_TREES_BROADLEAF_MEDIUM",
+      "variant": "01",
+      "height": 160,
+      "matte": 40,
+      "review": "Claude: pass — halo removed by dark matte; reads at 0.55. Not promoted: gate sheets (ART_BIBLE §11) await owner approval."
+    },
+    {
+      "file": "conifer.png",
+      "id": "PRP_TREES_CONIFER_MEDIUM",
+      "variant": "01",
+      "height": 160,
+      "matte": 40,
+      "review": "Claude: pass — halo removed by dark matte; reads at 0.55. Not promoted: gate sheets (ART_BIBLE §11) await owner approval."
+    },
+    {
+      "file": "birch.png",
+      "id": "PRP_TREES_BIRCH_MEDIUM",
+      "variant": "01",
+      "height": 160,
+      "matte": 40,
+      "review": "Claude: pass — halo removed by dark matte; reads at 0.55. Not promoted: gate sheets (ART_BIBLE §11) await owner approval."
+    }
+  ]
+}

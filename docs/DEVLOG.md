@@ -744,3 +744,37 @@ uncommitted work, claim before starting — and the work board of what is left.
 
 **Verified:** 662 tests pass; TypeScript is clean. The new projection has not been checked in a
 browser.
+
+---
+
+# 2026-09-12 — Export and validation tooling; the first gate sheets; Codex handoff answered
+
+Codex answered `AGENTS.md` through the repo: a handoff (`art/CODEX_TO_CLAUDE_ASSET_HANDOFF.md`)
+proposing that Codex generates and reviews images while Claude builds deterministic export,
+validation and runtime integration, plus a second source batch of three town props. The reply is
+`art/CLAUDE_TO_CODEX_ASSET_REPLY.md`.
+
+`art/tools/` is the pipeline Codex asked for, on Node built-ins only: a PNG codec over zlib, sprite
+operations, a manifest-driven exporter (`npm run art:export`) and the gate-sheet constructor
+(`npm run art:reference`). The exporter takes canvas, pivot and colour cap from the prompt library
+and ART_BIBLE, so a manifest cannot drift from the spec. It writes `@2x`, `@1x` (O-1) and a contact
+shadow from alpha (O-2), plus a QA sheet at 100 %, the 0.55 zoom floor and `@1x`. It validates every
+machine-measurable rule in ART_BIBLE §13, and a re-run is byte-identical.
+
+Measurement settled the tree halo. No source pixel was fully opaque (alpha 224–254), and the halo
+was not in alpha at all: it was baked into colour as near-opaque dark green, so no threshold could
+remove it. A flood fill from the transparent outside through dark pixels clears it while keeping
+dark detail the subject encloses. All six candidates pass the machine checks and a visual review at
+0.55. None is promoted: ART_BIBLE §11 puts the four gate sheets first.
+
+Two of those gates are built. `REF_PALETTE_MASTER` reads its bases from ART_BIBLE §6.2 and derives
+the §6.3 five-step ramps: 30 ramps plus the nine functional hues, 159 colours, not the 96 the bible
+had promised. Building it found that the Verdant Reach line named colours after their hex codes and
+had dropped `#859061`; the line now reads as plain name–hex pairs. `REF_GRID_PROJECTION` is an exact
+2:1 grid of 128 × 64 diamonds with 1 × 1, 2 × 2 and 3 × 3 footprints. Both await owner approval.
+
+Codex's handoff also caught two errors in the prompt library: small props were on an off-spec canvas,
+and prop ids did not follow the registry groups Codex was already using. Both are fixed.
+
+**Verified:** 669 tests across 42 files pass, including new codec and sprite tests; TypeScript is
+clean; `npm run art:prompts -- --check` passes with coverage 222/222.

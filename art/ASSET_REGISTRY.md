@@ -32,9 +32,9 @@ Anything not on that path is P1 or later, however tempting.
 
 | ID | Priority | Status | Notes |
 |---|---|---|---|
-| `REF_PALETTE_MASTER` | P0 | SPEC | **Gate.** 96-colour master ramp + `.gpl` |
+| `REF_PALETTE_MASTER` | P0 | REVIEW | **Gate.** Constructed by `art/tools/reference.mjs` from §6.2 — awaiting owner approval |
 | `REF_LIGHTING_BALL` | P0 | SPEC | **Gate.** Sphere/cube/cylinder under the §7 rig |
-| `REF_GRID_PROJECTION` | P0 | SPEC | **Gate.** 64×32 grid, 1×1/2×2/3×3 footprints |
+| `REF_GRID_PROJECTION` | P0 | REVIEW | **Gate.** Constructed exactly by `art/tools/reference.mjs` — awaiting owner approval |
 | `REF_SCALE_LINEUP` | P0 | SPEC | **Gate.** Every scale class on one baseline |
 | `REF_MATERIAL_STUDY` | P0 | SPEC | 9 materials × 5-step ramps |
 | `REF_HUNTER_TURNAROUND` | P0 | SPEC | 3 archetypes × 4 facings, layers separated |

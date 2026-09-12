@@ -219,9 +219,9 @@ Sampled from the approved `art/generated/` anchors and `ART_DIRECTION.md`.
 dark timber `#54382a`, faded brick red `#9c5347`, thatch `#c2a05e`, moss green `#6f7f4e`,
 slate-blue shadow `#3e4a5c`, stone `#8d8a80`, canvas `#ccbfa3`.
 
-**Verdant Reach (Blue) — safe, generous.** Land gradient `#415845` → `#859061`, grass
-detail `#82905b`, water `#4c8589` with `#a1baa4` bank and `#86b1ad` highlight, canopy
-`#4e6b45`, trail dust `#9b9070`.
+**Verdant Reach (Blue) — safe, generous.** Land dark `#415845`, land light `#859061` (the land
+gradient runs between them), grass detail `#82905b`, water `#4c8589`, water bank `#a1baa4`,
+water highlight `#86b1ad`, canopy `#4e6b45`, trail dust `#9b9070`.
 
 **Coldwater Quarry (Yellow) — exposed, mineral.** Cut stone `#7f8791`, slate `#5a626d`,
 cold water `#476a78`, rust `#a6683f`, sparse scrub `#6b7355`.
@@ -240,8 +240,9 @@ shift hue as they shift value — shadows go cooler and slightly blue, highlight
 Pure black (`#000000`) and pure white (`#ffffff`) are forbidden anywhere in the art.
 
 Maximum unique colours per asset: **32 for characters and monsters, 48 for buildings,
-24 for props, 16 for UI icons.** A shared 96-colour master ramp file lives at
-`art/reference-sheets/palette_master.png` and `palette_master.gpl`.
+24 for props, 16 for UI icons.** The master ramp — every §6.2 base in five steps, plus the nine
+functional hues — is constructed from this section by `art/tools/reference.mjs` into
+`art/reference-sheets/palette_master.png`, `.gpl` and `.md`. Edit §6.2, never the palette files.
 
 ---
 
@@ -469,7 +470,7 @@ Produced **before** any production asset. Each is a committed, versioned gate.
 
 | ID | File | Contents |
 |---|---|---|
-| `REF_PALETTE_MASTER` | `palette_master.png` / `.gpl` | 96-colour master ramp, grouped by material, hex-labelled |
+| `REF_PALETTE_MASTER` | `palette_master.png` / `.gpl` / `.md` | Every §6.2 base ramped to five steps, plus the nine functional hues. Constructed by `art/tools/reference.mjs` |
 | `REF_LIGHTING_BALL` | `lighting_ball.png` | Sphere + cube + cylinder under the §7 key/fill/bounce rig |
 | `REF_GRID_PROJECTION` | `grid_projection.png` | 8×8 tile grid at 64×32, with 1×1 / 2×2 / 3×3 footprints marked |
 | `REF_SCALE_LINEUP` | `scale_lineup.png` | Tile, hunter, NPC, trash/elite/boss monster, world boss, T1/T2/T3 building, tree, barrel — one baseline |

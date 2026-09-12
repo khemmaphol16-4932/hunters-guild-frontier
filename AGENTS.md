@@ -79,12 +79,13 @@ Status: ⬜ open · 🔨 claimed · ✅ done · ⛔ blocked on the owner. Claim 
 | # | Item | Lane | Owner | Status |
 |---|---|---|---|---|
 | 1 | Gate sheets: `REF_LIGHTING_BALL`, `REF_SCALE_LINEUP` (generate, then correct by hand) | Art | Codex | 🔨 |
-| 2 | Gate sheets: `REF_PALETTE_MASTER`, `REF_GRID_PROJECTION` (constructed exactly, not generated) | Code | | ⬜ |
+| 2 | Gate sheets: `REF_PALETTE_MASTER`, `REF_GRID_PROJECTION` (constructed exactly, not generated) | Code | Claude | ✅ built — owner approval pending |
 | 3 | Clean up and QA the tree candidates in `art/generated/trees-source-v1/`, then promote | Art | Codex | 🔨 |
-| 4 | Build pipeline: `@1x` from `@2x` and contact shadows from alpha (O-1, O-2) | Code | | ⬜ |
-| 5 | Building kit: `src/data/town/building-art.json` schema and bake step (O-6) | Code | | ⬜ |
+| 4 | Build pipeline: `@1x` from `@2x` and contact shadows from alpha (O-1, O-2) | Code | Claude | ✅ `npm run art:export` |
+| 4a | Deterministic export + validation of candidates (`art/tools/`, reports in `art/qa/`) | Code | Claude | ✅ six candidates pass — promotion waits on the gates |
+| 5 | Building kit: `src/data/town/building-art.json` schema and bake step (O-6) | Code | Claude | 🔨 |
 | 6 | P0 art for the proof cycle — 107 P0 prompts in `art/prompts/`, starting with `REF_HUNTER_TURNAROUND` | Art | Codex | 🔨 |
-| 7 | Canvas world renderer and paper-doll cache (O-9, O-10); atlas packing (O-8) | Code | | ⬜ |
+| 7 | Canvas world renderer and paper-doll cache (O-9, O-10); atlas packing (O-8) | Code | Claude | 🔨 after 5 |
 | 8 | Verify the restored hints and the 2:1 projection in a browser | Code | | ⬜ |
 
 ### Game — the continuous-world migration

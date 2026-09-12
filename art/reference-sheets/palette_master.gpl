@@ -1,0 +1,163 @@
+GIMP Palette
+Name: Hunter's Guild Frontier master
+Columns: 5
+#
+159  75  18	Honey lantern gold — shadow
+220 129  31	Honey lantern gold — core shadow
+232 180  90	Honey lantern gold — base
+234 206 129	Honey lantern gold — light
+235 224 165	Honey lantern gold — highlight
+ 77  40  31	warm timber — shadow
+108  65  46	warm timber — core shadow
+138  92  59	warm timber — base
+179 135  86	warm timber — light
+195 172 133	warm timber — highlight
+ 47  25  23	dark timber — shadow
+ 66  40  33	dark timber — core shadow
+ 84  56  42	dark timber — base
+139 101  72	dark timber — light
+175 146 112	dark timber — highlight
+ 87  38  42	faded brick red — shadow
+122  57  55	faded brick red — core shadow
+156  83  71	faded brick red — base
+184 124 105	faded brick red — light
+199 165 147	faded brick red — highlight
+117  74  42	thatch — shadow
+163 117  62	thatch — core shadow
+194 160  94	thatch — base
+205 188 131	thatch — light
+215 207 166	thatch — highlight
+ 55  71  42	moss green — shadow
+ 82  99  61	moss green — core shadow
+111 127  78	moss green — base
+151 163 109	moss green — light
+180 185 149	moss green — highlight
+ 34  38  51	slate-blue shadow — shadow
+ 48  55  72	slate-blue shadow — core shadow
+ 62  74  92	slate-blue shadow — base
+ 95 116 138	slate-blue shadow — light
+135 155 169	slate-blue shadow — highlight
+ 78  78  70	stone — shadow
+111 109  99	stone — core shadow
+141 138 128	stone — base
+166 164 156	stone — light
+188 187 182	stone — highlight
+131  98  71	canvas — shadow
+175 147 111	canvas — core shadow
+204 191 163	canvas — base
+214 208 184	canvas — light
+224 220 203	canvas — highlight
+ 35  49  41	Land dark — shadow
+ 51  69  56	Land dark — core shadow
+ 65  88  69	Land dark — base
+ 99 132 102	Land dark — light
+139 165 138	Land dark — highlight
+ 67  80  53	land light — shadow
+ 99 112  76	land light — core shadow
+133 144  97	land light — base
+164 170 131	land light — light
+189 190 164	land light — highlight
+ 65  80  49	grass detail — shadow
+ 97 112  71	grass detail — core shadow
+130 144  91	grass detail — base
+163 171 125	grass detail — light
+189 191 160	grass detail — highlight
+ 41  66  76	water — shadow
+ 59  98 107	water — core shadow
+ 76 133 137	water — base
+108 171 169	water — light
+148 190 184	water — highlight
+ 80 111  91	water bank — shadow
+117 154 126	water bank — core shadow
+161 186 164	water bank — base
+182 201 183	water bank — light
+203 214 202	water bank — highlight
+ 66  99 105	water highlight — shadow
+ 95 146 147	water highlight — core shadow
+134 177 173	water highlight — base
+161 193 187	water highlight — light
+187 208 202	water highlight — highlight
+ 38  59  37	canopy — shadow
+ 57  83  54	canopy — core shadow
+ 78 107  69	canopy — base
+116 150  99	canopy — light
+156 176 140	canopy — highlight
+ 87  74  60	trail dust — shadow
+123 109  86	trail dust — core shadow
+155 144 112	trail dust — base
+176 171 144	trail dust — light
+195 192 174	trail dust — highlight
+ 69  72  81	Cut stone — shadow
+ 98 103 114	Cut stone — core shadow
+127 135 145	Cut stone — base
+156 163 169	Cut stone — light
+182 187 190	Cut stone — highlight
+ 49  52  60	slate — shadow
+ 70  75  85	slate — core shadow
+ 90  98 109	slate — base
+123 134 145	slate — light
+157 167 172	slate — highlight
+ 38  52  67	cold water — shadow
+ 55  78  94	cold water — core shadow
+ 71 106 120	cold water — base
+100 150 161	cold water — light
+142 179 183	cold water — highlight
+ 93  43  33	rust — shadow
+129  72  49	rust — core shadow
+166 104  63	rust — base
+192 145  99	rust — light
+205 180 142	rust — highlight
+ 55  64  46	sparse scrub — shadow
+ 81  90  66	sparse scrub — core shadow
+107 115  85	sparse scrub — base
+146 151 117	sparse scrub — light
+175 177 154	sparse scrub — highlight
+ 59  54  53	Ash — shadow
+ 83  78  75	Ash — core shadow
+107 101  96	Ash — base
+141 136 129	Ash — light
+170 167 162	Ash — highlight
+ 32  26  25	scorched earth — shadow
+ 45  39  36	scorched earth — core shadow
+ 58  51  46	scorched earth — base
+107  97  86	scorched earth — light
+149 140 126	scorched earth — highlight
+125 100  81	bone — shadow
+168 148 125	bone — core shadow
+201 192 174	bone — base
+212 208 192	bone — light
+223 220 209	bone — highlight
+107  30  32	ember — shadow
+150  55  45	ember — core shadow
+192  86  58	ember — base
+205 134 102	ember — light
+214 173 145	ember — highlight
+ 25  36  46	Deep water — shadow
+ 37  55  64	Deep water — core shadow
+ 47  74  82	Deep water — base
+ 79 127 134	Deep water — light
+119 169 170	Deep water — highlight
+ 60  67  67	wet stone — shadow
+ 85  95  93	wet stone — core shadow
+109 122 118	wet stone — base
+140 152 147	wet stone — light
+170 178 174	wet stone — highlight
+ 72  95  73	pale algae — shadow
+105 134 103	pale algae — core shadow
+143 165 138	pale algae — base
+170 184 164	pale algae — light
+193 202 188	pale algae — highlight
+ 68  57  50	silt — shadow
+ 95  84  72	silt — core shadow
+122 111  92	silt — base
+155 147 124	silt — light
+179 176 159	silt — highlight
+140 152 168	functional #8c98a8
+221 227 234	functional #dde3ea
+ 91 141 214	functional #5b8dd6
+217 164  65	functional #d9a441
+212 104  95	functional #d4685f
+181 139 214	functional #b58bd6
+140  95 214	functional #8c5fd6
+ 95 191 135	functional #5fbf87
+ 79 176 184	functional #4fb0b8

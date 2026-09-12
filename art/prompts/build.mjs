@@ -198,6 +198,7 @@ function renderJsonl(all) {
       kind: a.kind,
       width: a.members ? undefined : a.canvas?.[0],
       height: a.members ? undefined : a.canvas?.[1],
+      pivot: a.pivot,
       output: a.out,
       members: a.members?.map((m) => ({ id: m.id, output: m.out })),
       prompt: a.prompt,
