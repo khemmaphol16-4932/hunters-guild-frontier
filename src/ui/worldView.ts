@@ -7,6 +7,7 @@ import { TownView } from './townView.js';
 import { ExpeditionView } from './expeditionView.js';
 import { HallView } from './hallView.js';
 import { BuildDashboard } from './buildDashboard.js';
+import type { GuidanceScreen } from '../data/guidanceSchema.js';
 
 const el = (tag: string, cls = '', text?: string): HTMLElement => {
   const n = document.createElement(tag); n.className = cls;
@@ -17,6 +18,19 @@ const button = (label: string, action: () => void, cls = ''): HTMLButtonElement 
   const b = el('button', cls, label) as HTMLButtonElement; b.type = 'button'; b.onclick = action; return b;
 };
 type Panel = 'build' | 'frontier' | 'hall' | 'guild' | undefined;
+
+/**
+ * Which guidance screens (REQ-UX-001) the player is looking at. The four former screens now
+ * live as drawers over one world, so an open drawer is its screen, and the bare world shows
+ * both the town and the frontier at once.
+ */
+const SCREENS_FOR: Readonly<Record<Exclude<Panel, undefined>, readonly GuidanceScreen[]>> = {
+  build: ['town'],
+  frontier: ['field'],
+  hall: ['hall'],
+  guild: ['guild'],
+};
+const WORLD_SCREENS: readonly GuidanceScreen[] = ['town', 'field'];
 
 export class WorldView {
   private selected: HunterId | undefined;
@@ -36,8 +50,14 @@ export class WorldView {
   private readonly guild: BuildDashboard;
   private readonly layout = el('div', 'world-workspace');
   private returnFocus: HTMLElement | null = null;
+  private panel: Panel;
 
-  constructor(private readonly host: HTMLElement, private readonly session: Session, commands: GuildCommands) {
+  constructor(
+    private readonly host: HTMLElement,
+    private readonly session: Session,
+    commands: GuildCommands,
+    private readonly onPanelChange: () => void = () => {},
+  ) {
     this.town = new TownView(this.panelBody, session, commands);
     this.frontier = new ExpeditionView(this.panelBody, session, commands);
     this.hall = new HallView(this.panelBody, session, commands);
@@ -104,8 +124,14 @@ export class WorldView {
     // Keep focused forms and scroll positions intact. Existing panels refresh through their actions.
   }
 
+  /** The guidance screens in front of the player right now, most specific first. */
+  get screens(): readonly GuidanceScreen[] {
+    return this.panel ? SCREENS_FOR[this.panel] : WORLD_SCREENS;
+  }
+
   open(panel: Exclude<Panel, undefined>): void {
     this.returnFocus = document.activeElement as HTMLElement | null;
+    this.panel = panel;
     const title = { build: 'Build & town', frontier: 'Expeditions', hall: 'Guild affairs', guild: 'Hunters' }[panel];
     const head = el('div', 'drawer-heading');
     head.append(el('h2', '', title), button('Close ×', () => this.close()));
@@ -117,10 +143,12 @@ export class WorldView {
     else this.guild.mount();
     this.panelBody.scrollTop = 0;
     (head.querySelector('button') as HTMLButtonElement).focus();
+    this.onPanelChange();
   }
 
   private close(): void {
     this.drawer.hidden = true; this.refresh();
+    if (this.panel !== undefined) { this.panel = undefined; this.onPanelChange(); }
     if (this.returnFocus?.isConnected) this.returnFocus.focus(); else this.viewport.focus();
   }
 

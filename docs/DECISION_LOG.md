@@ -764,3 +764,15 @@ history for events the player did not watch.
 
 **Reversal.** Raise `absenceSteps` to make long gaps silent live time, or lower it to surface reports sooner.
 
+---
+
+## DL-067 — Hints follow the open drawer
+
+**Ambiguity.** DL-063 put one hint per screen above the view (REQ-UX-001). DL-064 replaced the four screens with one Living World and drawers, and the hint box was dropped in the process: `hintFor` was left tested but called by no UI file, and "Show dismissed hints again" became permanently disabled.
+
+**Decision.** Restored. Each drawer maps to the screen it replaced (Build & town → `town`, Expeditions → `field`, Guild affairs → `hall`, Hunters → `guild`). With no drawer open the world shows the town and frontier together, so it offers the first live hint from `town`, then `field` — still one hint at a time. Opening or closing a drawer re-evaluates it.
+
+**Why conservative.** No hint text, condition or screen id changed; `guidance.json` and its tests are untouched. This restores shipped behaviour rather than redesigning it.
+
+**Reversal.** Give hints a `world` screen of their own in `guidanceSchema.ts` if the combined town-and-field view should teach something neither drawer does.
+

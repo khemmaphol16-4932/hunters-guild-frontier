@@ -19,6 +19,7 @@ import type { GuildReport } from '../app/GuildReport.js';
 import { onPreferencesChanged, preferences, setPreference } from './preferences.js';
 import { applyAccessibilityPreferences } from './a11y.js';
 import { playNoticeCue } from './audio.js';
+import { hintFor } from '../app/Guidance.js';
 
 
 const el = (tag: string, className?: string, text?: string): HTMLElement => {
@@ -53,7 +54,8 @@ export class AppShell {
     this.body = document.createElement('main');
     this.body.id = 'view-body';
 
-    this.world = new WorldView(this.body, session, commands);
+    // Opening or closing a drawer changes which screen's hint applies.
+    this.world = new WorldView(this.body, session, commands, () => this.renderAlerts());
 
     applyAccessibilityPreferences();
     // Easy/Advanced changes what every screen says, so a change re-renders the current one.
@@ -227,9 +229,24 @@ export class AppShell {
 
     if (this.settingsOpen) this.alerts.append(this.renderSettings());
 
-    // REQ-UX-001: one hint, for this screen, about something that is true right now.
-    // The Living World owns the former town and field surfaces. Lead with the frontier hint;
-    // contextual guidance inside each view remains unchanged.
+    // REQ-UX-001: one hint, for what is on screen, about something that is true right now.
+    // The first screen with a live hint wins, so the bare world shows one hint, not two.
+    const dismissedHints = new Set(preferences().dismissedHints);
+    const hint = this.report
+      ? undefined
+      : this.world.screens.map((screen) => hintFor(this.session, screen, dismissedHints)).find((h) => h !== undefined);
+    if (hint) {
+      const box = el('div', 'hint');
+      box.setAttribute('role', 'note');
+      box.append(el('span', undefined, hint.text));
+      const got = el('button', 'small', 'Got it') as HTMLButtonElement;
+      got.onclick = () => {
+        setPreference('dismissedHints', [...preferences().dismissedHints, hint.id]);
+        this.renderAlerts();
+      };
+      box.append(got);
+      this.alerts.append(box);
+    }
 
     if (this.feedOpen) {
       const feed = el('section', 'card notice-feed');
