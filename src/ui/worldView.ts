@@ -126,7 +126,11 @@ export class WorldView {
 
   private transform(): void {
     this.x = Math.max(-850, Math.min(850, this.x)); this.y = Math.max(-550, Math.min(550, this.y));
-    this.scene.style.transform = `translate(calc(-50% + ${this.x}px), calc(-50% + ${this.y}px)) scale(${this.zoom})`;
+    // Pan offsets snap to whole device pixels. A fractional translate makes pixel art shimmer
+    // while panning and forces the compositor to resample the scene (art/specs O-12).
+    const dpr = window.devicePixelRatio || 1;
+    const snap = (v: number): number => Math.round(v * dpr) / dpr;
+    this.scene.style.transform = `translate(calc(-50% + ${snap(this.x)}px), calc(-50% + ${snap(this.y)}px)) scale(${this.zoom})`;
   }
   private changeZoom(delta: number): void { this.zoom = Math.min(1.8, Math.max(.55, this.zoom + delta)); this.transform(); }
 
