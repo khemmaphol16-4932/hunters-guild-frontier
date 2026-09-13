@@ -1058,3 +1058,14 @@ Verified in the running game: a party sent to the Verdant Reach showed "Walking 
 counted its stops up as it worked them, and came home to Recovering — the DL-074 lifecycle end to end.
 
 **Verified:** 706 tests pass (1 skipped); TypeScript is clean; the production build succeeds.
+
+---
+
+# 2026-09-13 — Narrow-width HUD overlap fixed
+
+Playing the build in the preview at a narrow pane width, the guidance hint (an absolutely-positioned
+overlay, top-right) widened to nearly full width and overlapped the decorative world-scene title
+("Hunter City"), which read as a broken layer. Below 650px the title plaque is now hidden — the guild
+name already sits in the header — so the actionable hint reads cleanly and the resource bar stays
+clear beneath it. Verified by DOM bounding-box checks at 560px (no overlap) and that the plaque still
+shows above 650px. CSS only.
