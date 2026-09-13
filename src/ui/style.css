@@ -551,6 +551,42 @@ html.reduced-motion *, html.reduced-motion *::before, html.reduced-motion *::aft
 .building-canvas { position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; pointer-events:none; }
 .building-layer { position:absolute; inset:0; pointer-events:none; }
 .building-layer > .map-building { pointer-events:auto; }
+.activity-layer { position:absolute; inset:0; pointer-events:none; }
+.world-hunter {
+  position:absolute; width:34px; height:48px; padding:0; border:0; background:transparent;
+  transform:translate(-50%,-75%); transition:left 1.4s ease, top 1.4s ease; pointer-events:auto;
+  filter:drop-shadow(4px 6px 2px #16251d88);
+}
+.world-hunter-head { position:absolute; left:10px; top:2px; width:15px; height:14px; border:2px solid #25312a; border-radius:50%; background:#e2b789; }
+.world-hunter-body { position:absolute; left:6px; top:14px; width:24px; height:27px; border:2px solid #25312a; border-radius:10px 10px 6px 6px; background:#5b8dd6; }
+.world-hunter.role-healer .world-hunter-body { background:#5fbf87; }
+.world-hunter.role-damage .world-hunter-body { background:#d4685f; }
+.world-hunter.role-support .world-hunter-body { background:#9b74bd; }
+.world-hunter.role-control .world-hunter-body { background:#4fb0b8; }
+.world-hunter-name, .world-hunter-status { position:absolute; left:50%; transform:translateX(-50%); white-space:nowrap; border-radius:3px; text-shadow:0 1px #101b16; }
+.world-hunter-name { top:42px; padding:1px 4px; color:#fff1cb; background:#183027d9; font-size:9px; font-weight:700; }
+.world-hunter-status { top:56px; color:#e6edda; font-size:8px; opacity:0; }
+.world-hunter:hover .world-hunter-status, .world-hunter:focus-visible .world-hunter-status, .world-hunter.in-field .world-hunter-status { opacity:1; }
+.world-hunter.fighting { animation:hunter-strike .7s ease-in-out infinite alternate; }
+.world-hunter.returning::after { content:'◆'; position:absolute; right:-3px; top:19px; color:#f1cc67; font-size:13px; animation:loot-bob .8s ease-in-out infinite alternate; }
+.world-monster { position:absolute; width:50px; height:45px; transform:translate(-50%,-60%); filter:drop-shadow(5px 7px 2px #17271d99); animation:monster-lunge .9s ease-in-out infinite alternate; }
+.monster-body { position:absolute; inset:9px 2px 3px; border:3px solid #283326; border-radius:50% 44% 38% 46%; background:linear-gradient(135deg,#839248,#425f39 65%); box-shadow:inset 8px 4px #b7b65e66; }
+.monster-body::before, .monster-body::after { content:''; position:absolute; top:-8px; width:13px; height:13px; background:#61763e; border:2px solid #283326; transform:rotate(45deg); }
+.monster-body::before { left:4px; } .monster-body::after { right:3px; }
+.monster-name { position:absolute; top:45px; left:50%; transform:translateX(-50%); white-space:nowrap; color:#ffe3ba; background:#382d25dc; padding:1px 4px; font-size:8px; }
+.world-monster::after { content:''; position:absolute; left:-28px; top:22px; width:25px; height:3px; background:#f7d270; box-shadow:0 0 7px #fff2a7; transform:rotate(-24deg); animation:slash .7s steps(2) infinite; }
+.world-loot { position:absolute; min-width:28px; padding:4px 7px; border:1px solid #f1cf72; border-radius:12px; color:#ffe498; background:#23352cd9; font-size:11px; font-weight:700; animation:loot-bob .8s ease-in-out infinite alternate; }
+@keyframes hunter-strike { to { transform:translate(-25%,-78%); } }
+@keyframes monster-lunge { to { transform:translate(-65%,-62%); } }
+@keyframes slash { 50% { opacity:0; transform:translate(-7px,7px) rotate(-24deg); } }
+@keyframes loot-bob { to { transform:translateY(-5px); } }
+.play-panel { position:absolute; right:24px; top:118px; z-index:14; width:250px; padding:14px; border:1px solid #d8c38b55; border-radius:10px; background:#192b24ed; box-shadow:0 10px 28px #10211944; }
+.play-panel strong { display:block; margin:3px 0 6px; color:#f0dab0; font-size:13px; }
+.play-panel p { margin:0 0 10px; color:#b7c5b3; font-size:10px; line-height:1.45; }
+.play-kicker { color:#dbbd7f; font-size:8px; letter-spacing:.16em; font-weight:800; }
+.play-panel button { width:100%; margin-top:5px; padding:8px; }
+.play-panel .play-primary { color:#1a2b23; background:#d7b66f; border-color:#f0d897; font-weight:800; }
+.play-message { display:block; margin-top:8px; min-height:24px; color:#9eb49e; font-size:9px; line-height:1.35; }
 .map-building.sprite-hit { transform:none; background:transparent; }
 .map-building.sprite-hit:hover, .map-building.sprite-hit:focus-visible { filter:none; outline:2px solid #e8b45a; outline-offset:2px; }
 .map-building.sprite-hit .building-label { bottom:-8px; }
@@ -578,5 +614,5 @@ html.reduced-motion *, html.reduced-motion *::before, html.reduced-motion *::aft
 .condition-meter { display:grid; grid-template-columns:46px 1fr 34px; gap:9px; align-items:center; font-size:11px; margin:10px 20px; }
 .condition-meter meter { width:100%; accent-color:#b8cb80; }
 .profile-action { margin:12px 20px 0; color:#e4c68f; background:transparent; border-color:#b7a97655; }
-@media(max-width:1000px) { .resource-bar { left:auto; right:20px; transform:none; } .resource { min-width:68px; padding:0 10px; } .hunter-dock { max-width:calc(100% - 40px); bottom:68px; } .map-guide { bottom:164px; } .location-plaque h1 { font-size:27px; } .world-tools { top:145px; } .world-tools button { width:132px; } .guild-brand { margin-right:0; } }
-@media(max-width:650px) { #view-switch { gap:3px; padding:6px 9px; } #view-switch > button:not(.notices) { display:none; } .guild-brand { font-size:9px; letter-spacing:.03em; } .time-controls { margin-left:auto; } #view-switch .time-controls button { padding:6px; } .location-plaque { display:none; } .resource-bar { top:91px; left:16px; right:16px; justify-content:space-around; } .resource { padding:0 8px; } .world-tools { left:12px; top:165px; } .world-tools button { width:43px; padding:9px; } .world-tools button > span:last-child { display:none; } .hunter-inspector { right:12px; top:164px; width:min(280px, calc(100% - 76px)); } .map-guide { display:none; } .world-drawer main { display:block; } .world-drawer #roster { max-height:180px; } .camera-tools { bottom:12px; right:12px; } .world-drawer-body { padding:9px; } }
+@media(max-width:1000px) { .resource-bar { left:auto; right:20px; transform:none; } .resource { min-width:68px; padding:0 10px; } .hunter-dock { max-width:calc(100% - 40px); bottom:68px; } .map-guide { bottom:164px; } .location-plaque h1 { font-size:27px; } .world-tools { top:145px; } .world-tools button { width:132px; } .guild-brand { margin-right:0; } .play-panel { top:150px; width:210px; } }
+@media(max-width:650px) { #view-switch { gap:3px; padding:6px 9px; } #view-switch > button:not(.notices) { display:none; } .guild-brand { font-size:9px; letter-spacing:.03em; } .time-controls { margin-left:auto; } #view-switch .time-controls button { padding:6px; } .location-plaque { display:none; } .resource-bar { top:91px; left:16px; right:16px; justify-content:space-around; } .resource { padding:0 8px; } .world-tools { left:12px; top:165px; } .world-tools button { width:43px; padding:9px; } .world-tools button > span:last-child { display:none; } .hunter-inspector { right:12px; top:164px; width:min(280px, calc(100% - 76px)); } .map-guide { display:none; } .world-drawer main { display:block; } .world-drawer #roster { max-height:180px; } .camera-tools { bottom:12px; right:12px; } .world-drawer-body { padding:9px; } .play-panel { left:66px; right:12px; top:auto; bottom:176px; width:auto; padding:10px; } .play-panel p { display:none; } .play-panel button { display:inline-block; width:calc(50% - 3px); font-size:9px; } .play-message { min-height:0; } }

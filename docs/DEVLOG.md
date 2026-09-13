@@ -1069,3 +1069,23 @@ overlay, top-right) widened to nearly full width and overlapped the decorative w
 name already sits in the header — so the actionable hint reads cleanly and the resource bar stays
 clear beneath it. Verified by DOM bounding-box checks at 560px (no overlap) and that the plaque still
 shows above 650px. CSS only.
+
+---
+
+# 2026-09-13 — Playable continuous-world prototype slice
+
+The main world now shows the simulation as activity rather than only reporting it in drawers.
+Every persistent hunter is visible in the town, walking between work, training, shopping and rest.
+When a party departs, those same hunter pieces move toward the Verdant Reach; at a live route stop
+they face the encounter's actual monster ids in the field, show a combat motion, and expose the
+run's current loot-roll count. They then turn back through the same scene and resume town activity.
+
+A compact Live Guild panel makes the proof loop playable without learning the deeper management UI:
+one button sends a normal autonomous Verdant patrol and one opens the selected hunter's existing
+equipment and armoury controls. Combat results continue to come from the deterministic expedition
+simulation, and returned drops use the existing equip and sell commands.
+
+Verified in the browser at 4×: four hunters left town, fought a Moss Crawler across four stops,
+carried three loot rolls, returned to recovery, and delivered three loose items plus resources. The
+equipment drawer offered the returned weapon, hands and trinket for equipping and the loose-item
+sale control. TypeScript remains clean.

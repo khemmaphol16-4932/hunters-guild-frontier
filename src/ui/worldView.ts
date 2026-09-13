@@ -61,6 +61,8 @@ export class WorldView {
   // on every autonomous tick (as the scene used to) cost ~120 DOM nodes a tick for nothing.
   private readonly canvas = document.createElement('canvas');
   private readonly buildingLayer = el('div', 'building-layer');
+  private readonly activityLayer = el('div', 'activity-layer');
+  private readonly playPanel = el('section', 'play-panel');
   private readonly townLabel = el('div', 'map-town-label');
   private sceneKey = '';
   private drawList: DrawItem[] = [];
@@ -117,7 +119,8 @@ export class WorldView {
     camera.append(button('−', () => this.changeZoom(-.15)), button('Center town', () => { this.x = 0; this.y = 0; this.zoom = 1; this.transform(); }), button('+', () => this.changeZoom(.15)));
     camera.firstElementChild?.setAttribute('aria-label', 'Zoom out'); camera.lastElementChild?.setAttribute('aria-label', 'Zoom in');
     const guide = el('div', 'map-guide', 'Drag to explore · Scroll to zoom · Select a building or hunter');
-    this.layout.append(this.viewport, location, this.resourceBar, tools, camera, guide, this.roster, this.inspector, this.drawer);
+    this.buildPlayPanel();
+    this.layout.append(this.viewport, location, this.resourceBar, tools, camera, guide, this.playPanel, this.roster, this.inspector, this.drawer);
     this.drawer.hidden = true; this.inspector.hidden = true;
     this.layout.addEventListener('keydown', (e) => { if (e.key === 'Escape') { this.close(); this.selected = undefined; this.renderInspector(); } });
     this.buildStaticScene();
@@ -195,7 +198,7 @@ export class WorldView {
       const tree = el('div', `scenery-tree tree-${i % 3}`); tree.style.left = `${x}px`; tree.style.top = `${y}px`; tree.style.zIndex = String(y);
       tree.setAttribute('aria-hidden', 'true'); this.scene.append(tree);
     }
-    this.scene.append(this.buildingLayer);
+    this.scene.append(this.buildingLayer, this.activityLayer);
     this.scene.append(button('The Verdant Reach ↗', () => this.open('frontier'), 'frontier-sign'), this.townLabel);
   }
 
@@ -216,7 +219,102 @@ export class WorldView {
       this.renderBuildingButtons(placed, items, new Set(missing));
       this.drawBuildings();
     }
+    this.renderActors();
     this.transform();
+  }
+
+  /** The shortest path into the prototype loop, kept over the world so the result stays visible. */
+  private buildPlayPanel(): void {
+    this.playPanel.setAttribute('aria-label', 'Guild activity');
+    this.playPanel.append(
+      el('span', 'play-kicker', 'LIVE GUILD'),
+      el('strong', '', 'Town → Hunt → Loot → Sell → Equip'),
+      el('p', '', 'Hunters act on their own. Send a patrol, then watch them leave the gate and fight in the field.'),
+      button('Send Verdant patrol', () => {
+        const result = this.commands.departExpedition('verdant_reach', 'clear');
+        const note = this.playPanel.querySelector('.play-message') as HTMLElement | null;
+        if (note) note.textContent = result.ok ? 'Party formed — follow the moving hunters.' : result.error;
+        this.refresh();
+      }, 'play-primary'),
+      button('Equipment & selling', () => {
+        this.open('guild');
+        const first = this.session.roster.all()[0];
+        if (first) this.guild.select(first.id);
+      }),
+      el('span', 'play-message', 'The town keeps working while you watch.'),
+    );
+  }
+
+  /** Place persistent agents and monsters in the same scene from live simulation state. */
+  private renderActors(): void {
+    const parties = this.commands.partiesInField();
+    const away = new Map(parties.flatMap((party) => party.hunterIds.map((id) => [id, party] as const)));
+    const tickStep = Math.floor(this.session.clock.tick / Math.max(1, this.session.clock.coarseStepRatio));
+    const wanted = new Set<string>();
+
+    for (const [index, hunter] of this.session.roster.all().entries()) {
+      const key = `hunter-${hunter.id}`;
+      wanted.add(key);
+      let actor = this.activityLayer.querySelector(`[data-actor="${key}"]`) as HTMLButtonElement | null;
+      if (!actor) {
+        actor = button('', () => { this.selected = hunter.id; this.renderInspector(); }, `world-hunter role-${this.session.buildIdentity.profileOf(hunter).primaryRole}`);
+        actor.dataset.actor = key;
+        actor.append(el('span', 'world-hunter-head'), el('span', 'world-hunter-body'), el('span', 'world-hunter-name', hunter.name.split(' ')[0] ?? hunter.name), el('span', 'world-hunter-status'));
+        this.activityLayer.append(actor);
+      }
+      const party = away.get(hunter.id);
+      const status = actor.querySelector('.world-hunter-status') as HTMLElement;
+      let x: number; let y: number;
+      if (!party) {
+        const route = [projectTile(5, 5), projectTile(8, 6), projectTile(6, 9), projectTile(10, 8)];
+        const stop = route[(tickStep + index * 2) % route.length]!;
+        x = stop.x; y = stop.y + 12;
+        status.textContent = ['Training', 'Shopping', 'Working', 'Resting'][(tickStep + index) % 4]!;
+        actor.classList.remove('in-field', 'fighting', 'returning');
+      } else {
+        const member = party.hunterIds.indexOf(hunter.id);
+        const spreadX = (member - (party.hunterIds.length - 1) / 2) * 34;
+        if (party.phase === 'outbound') { x = 1020 + spreadX; y = 510 + member * 8; status.textContent = 'Travelling'; }
+        else if (party.phase === 'inbound') { x = 980 + spreadX; y = 560 + member * 8; status.textContent = 'Returning with loot'; }
+        else { x = 1210 + spreadX; y = 430 + member * 16; status.textContent = `Fighting · stop ${Math.max(1, party.node)}`; }
+        actor.classList.add('in-field');
+        actor.classList.toggle('fighting', party.phase === 'working');
+        actor.classList.toggle('returning', party.phase === 'inbound');
+      }
+      actor.style.left = `${x}px`; actor.style.top = `${y}px`; actor.style.zIndex = String(Math.round(y + 80));
+      actor.setAttribute('aria-label', `${hunter.name}: ${status.textContent}. Follow hunter`);
+    }
+
+    for (const party of parties) {
+      if (party.phase !== 'working') continue;
+      const journey = this.session.journeys.get(party.journeyId);
+      const node = journey?.run?.walk[journey.run.cursor];
+      const monsters = node?.monsters.length ? node.monsters : ['moss_crawler'];
+      monsters.slice(0, 4).forEach((monsterId, index) => {
+        const key = `${party.journeyId}-monster-${index}`;
+        wanted.add(key);
+        let monster = this.activityLayer.querySelector(`[data-actor="${key}"]`) as HTMLElement | null;
+        if (!monster) {
+          monster = el('div', 'world-monster'); monster.dataset.actor = key;
+          monster.append(el('span', 'monster-body'), el('span', 'monster-name'));
+          this.activityLayer.append(monster);
+        }
+        const name = this.session.content.monstersById.get(monsterId)?.name ?? monsterId.replace(/_/g, ' ');
+        (monster.querySelector('.monster-name') as HTMLElement).textContent = name;
+        monster.style.left = `${1320 + index * 52}px`; monster.style.top = `${430 + index * 28}px`; monster.style.zIndex = String(540 + index);
+      });
+      const carried = journey?.run?.lootRolls ?? 0;
+      if (carried > 0) {
+        const key = `${party.journeyId}-loot`;
+        wanted.add(key);
+        let loot = this.activityLayer.querySelector(`[data-actor="${key}"]`) as HTMLElement | null;
+        if (!loot) { loot = el('div', 'world-loot'); loot.dataset.actor = key; this.activityLayer.append(loot); }
+        loot.textContent = `✦ ${carried}`; loot.style.left = '1275px'; loot.style.top = '535px';
+      }
+    }
+    for (const node of [...this.activityLayer.querySelectorAll<HTMLElement>('[data-actor]')]) {
+      if (!wanted.has(node.dataset.actor ?? '')) node.remove();
+    }
   }
 
   /** One real button per building: clicks, keyboard focus and screen readers, over the sprite. */
