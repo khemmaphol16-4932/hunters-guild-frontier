@@ -963,3 +963,86 @@ return; what remains is to store the endless objective on the record and point t
 at `departExpedition`.
 
 **Reversal.** Point `runStandingOrder` back at `sendExpedition`. Nothing else changed.
+
+## DL-074 — Resolving each stop on the tick (step 2) — design, one decision PENDING APPROVAL
+
+**Status.** Design only; not implemented. This entry pins the approach and surfaces the single
+owner-facing decision it forces, so the change can land as one coherent slice rather than a core
+refactor made speculatively. It is the board's item 10 "step 2".
+
+**The problem it solves.** Today a journey (DL-070) resolves its whole route at departure, from a
+seeded fork, and applies the result on return. A recall (DL-071) re-runs that route from the same
+seed with a hard stop. Both carry one caveat, recorded in DL-071: anything about the *guild* that
+changes while a party is out — a facility upgrade, a mentor bonus, an item upgraded by id — reaches
+the re-run and, in principle, a node the party already worked. No current content triggers it, but
+the fidelity is guaranteed by test, not by construction. Step 2 removes the caveat by construction:
+each stop is resolved as the party reaches it, against the guild as it is at that tick, and nothing
+already resolved is ever re-run.
+
+**The engine becomes resumable.** `Expedition.run` is one synchronous pass over a mutable walk. The
+infrastructure to suspend it already exists on purpose: `core/rng.ts` says its four-uint32 state is
+"small enough to serialise into a save file verbatim so an interrupted expedition resumes on exactly
+the same sequence," and `Rng.state()` exposes it. Between fights only health carries — statuses,
+threat and cooldowns are already cleared at the top of `fight` — so a node boundary is a clean
+suspend point. The refactor: split `run` into
+  - `begin(rng, region, party, options) -> RunState` — draws the route, builds the combatants;
+  - `stepNode(state) -> 'continued' | { done: reason }` — exactly one cursor iteration of today's
+    loop (the endless depth-extension, the time cap, the decide-or-retreat, the rest/discovery/event
+    branch with its walk splice and skip, or the fight), mutating `RunState`;
+  - `finalize(state) -> ExpeditionResult` — today's aftermath and summary tail.
+`run` becomes `begin` then `stepNode` until done then `finalize`, so the one-shot path is unchanged.
+`RunState` is fully serialisable: the `RngState`, each member's `{ health, resource, dead, downed }`
+(combatants are rebuilt by `combatantFor` and re-dressed on resume), the `walk` (plain `RouteNode`s),
+`cursor`, and every accumulator (`reports`, `decisions`, `events`, xp/downed maps, the flags,
+`elapsedSeconds`, `reached`, `entered`, depth). The proof is a test: run a route one node at a time,
+round-tripping `RunState` through JSON between every step, and assert the result is byte-identical to
+one-shot `run` across many seeds.
+
+**The return time becomes emergent — the one owner decision.** A route's return tick is
+`turnsHome + travel`, and `turnsHome` depends on how many nodes the party works. Resolving at
+departure, that count is known, so `returnsAtTick` is fixed the moment the party leaves and the UI
+shows a countdown ("home in 3 steps"). Resolving on the tick, the count is *not* known until the
+party retreats, wipes, or runs out of route — a detour lengthens it, an early retreat shortens it.
+So `returnsAtTick` can only be set at the moment the party turns for home, which is decided *during*
+resolution, one stop before it would walk the next.
+
+This changes what the field UI can promise, and that is a design decision, not an implementation
+detail:
+  - **Until the party turns home:** it shows where it is ("at stop 3, still pushing on"), a count
+    *up*, with no fixed time-home. A recall is offered, as now.
+  - **Once it turns home** (finished the route, retreated, was recalled, or wiped): the return tick
+    is set and the countdown appears, exactly as today.
+The alternative — keep a fixed countdown by pre-committing the node count at departure — is what we
+have now and is precisely the re-run this step exists to remove; it cannot be both emergent and
+pre-committed. **PENDING APPROVAL:** the owner blesses the field card showing a count-up "still out"
+phase before a countdown. `partiesInField` / `phaseAt` / `ui/fieldParty.ts` already localise every
+number, so the wording is one file; the journeys test's `stepsUntilHome` countdown assertions move to
+"count up until the party turns home, then count down."
+
+**Recall stops costing a re-run.** With per-node resolution, `recallJourney` no longer re-runs from
+the seed: it sets a flag on the live `RunState` so the next `stepNode` takes the recall branch (the
+same branch `recallAfterNodes` drives today), and the party finishes the stop it is on and turns
+home. `recallAfterNodes` and the re-run in `recallJourney` are deleted. DL-071's "town-wide changes
+reach the re-run" caveat is gone: there is no re-run.
+
+**`passTime` steps journeys instead of splitting at a known return.** Today the catch-up loop splits
+each chunk exactly at `nextReturnTick`. With emergent returns there is no such tick until a party
+turns home, so the loop instead advances the clock by the per-node cadence and calls `stepNode` on
+each active journey whose next stop is due, resolving it against the guild at that tick. A party that
+has turned home still has a fixed `returnsAtTick` and is completed by `completeJourneys` as now. The
+offline-equals-live guarantee (REQ-OFF-002) holds because the same stepper runs on the same cadence
+either way — the property to test is unchanged, only the split point moves.
+
+**Save.** A `JourneyRecord` stops carrying a finished `ExpeditionResult` and carries a `RunState`
+plus the stops resolved so far (already slim after DL-072). Version bumps to v28 with a migration and
+a round-trip test; a v27 in-flight journey (which has a full precomputed result and a fixed
+`returnsAtTick`) migrates as an already-turned-home journey — its result stands and it lands on
+return exactly as it would have, so no v27 save changes outcome.
+
+**Why conservative.** It reuses the rules engine unchanged — `stepNode` is today's loop body moved,
+not rewritten — and the determinism it rests on is the same seeded stream, now serialised at a
+boundary the code was already built to serialise at. Every existing expedition test guards the
+one-shot path through `run`; the new tests guard that stepwise-with-serialisation equals one-shot.
+
+**Reversal.** Keep `begin`/`stepNode`/`finalize` (a harmless internal shape) but have journeys call
+`run` once at departure again and restore the fixed timetable; delete the per-node `passTime` branch.

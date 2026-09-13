@@ -100,7 +100,7 @@ still resolve synchronously into a replay.
 | # | Item | Lane | Owner | Status |
 |---|---|---|---|---|
 | 9 | Persistent journey/activity state owned by the simulation | Code | Claude | ✅ journeys, save v27 (DL-070) |
-| 10 | Travel, encounter, combat, return, recovery and selling advance on fixed ticks | Code | Claude | 🔨 travel and return on the tick (DL-070); recall mid-journey and "Send them" departs a journey (DL-071); node-by-node resolution and carried loot next |
+| 10 | Travel, encounter, combat, return, recovery and selling advance on fixed ticks | Code | Claude | 🔨 travel and return on the tick (DL-070); recall mid-journey and "Send them" departs a journey (DL-071); standing orders on journeys (DL-073); slim journey saves (DL-072); node-by-node resolution designed (DL-074, one owner decision pending); carried loot next |
 | 11 | Region loading and camera observation as consumers of that state | Code | | ⬜ |
 | 12 | Keep seeded combat facts and the audit trail for off-screen fidelity | Code | | ⬜ |
 | 13 | Live observation primary; reports for history and missed events | Code | | ⬜ |
@@ -119,6 +119,7 @@ loot → physical return → sale to Guild → recovery. Art item 6 and code ite
 | 18 | The ten-step absence threshold for the live clock | DL-066 |
 | 19 | Add `sharp` as a dev dependency to re-export the two 3 MB PNGs (saves ~5.6 MB) | O-11 |
 | 20 | World-boss henchmen content | `world/worldBoss.json`, REQ-CW-013 |
+| 21 | Node-by-node resolution (DL-074) makes a journey's return time emergent: the field card shows a count-up "still out" phase before the countdown appears when the party turns home | DL-074 |
 
 ### Recently decided
 
