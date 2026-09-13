@@ -625,6 +625,11 @@ export interface LootBalance {
     readonly duplicateCardValue: number;
     readonly cardPurchaseCost: number;
   };
+  /** REQ-CW-008/011: personal carried loot, sold to the Guild on return (DL-076). */
+  readonly carriedLoot: {
+    /** Chance per carried item to be lost coming home through a Red zone. */
+    readonly redZoneLossChance: number;
+  };
 }
 
 export function parseLootBalance(raw: unknown, path = 'loot.json'): LootBalance {
@@ -636,6 +641,7 @@ export function parseLootBalance(raw: unknown, path = 'loot.json'): LootBalance 
     `${path}.bossCards.duplicateProtection`,
   );
   const conversion = expectObject(field(o, 'conversion', path), `${path}.conversion`);
+  const carriedLoot = expectObject(field(o, 'carriedLoot', path), `${path}.carriedLoot`);
 
   const dropChance = expectNumber(
     field(bossCards, 'dropChance', `${path}.bossCards`),
@@ -684,6 +690,12 @@ export function parseLootBalance(raw: unknown, path = 'loot.json'): LootBalance 
       cardPurchaseCost: expectNumber(
         field(conversion, 'cardPurchaseCost', `${path}.conversion`),
         `${path}.conversion.cardPurchaseCost`,
+      ),
+    },
+    carriedLoot: {
+      redZoneLossChance: expectNumber(
+        field(carriedLoot, 'redZoneLossChance', `${path}.carriedLoot`),
+        `${path}.carriedLoot.redZoneLossChance`,
       ),
     },
   };

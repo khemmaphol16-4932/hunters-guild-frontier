@@ -39,6 +39,7 @@ import { Condition } from '../systems/hunter/Condition.js';
 import { BuildIdentity } from '../systems/hunter/BuildIdentity.js';
 import { Chronicle } from '../systems/hunter/Chronicle.js';
 import { Armoury } from '../systems/items/Armoury.js';
+import { HunterHoldings } from '../systems/hunter/HunterHoldings.js';
 import { Cards } from '../systems/items/Cards.js';
 import { Sets } from '../systems/items/Sets.js';
 import { Equipment } from '../systems/items/Equipment.js';
@@ -196,6 +197,8 @@ export class Session {
   readonly policy: PolicyBook;
 
   readonly armoury: Armoury;
+  /** Each hunter's personal money and the loot they are carrying home (REQ-CW-008; DL-076). */
+  readonly holdings = new HunterHoldings();
   readonly cards: Cards;
   readonly sets: Sets;
   readonly equipment: Equipment;
@@ -840,6 +843,7 @@ export class Session {
       clock: this.clock.snapshot(),
       rngStreams,
       armoury: this.armoury.snapshot(),
+      holdings: this.holdings.snapshot(),
       lootPity: this.itemGenerator.pity,
       audit: this.audit.snapshot(),
       emergencyAuthorisations: this.emergency.snapshot(),
@@ -903,6 +907,7 @@ export class Session {
     this.market.restore(payload.market);
     this.contracts.restore(payload.contracts);
     this.journeys.restore(payload.journeys);
+    this.holdings.restore(payload.holdings);
     this.factions.restore(payload.factions);
     this.guildMastery.restore(payload.guildMastery);
     this.monument.restore(payload.monument);

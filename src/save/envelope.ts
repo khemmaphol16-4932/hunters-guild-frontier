@@ -13,6 +13,7 @@
  */
 
 import type { JourneysSnapshot } from '../sim/expedition/Journey.js';
+import type { HunterHoldingsSnapshot } from '../systems/hunter/HunterHoldings.js';
 import type { Hunter } from '../core/hunter/Hunter.js';
 import type { HunterChronicle } from '../systems/hunter/Chronicle.js';
 import type { RngState } from '../core/rng.js';
@@ -44,7 +45,7 @@ import type { WorldEventsSnapshot } from '../systems/world/WorldEvents.js';
 import type { FriendshipSnapshot } from '../systems/hunter/Friendship.js';
 import type { StandingOrdersSnapshot } from '../systems/guild/StandingOrders.js';
 
-export const CURRENT_SAVE_VERSION = 28;
+export const CURRENT_SAVE_VERSION = 29;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -231,7 +232,9 @@ export interface SavePayloadV26 extends SavePayloadV25 {}
 export interface SavePayloadV27 extends SavePayloadV26 { readonly journeys: JourneysSnapshot }
 /** v28 — a journey resolves node by node and carries a resumable run, not a finished result (DL-074). */
 export interface SavePayloadV28 extends SavePayloadV27 {}
-export type CurrentSavePayload = SavePayloadV28;
+/** v29 — each hunter's personal money and carried loot (REQ-CW-008/011; DL-076). */
+export interface SavePayloadV29 extends SavePayloadV28 { readonly holdings: HunterHoldingsSnapshot }
+export type CurrentSavePayload = SavePayloadV29;
 
 export interface Migration {
   readonly from: number;

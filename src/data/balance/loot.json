@@ -20,5 +20,9 @@
     "duplicateCardResourceId": "essence",
     "duplicateCardValue": 1,
     "cardPurchaseCost": 8
+  },
+  "carriedLoot": {
+    "$comment": "REQ-CW-008/011 (DL-076, owner-approved 2026-09-13): a hunter carries loot home and the Guild buys it at its full sell value. A Red zone risks losing a carried item on the way back — a small independent chance per item.",
+    "redZoneLossChance": 0.1
   }
 }

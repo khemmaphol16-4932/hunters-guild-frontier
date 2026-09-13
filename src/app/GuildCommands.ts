@@ -57,7 +57,7 @@ import {
   type JourneyPhase,
   type JourneyRecord,
 } from '../sim/expedition/Journey.js';
-import type { KnowledgeTier, RegionDef as WorldRegionDef } from '../data/combatSchema.js';
+import type { KnowledgeTier, RegionDef as WorldRegionDef, ZoneTier } from '../data/combatSchema.js';
 import { KNOWLEDGE_TIERS } from '../data/combatSchema.js';
 import type { Rotation, TownDepartmentId } from '../data/townSchema.js';
 import type { Placement } from '../systems/town/TownGrid.js';
@@ -194,6 +194,9 @@ export class GuildCommands {
       .filter((trait) => trait.origin === 'legacy' && trait.fromChronicle !== undefined && historicKinds.has(trait.fromChronicle))
       .map((trait) => trait.id);
     const mentor = this.session.mentors.retire(hunter, legacyTraits);
+    // Settle any loot they were still carrying before they leave, then their holdings go with them.
+    this.sellCarriedLoot([hunter.id]);
+    this.session.holdings.forget(hunter.id);
     this.session.roster.remove(hunter.id);
     this.session.friendship.forget(hunter.id);
     this.session.audit.record({
@@ -1216,6 +1219,50 @@ export class GuildCommands {
     }
   }
 
+  /**
+   * Hand a returning party's loot to its survivors and settle the sale (REQ-CW-008/011; DL-076).
+   * Each drop goes to a survivor's inventory in turn; a Red zone may lose one on the way back; then
+   * the Guild buys what it can afford. Returns the items that actually came home, for the report.
+   */
+  private deliverCarriedLoot(found: readonly Item[], survivors: readonly HunterId[], zoneTier: ZoneTier): Item[] {
+    if (survivors.length === 0) return []; // nobody carried anything home
+    const lossChance = zoneTier === 'red' ? this.session.content.balance.loot.carriedLoot.redZoneLossChance : 0;
+    const delivered: Item[] = [];
+    found.forEach((item, index) => {
+      if (lossChance > 0 && this.session.streams.loot.bool(lossChance)) return; // lost on the way back
+      const owner = survivors[index % survivors.length]!;
+      this.session.holdings.addCarried(owner, item);
+      delivered.push(item);
+    });
+    this.sellCarriedLoot(survivors);
+    return delivered;
+  }
+
+  /**
+   * The Guild buys carried loot at its full sell value (DL-076), paying the hunter and taking the
+   * item into the armoury. When the Guild cannot afford an item the hunter keeps it and it is
+   * offered again on a later settle. Runs for the named hunters, or for everyone carrying when none
+   * are named — the retry pass `passTime` calls as the Guild's gold recovers.
+   */
+  private sellCarriedLoot(hunterIds?: readonly HunterId[]): { sold: number; paid: number } {
+    const ids = hunterIds ?? this.session.holdings.hunterIdsWithCarried();
+    let sold = 0;
+    let paid = 0;
+    for (const id of ids) {
+      for (const item of [...this.session.holdings.carriedOf(id)]) {
+        const price = this.session.armoury.sellValue(item);
+        if (this.session.resources.amount('gold') < price) break; // Guild is broke; keep it for later
+        this.session.resources.transact({ debits: { gold: price } });
+        this.session.holdings.earn(id, price);
+        this.session.armoury.add(item);
+        this.session.holdings.removeCarried(id, item);
+        sold += 1;
+        paid += price;
+      }
+    }
+    return { sold, paid };
+  }
+
   worldBossEvent(): WorldBossEvent | undefined {
     return this.session.worldEvents.currentWorldBoss(this.session.clock.tick);
   }
@@ -1466,6 +1513,9 @@ export class GuildCommands {
           outcome: `${hunter.name} died in ${region.name}`,
           reasonCodes: ['hunter_died', `zone:${region.zoneTier}`],
         });
+        // REQ-CW-008: a hunter who dies loses the loot they were carrying; equipped gear is the
+        // armoury's and stays. Their holdings die with them.
+        this.session.holdings.forget(hunter.id);
         this.session.roster.remove(hunter.id);
         this.session.friendship.forget(hunter.id);
         continue;
@@ -1578,7 +1628,7 @@ export class GuildCommands {
     const lootRolls = endless
       ? Math.round((result.lootRolls + endlessConfig.lootRollsPerDepth * depthsCleared) * endless.rewardScale.loot)
       : result.lootRolls;
-    const loot =
+    const found =
       lootRolls > 0
         ? this.session.itemGenerator.generateMany(
             this.session.streams.loot,
@@ -1586,7 +1636,12 @@ export class GuildCommands {
             { itemLevel: region.itemLevel },
           )
         : [];
-    this.session.armoury.addMany(loot);
+    // REQ-CW-008/011 (DL-076): the hunters carry the loot home. Each drop goes to a survivor's
+    // inventory; a Red zone may claim one on the way back; then the Guild buys it at full sell
+    // value, paying the hunter, or the hunter keeps it to sell on a later settle if the Guild is
+    // broke. `loot` reported to the screen is what actually came home.
+    const survivors = result.aftermath.filter((a) => !a.died && this.session.roster.get(a.hunterId) !== undefined).map((a) => a.hunterId);
+    const loot = this.deliverCarriedLoot(found, survivors, region.zoneTier);
 
     const baseReward = this.session.content.economy.expeditionRewards[region.zoneTier];
     const completionScale = result.wiped
@@ -1696,6 +1751,9 @@ export class GuildCommands {
       if (result.defense) recorder.noteDefense(result.defense.summary, result.defense.held);
       this.advanceJourneys(this.session.clock.tick);
       this.completeJourneys(recorder);
+      // REQ-CW-008: loot a hunter kept because the Guild could not pay is offered again now, as
+      // the Guild's gold recovers (DL-076).
+      this.sellCarriedLoot();
       if (this.session.standingOrders.autoRepair) this.repairDamaged(recorder);
       // Asking is what lets the world boss appear on schedule (and announce itself).
       this.worldBossEvent();

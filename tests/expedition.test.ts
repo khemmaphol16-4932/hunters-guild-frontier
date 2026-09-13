@@ -496,7 +496,10 @@ describe('sending an expedition', () => {
     const outcome = commands.sendExpedition('verdant_reach', 'clear');
     if (!outcome.ok) throw new Error(outcome.error);
 
-    expect(session.resources.amount('gold')).toBe(before['gold']! + outcome.value.resources.gold);
+    // The gold reward lands, less what the Guild paid the hunters for the loot they carried home
+    // (REQ-CW-008/011; DL-076) — every earning here comes from this one expedition's sale.
+    const paidForLoot = outcome.value.party.members.reduce((sum, m) => sum + session.holdings.moneyOf(m.hunterId), 0);
+    expect(session.resources.amount('gold')).toBe(before['gold']! + outcome.value.resources.gold - paidForLoot);
     expect(session.resources.amount('materials')).toBe(before['materials']! + outcome.value.resources.materials);
     expect(session.resources.amount('food')).toBe(before['food']! + outcome.value.resources.food);
   });

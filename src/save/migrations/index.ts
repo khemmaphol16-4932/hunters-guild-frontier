@@ -543,6 +543,17 @@ const v27ToV28: Migration = {
   },
 };
 
+const v28ToV29: Migration = {
+  from: 28,
+  to: 29,
+  describe: 'each hunter carries personal money and loot (REQ-CW-008/011; DL-076)',
+  migrate(payload: unknown): unknown {
+    // Before v29 loot went straight to the guild armoury and hunters held no money, so every
+    // hunter starts with an empty purse and nothing carried.
+    return { ...asRecord(payload, 28), holdings: { holdings: [] } };
+  },
+};
+
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -571,6 +582,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v25ToV26,
   v26ToV27,
   v27ToV28,
+  v28ToV29,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

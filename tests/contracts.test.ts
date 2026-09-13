@@ -22,12 +22,15 @@ describe('contracts and factions (REQ-CON-001/REQ-FAC-001)', () => {
     const offer = h.commands.contractBoard().find((x) => x.offer.regionId === 'verdant_reach')!.offer;
     expect(h.commands.acceptContract(offer.offerId).ok).toBe(true);
     expect(h.commands.acceptContract(h.commands.contractBoard()[0]!.offer.offerId).ok).toBe(false);
-    const gold = h.session.resources.amount('gold');
+    const armouryBefore = h.session.armoury.all().length;
     const outcome = h.commands.sendExpedition(offer.regionId, offer.objective);
     expect(outcome.ok).toBe(true);
     expect(h.session.contracts.active()).toBeUndefined();
     if (outcome.ok && outcome.value.result.completed) {
-      expect(h.session.resources.amount('gold')).toBeGreaterThan(gold);
+      // The run pays off in loot the Guild buys into its armoury and money for the hunters, rather
+      // than only in gold — the Guild now buys the loot the party carries home (DL-076).
+      const earned = outcome.value.party.members.reduce((sum, m) => sum + h.session.holdings.moneyOf(m.hunterId), 0);
+      expect(h.session.armoury.all().length + earned).toBeGreaterThan(armouryBefore);
     }
   });
 

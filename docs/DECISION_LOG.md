@@ -1085,3 +1085,29 @@ the outcome the return produced.
 
 **Reversal.** Point both send methods back at `dispatch` (the instant path is untouched); drop
 `endlessObjectiveId`.
+
+## DL-076 — Personal carried loot, sold to the Guild on return
+
+**Ambiguity.** REQ-CW-008/011 give hunters personal money and carried loot: loot transfers to Guild
+storage only when sold, the Guild buys it on return, and if the Guild cannot pay the hunter keeps it
+and tries later. The price, the can't-pay behaviour, and the Red-zone loss chance were unset.
+
+**Decision (owner-approved 2026-09-13).** The Guild buys a returning hunter's loot at its **full sell
+value** (`Armoury.sellValue`), paying the hunter from the Guild ledger and taking the item into the
+armoury. When the Guild cannot afford an item the hunter **keeps it** and it is offered again on each
+later settle as the Guild's gold recovers. A **Red zone** claims a carried item on the way home with
+a small independent chance per item (`balance/loot.json` `carriedLoot.redZoneLossChance`, **0.1**). A
+hunter who **dies** loses the loot they were carrying; their equipped gear is the armoury's and
+stays. Money and carried loot live in a `HunterHoldings` system keyed by hunter id, apart from the
+`Hunter` value, so hunter creation and every `with*` helper are untouched; they leave with the hunter
+on death or retirement (a retiring hunter's carried loot is settled first). Save bumps to v29.
+
+**Why conservative.** It is the plainest reading of the requirement and reuses the existing
+`sellValue`, armoury and ledger. Full value keeps the Guild's *net worth* unchanged — gold becomes an
+item of equal value plus money in the hunter's pocket — rather than inventing a margin the spec does
+not describe; the money is a sink for the shops (REQ-CW-009) that come next. The change is local to
+the loot step of `applyDispatch` plus a retry pass in `passTime`; the two economy tests that assumed
+loot was free to the Guild were updated to account for the purchase.
+
+**Reversal.** Have the loot step call `armoury.addMany` again and drop `HunterHoldings`; v29 saves
+keep the `holdings` field harmlessly.
