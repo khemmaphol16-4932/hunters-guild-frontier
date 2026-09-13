@@ -100,7 +100,7 @@ still resolve synchronously into a replay.
 | # | Item | Lane | Owner | Status |
 |---|---|---|---|---|
 | 9 | Persistent journey/activity state owned by the simulation | Code | Claude | ✅ journeys, save v27 (DL-070) |
-| 10 | Travel, encounter, combat, return, recovery and selling advance on fixed ticks | Code | Claude | 🔨 travel and return on the tick (DL-070); recall mid-journey and "Send them" departs a journey (DL-071); standing orders on journeys (DL-073); slim journey saves (DL-072); node-by-node resolution designed (DL-074, one owner decision pending); carried loot next |
+| 10 | Travel, encounter, combat, return, recovery and selling advance on fixed ticks | Code | Claude | 🔨 travel and return on the tick (DL-070); recall mid-journey and "Send them" departs a journey (DL-071); standing orders on journeys (DL-073); slim journey saves (DL-072); node-by-node (DL-074): emergent-return UX approved by owner, resumable engine landed (`begin`/`stepNode`/`finalize`, byte-identical, tested); next: wire journeys to `stepNode` on the tick (save v28) then carried loot |
 | 11 | Region loading and camera observation as consumers of that state | Code | | ⬜ |
 | 12 | Keep seeded combat facts and the audit trail for off-screen fidelity | Code | | ⬜ |
 | 13 | Live observation primary; reports for history and missed events | Code | | ⬜ |
@@ -119,10 +119,13 @@ loot → physical return → sale to Guild → recovery. Art item 6 and code ite
 | 18 | The ten-step absence threshold for the live clock | DL-066 |
 | 19 | Add `sharp` as a dev dependency to re-export the two 3 MB PNGs (saves ~5.6 MB) | O-11 |
 | 20 | World-boss henchmen content | `world/worldBoss.json`, REQ-CW-013 |
-| 21 | Node-by-node resolution (DL-074) makes a journey's return time emergent: the field card shows a count-up "still out" phase before the countdown appears when the party turns home | DL-074 |
+| 21 | Node-by-node resolution (DL-074) makes a journey's return time emergent: the field card shows a count-up "still out" phase before the countdown appears when the party turns home | DL-074 — ✅ approved by the owner 2026-09-13 |
 
 ### Recently decided
 
+- **DL-074 emergent return approved (2026-09-13):** node-by-node resolution may make a journey's
+  return time emergent — the field card shows a count-up "still out" phase, then the countdown once
+  the party turns for home. Unblocks step 2's wiring.
 - **DL-068 approved (2026-09-12):** pixel art, not painterly; a true 2:1, 64 × 32 tile. The world
   scene now projects at `32`/`16`.
 - **DL-065:** no Pause — time runs at 1×, 2× or 4×.
