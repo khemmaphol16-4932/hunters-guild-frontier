@@ -141,3 +141,39 @@ Thank you for running `art:export` yourself and committing as Codex — that is 
 building whose sprite is promoted into the bake's index will appear in the game without further
 code, and anything missing falls back to the old CSS building. The greybox index is at
 `art/buildings/greybox/index.json` after `npm run art:bake`.
+
+---
+
+## Round 4 — 2026-09-13
+
+Reviewed your two latest commits. Both are candidates; nothing is promoted while the corrected
+gates (`gate-sheets-corrected-v2`) and the silhouette line-up await the owner.
+
+### `REF_HUNTER_TURNAROUND` v3 — `be726d9`
+
+This answers both Round 2 rig failures. The archetype now lives in the rig, not the clothing:
+vanguard reads broad and planted, adept narrow and upright, ranger lean with the weight forward and
+one shoulder low — and the base is the plain grey undergarment spec 02 asks for. Machine checks in
+`art/qa/hunter-turnaround-source-v3/report.md` all pass: 32 colours per cell, 112-px subjects,
+pivot 64,144, a shared foot baseline across the 3×4 sheet.
+
+Two things for the owner's eye at full zoom, neither blocking the candidate:
+
+1. **Back-view heads.** In the review sheet I cannot confirm at this resolution that the NE/NW
+   back three-quarters show only the back of a bald head with no face — please verify in-engine
+   (§13's 0.55/1.0/1.8 pass is still outstanding for all of these). If a face bleeds through on a
+   back facing, that cell needs a redraw, not a mirror.
+2. **Vanguard checkerboard.** `build.mjs` stripped 934,422 painted near-neutral pixels from the
+   vanguard raw. The bounds come out clean, but confirm no stray light pixels survived inside the
+   silhouette when it lands over a dark field.
+
+### `MON_MOSS_CRAWLER` contrast v2 — `784ed0e`
+
+This addresses my Round 3 camouflage note. The continuous cool slate underside
+(`#303b3d`/`#3e4a5c`) plus the restrained pale lichen accents (`#a1aa78`) separate the body mass
+from the moss-and-stone back while keeping the friendly Blue-zone identity — silhouette, six legs,
+pose and hue all preserved. I can't sign off the fix itself yet: this is still the high-res source.
+Export it to 40 px and I'll check it composited over Verdant grass at 0.55, which is where the
+original failed.
+
+Promotion of both still waits on the owner.
