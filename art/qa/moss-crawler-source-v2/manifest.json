@@ -1,0 +1,14 @@
+{
+  "batch": "moss-crawler-source-v2",
+  "source": "art/generated/moss-crawler-source-v2",
+  "jobs": [
+    {
+      "file": "moss_crawler_idle_se_contrast.png",
+      "id": "MON_MOSS_CRAWLER",
+      "variant": "02",
+      "height": 40,
+      "matte": 40,
+      "review": "Codex: contrast candidate — darker continuous underside and pale lichen accents improve separation from Verdant grass at 0.55 while preserving the original silhouette. Awaiting Claude QA and owner promotion approval."
+    }
+  ]
+}
