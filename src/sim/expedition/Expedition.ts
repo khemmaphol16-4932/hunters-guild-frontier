@@ -71,6 +71,11 @@ export interface RunOptions {
   readonly endless?: EndlessRunConfig;
   /** The boss on this route is the world boss (REQ-BOS-003); its kill is reported as one. */
   readonly worldBossId?: string;
+  /**
+   * The guild's recall (REQ-CW-010): once the party has worked this many nodes it turns for home
+   * before the next, whatever the Guild AI would have chosen. 0 turns it back before the first.
+   */
+  readonly recallAfterNodes?: number;
 }
 
 export interface NodeReport {
@@ -113,6 +118,11 @@ export interface ExpeditionResult {
   readonly objective: ObjectiveDef;
   readonly nodes: readonly NodeReport[];
   readonly reachedNode: number;
+  /**
+   * How many nodes the party actually worked. Not `reachedNode`, which is an index: a detour
+   * appends nodes with later indices and a shortcut skips some, so only this counts time spent.
+   */
+  readonly nodesEntered: number;
   readonly routeLength: number;
   readonly completed: boolean;
   readonly retreated: boolean;
@@ -293,6 +303,7 @@ export class Expedition {
     let wiped = false;
     let bossDefeated = false;
     let reached = 0;
+    let entered = 0;
 
     // A mutable walk rather than a for-of over a fixed array, because REQ-EXP-002's
     // branching means the route can change while it is being walked: an event that sends
@@ -355,6 +366,28 @@ export class Expedition {
         break;
       }
 
+      // REQ-CW-010: the guild's recall overrides the Guild AI. Checked at the same point as every
+      // other retreat — before entering — so the party finishes the node it was working and
+      // everything up to here is exactly the route it would have walked anyway.
+      if (options.recallAfterNodes !== undefined && entered >= options.recallAfterNodes) {
+        retreated = true;
+        decisions.push({
+          atNode: node.index,
+          choice: 'retreat',
+          explanation: 'The guild has recalled the party, and it turns for home.',
+          reasonCodes: [`node:${node.kind}`, 'order:recalled'],
+        });
+        reports.push({
+          node,
+          outcome: 'skipped',
+          xp: 0,
+          highlights: [],
+          encounterSeconds: 0,
+          partyHealth: partyHealthFraction([...combatants.values()]),
+        });
+        break;
+      }
+
       // Decide before entering, not after — the party turns back at the edge of a fight,
       // which is the only point at which turning back saves anyone.
       const decision = this.decideAtNode(node, [...combatants.values()], party.objective, tier);
@@ -373,6 +406,7 @@ export class Expedition {
       }
 
       reached = node.index + 1;
+      entered += 1;
 
       if (node.kind === 'rest') {
         const relief = this.deps.world.nodeKinds['rest']?.['fatigueRelief'] ?? 0.1;
@@ -562,6 +596,7 @@ export class Expedition {
       objective: party.objective,
       nodes: reports,
       reachedNode: reached,
+      nodesEntered: entered,
       routeLength: walk.length,
       completed,
       retreated: retreated || outOfTime,

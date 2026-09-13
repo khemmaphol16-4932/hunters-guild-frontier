@@ -136,6 +136,7 @@ A null object satisfies the compiler but proves nothing about whether the consum
 |---|---|---|
 | The route is resolved in full at departure | Nothing that happens in the world during a journey can change its outcome | Step 2: resolve node by node on the tick |
 | The whole `ExpeditionResult`, combat facts included, is stored in the save | A save grows by one expedition's worth of combat facts per party out; fine for a handful, not for many | Store only what apply and the replay need, or re-derive from the seed |
-| No mid-journey retreat | REQ-CW-010 is unmet for journeys; the Guild AI's in-route continue/retreat still works | The resolver gains "stop after node N" |
+| ~~No mid-journey retreat~~ | — | **done** (DL-071) — `recallJourney` re-runs from the journey's fork with a hard stop |
+| A recall re-runs the route against the guild as it stands | Town-wide changes during a journey (facility upgrades, mentor bonuses, items upgraded by id) reach the re-run; away hunters themselves are locked | Step 2's node-by-node resolution removes the re-run |
 | No personal carried loot | REQ-CW-008 and -011 are unmet; loot goes to the armoury on return | Hunter inventories, then sale to the Guild on return |
 | Expedition screen, standing orders, endless and world-boss runs use the instant path | Players cannot yet start a journey from the UI | Switch them to `departExpedition` |

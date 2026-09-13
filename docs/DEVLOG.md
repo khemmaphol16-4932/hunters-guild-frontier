@@ -891,3 +891,27 @@ personal carried loot do not exist yet, and the expedition screen and standing o
 instant path — all recorded in DL-070 as the next slices.
 
 **Verified:** 689 tests pass; TypeScript is clean.
+
+---
+
+# 2026-09-13 — Recalling a party mid-journey (DL-071)
+
+REQ-CW-010 for journeys. `recallJourney` orders a party home: one still walking out turns round
+where it stands, and one at a node finishes it and turns for home before the next. Because the route
+was resolved at the gate, the recall re-runs it from the journey's own seeded fork with a hard stop,
+`recallAfterNodes`, checked where every other retreat is checked. Everything up to the recall is the
+route the party was already walking.
+
+That only holds if the party is the party that left, so an away hunter is now out of reach of the
+town. Equipment, skills, books, attributes, respec, constellation nodes, rebirth, retirement and
+socketing all refuse while the hunter is on a journey.
+
+One quiet error was fixed on the way. The timetable counted time by `reachedNode`, which is an index,
+not a count: a detour appends nodes with later indices. `ExpeditionResult.nodesEntered` now counts the
+nodes actually worked, and journeys saved before it existed fall back to the old value on restore.
+
+A probe recalled a party one node short of its end on six seeds, after up to four town steps, and
+every node already worked was byte-identical each time. What is left is recorded in DL-071: changes to
+the guild as a whole during a journey still reach the re-run, a caveat that step 2 removes.
+
+**Verified:** 694 tests pass; TypeScript is clean.

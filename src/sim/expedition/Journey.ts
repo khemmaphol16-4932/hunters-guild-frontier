@@ -39,6 +39,8 @@ export interface JourneyRecord {
   readonly proposal: PartyProposal;
   /** Set when the journey was sent at a world boss, so its defeat is recorded on return. */
   readonly worldBoss?: WorldBossEvent;
+  /** Tick the guild ordered the party home (REQ-CW-010), when it did. */
+  readonly recalledAtTick?: number;
 }
 
 export interface JourneysSnapshot {
@@ -48,28 +50,47 @@ export interface JourneysSnapshot {
 
 /**
  * The timetable for a resolved route, in clock ticks. The party spends `stepsPerNode` at each node
- * it actually reached — a retreat or a wipe ends the route early, and the walk home starts from
+ * it actually worked — a retreat or a wipe ends the route early, and the walk home starts from
  * there. Balance is authored in town steps; a step is `ticksPerStep` clock ticks (the clock's
  * coarse step ratio), so this converts rather than adding steps to ticks.
  */
-export function timetable(departedAtTick: number, zoneTier: ZoneTier, nodesReached: number, balance: JourneyBalance, ticksPerStep: number): {
+export function timetable(departedAtTick: number, zoneTier: ZoneTier, nodesWorked: number, balance: JourneyBalance, ticksPerStep: number): {
   arrivesAtTick: number;
   turnsHomeAtTick: number;
   returnsAtTick: number;
 } {
   const travel = balance.travelSteps[zoneTier] * ticksPerStep;
   const arrivesAtTick = departedAtTick + travel;
-  const turnsHomeAtTick = arrivesAtTick + Math.max(1, nodesReached) * balance.stepsPerNode * ticksPerStep;
+  const turnsHomeAtTick = arrivesAtTick + Math.max(1, nodesWorked) * balance.stepsPerNode * ticksPerStep;
   return { arrivesAtTick, turnsHomeAtTick, returnsAtTick: turnsHomeAtTick + travel };
 }
 
 /** Where a journey is at a given tick — for presentation; the rules only care about `returnsAtTick`. */
 export function phaseAt(journey: JourneyRecord, tick: number): { phase: JourneyPhase; node: number } {
-  if (tick >= journey.returnsAtTick) return { phase: 'home', node: journey.result.reachedNode };
-  if (tick >= journey.turnsHomeAtTick) return { phase: 'inbound', node: journey.result.reachedNode };
+  const worked = journey.result.nodesEntered;
+  if (tick >= journey.returnsAtTick) return { phase: 'home', node: worked };
+  if (tick >= journey.turnsHomeAtTick) return { phase: 'inbound', node: worked };
   if (tick < journey.arrivesAtTick) return { phase: 'outbound', node: 0 };
-  const perNode = Math.max(1, (journey.turnsHomeAtTick - journey.arrivesAtTick) / Math.max(1, journey.result.reachedNode));
-  return { phase: 'working', node: Math.min(journey.result.reachedNode, 1 + Math.floor((tick - journey.arrivesAtTick) / perNode)) };
+  const perNode = Math.max(1, (journey.turnsHomeAtTick - journey.arrivesAtTick) / Math.max(1, worked));
+  return { phase: 'working', node: Math.min(worked, 1 + Math.floor((tick - journey.arrivesAtTick) / perNode)) };
+}
+
+/**
+ * The timetable after a recall at `tick` (REQ-CW-010). A party still walking out turns round
+ * where it stands and walks back the ground it covered; a party at a node finishes that node and
+ * then walks the whole way home. `nodesWorked` is the recalled route's count, from the re-run.
+ */
+export function recallTimetable(journey: JourneyRecord, tick: number, nodesWorked: number, perNodeTicks: number): {
+  arrivesAtTick: number;
+  turnsHomeAtTick: number;
+  returnsAtTick: number;
+} {
+  const travel = journey.arrivesAtTick - journey.departedAtTick;
+  if (tick < journey.arrivesAtTick) {
+    return { arrivesAtTick: tick, turnsHomeAtTick: tick, returnsAtTick: tick + Math.max(0, tick - journey.departedAtTick) };
+  }
+  const turnsHomeAtTick = journey.arrivesAtTick + Math.max(1, nodesWorked) * perNodeTicks;
+  return { arrivesAtTick: journey.arrivesAtTick, turnsHomeAtTick, returnsAtTick: turnsHomeAtTick + travel };
 }
 
 export class Journeys {
@@ -89,6 +110,11 @@ export class Journeys {
 
   get(id: string): JourneyRecord | undefined {
     return this.active.find((j) => j.id === id);
+  }
+
+  /** Swap a journey for its revised record — a recall changes the route's end and the timetable. */
+  revise(journey: JourneyRecord): void {
+    this.active = this.active.map((j) => (j.id === journey.id ? journey : j));
   }
 
   /** Whether a hunter is out on a journey right now. */
@@ -116,7 +142,10 @@ export class Journeys {
   }
 
   restore(snapshot: JourneysSnapshot | undefined): void {
-    this.active = [...(snapshot?.active ?? [])];
+    // Journeys saved before `nodesEntered` existed (v27, before recall) counted nodes by index.
+    this.active = (snapshot?.active ?? []).map((j) =>
+      j.result.nodesEntered === undefined ? { ...j, result: { ...j.result, nodesEntered: j.result.reachedNode } } : j,
+    );
     this.next = snapshot?.next ?? 1;
   }
 }

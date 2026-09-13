@@ -56,7 +56,7 @@ describe('journeys (DL-070)', () => {
     }
     expect(journey.departedAtTick).toBe(tick);
     const ratio = h.session.clock.coarseStepRatio;
-    const expected = timetable(tick, 'blue', journey.result.reachedNode, h.session.content.journey, ratio);
+    const expected = timetable(tick, 'blue', journey.result.nodesEntered, h.session.content.journey, ratio);
     expect(journey.returnsAtTick).toBe(expected.returnsAtTick);
     expect(phaseAt(journey, tick).phase).toBe('outbound');
     expect(phaseAt(journey, journey.returnsAtTick).phase).toBe('home');
@@ -130,5 +130,76 @@ describe('journeys (DL-070)', () => {
     stepUntilHome(straight);
     stepUntilHome(fresh);
     expect(snapshotOf(fresh, b.value.hunterIds)).toEqual(snapshotOf(straight, a.value.hunterIds));
+  });
+});
+
+describe('recalling a journey (REQ-CW-010, DL-071)', () => {
+  /** Depart and walk until the party is working its first node, with more ahead of it. */
+  function atFirstNode(seed = 'journey-seed') {
+    const h = founded(seed);
+    const res = h.commands.departExpedition('verdant_reach', 'clear');
+    if (!res.ok) throw new Error(res.error);
+    const journey = res.value;
+    const ratio = h.session.clock.coarseStepRatio;
+    h.commands.passTime((journey.arrivesAtTick - journey.departedAtTick) / ratio);
+    return { h, journey };
+  }
+
+  it('keep every node already worked exactly as it was, and give up only the rest', () => {
+    const { h, journey } = atFirstNode();
+    expect(journey.result.nodesEntered).toBeGreaterThan(1);
+    expect(phaseAt(journey, h.session.clock.tick)).toEqual({ phase: 'working', node: 1 });
+    const res = h.commands.recallJourney(journey.id);
+    if (!res.ok) throw new Error(res.error);
+    const recalled = res.value;
+    expect(recalled.result.nodesEntered).toBe(1);
+    expect(JSON.stringify(recalled.result.nodes[0])).toBe(JSON.stringify(journey.result.nodes[0]));
+    expect(recalled.result.retreated).toBe(true);
+    expect(recalled.result.decisions.at(-1)?.reasonCodes).toContain('order:recalled');
+    expect(recalled.returnsAtTick).toBeLessThan(journey.returnsAtTick);
+    for (const id of recalled.hunterIds) expect(h.session.roster.require(id).availability.readyAtTick).toBe(recalled.returnsAtTick);
+  });
+
+  it('bring home a party still walking out, over the ground it covered, with nothing gained', () => {
+    const h = founded();
+    const res = h.commands.departExpedition('verdant_reach', 'clear');
+    if (!res.ok) throw new Error(res.error);
+    const recalled = h.commands.recallJourney(res.value.id);
+    if (!recalled.ok) throw new Error(recalled.error);
+    expect(recalled.value.result.nodesEntered).toBe(0);
+    expect(recalled.value.returnsAtTick).toBe(h.session.clock.tick);
+    h.commands.passTime(1);
+    expect(h.session.journeys.all()).toHaveLength(0);
+    for (const id of res.value.hunterIds) expect(h.session.roster.require(id).xp).toBe(0);
+  });
+
+  it('refuse a recall that changes nothing', () => {
+    const { h, journey } = atFirstNode();
+    const ratio = h.session.clock.coarseStepRatio;
+    h.commands.passTime((journey.turnsHomeAtTick - h.session.clock.tick) / ratio);
+    expect(h.commands.recallJourney(journey.id).ok).toBe(false);
+    expect(h.commands.recallJourney('journey-999').ok).toBe(false);
+  });
+
+  it('land the same on return offline as live', () => {
+    const live = atFirstNode();
+    const offline = atFirstNode();
+    const a = live.h.commands.recallJourney(live.journey.id);
+    const b = offline.h.commands.recallJourney(offline.journey.id);
+    if (!a.ok || !b.ok) throw new Error('recall failed');
+    const steps = (a.value.returnsAtTick - live.h.session.clock.tick) / live.h.session.clock.coarseStepRatio + 2;
+    for (let i = 0; i < steps; i++) live.h.commands.passTime(1);
+    offline.h.commands.passTime(steps, { offline: true });
+    expect(snapshotOf(offline.h, b.value.hunterIds)).toEqual(snapshotOf(live.h, a.value.hunterIds));
+  });
+
+  it('keep an away hunter out of reach of the armoury and the Mentor Hall', () => {
+    const { h, journey } = atFirstNode();
+    const id = journey.hunterIds[0]!;
+    for (const res of [h.commands.unequipSlot(id, 'weapon'), h.commands.respec(id), h.commands.retireHunter(id)]) {
+      expect(res.ok).toBe(false);
+    }
+    const away = h.commands.unequipSlot(id, 'weapon');
+    if (!away.ok) expect(away.error).toMatch(/away on an expedition/);
   });
 });

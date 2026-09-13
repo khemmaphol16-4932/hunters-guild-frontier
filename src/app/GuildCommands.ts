@@ -46,7 +46,7 @@ import type { RefineResult } from '../systems/items/Refinement.js';
 import { REASON } from '../core/audit.js';
 import type { ObjectiveId, PartyProposal } from '../systems/party/Party.js';
 import type { ExpeditionResult } from '../sim/expedition/Expedition.js';
-import { timetable, type JourneyRecord } from '../sim/expedition/Journey.js';
+import { phaseAt, recallTimetable, timetable, type JourneyRecord } from '../sim/expedition/Journey.js';
 import type { KnowledgeTier, RegionDef as WorldRegionDef } from '../data/combatSchema.js';
 import { KNOWLEDGE_TIERS } from '../data/combatSchema.js';
 import type { Rotation, TownDepartmentId } from '../data/townSchema.js';
@@ -126,6 +126,8 @@ export class GuildCommands {
   }
 
   retireHunter(hunterId: HunterId): Result<MentorProfile, string> {
+    const away = this.awayError(hunterId);
+    if (away) return away;
     if (!this.session.legacy.has('mentor_hall')) return err('the Mentor Hall Legacy unlock is required');
     const hunter = this.session.roster.get(hunterId);
     if (!hunter) return err(`unknown hunter ${hunterId}`);
@@ -418,6 +420,8 @@ export class GuildCommands {
 
   /** Spend every remaining point on one attribute. */
   spendAllOn(hunterId: HunterId, attribute: AttributeKey): Result<Hunter, string> {
+    const away = this.awayError(hunterId);
+    if (away) return away;
     const hunter = this.session.roster.require(hunterId);
     const balance = this.session.content.balance.attributes;
     const spent = ATTRIBUTE_KEYS.reduce(
@@ -447,6 +451,8 @@ export class GuildCommands {
    * no source anywhere in the game.
    */
   respec(hunterId: HunterId): Result<Hunter, string> {
+    const away = this.awayError(hunterId);
+    if (away) return away;
     const hunter = this.session.roster.require(hunterId);
     const price = this.respecPrice(hunterId);
     if (price.amount > 0) {
@@ -461,6 +467,8 @@ export class GuildCommands {
 
   /** Rebegin one hunter's journey without resetting the guild (§10, DL-054). */
   rebirth(hunterId: HunterId, awakenedTraitId?: string): Result<Hunter, string> {
+    const away = this.awayError(hunterId);
+    if (away) return away;
     const hunter = this.session.roster.require(hunterId);
     const rules = this.session.content.progression.rebirth;
     const nextRank = (hunter.rebirths ?? 0) + 1;
@@ -516,6 +524,8 @@ export class GuildCommands {
    * SkillKnowledge and lets the Constellation adjudicate eligibility.
    */
   takeNode(hunterId: HunterId, nodeId: string, useRebirthBypass = false): Result<Hunter, string> {
+    const away = this.awayError(hunterId);
+    if (away) return away;
     const hunter = this.session.roster.require(hunterId);
 
     const node = this.session.constellation.node(nodeId);
@@ -551,6 +561,8 @@ export class GuildCommands {
   }
 
   equipSkill(hunterId: HunterId, skillId: string): Result<Hunter, string> {
+    const away = this.awayError(hunterId);
+    if (away) return away;
     const hunter = this.session.roster.require(hunterId);
     const node = this.session.constellation.nodeForSkill(skillId);
     if (node) {
@@ -565,6 +577,8 @@ export class GuildCommands {
   }
 
   unequipSkill(hunterId: HunterId, skillId: string): Result<Hunter, string> {
+    const away = this.awayError(hunterId);
+    if (away) return away;
     const hunter = this.session.roster.require(hunterId);
     const result = this.session.knowledge.unequip(hunter, asSkillId(skillId));
     if (isErr(result)) return result;
@@ -574,6 +588,8 @@ export class GuildCommands {
 
   /** Learn from a skill book — subject to class compatibility (REQ-CLS-004). */
   learnFromBook(hunterId: HunterId, skillId: string): Result<Hunter, string> {
+    const away = this.awayError(hunterId);
+    if (away) return away;
     const hunter = this.session.roster.require(hunterId);
     const book = this.session.books.bookFor(asSkillId(skillId));
     if (isErr(book)) return book;
@@ -629,6 +645,8 @@ export class GuildCommands {
    * hunters' sheets disagreeing about who has the sword.
    */
   equipItem(hunterId: HunterId, itemId: string): Result<Hunter, string> {
+    const away = this.awayError(hunterId);
+    if (away) return away;
     const hunter = this.session.roster.require(hunterId);
     const id = asItemId(itemId);
 
@@ -645,6 +663,8 @@ export class GuildCommands {
   }
 
   unequipSlot(hunterId: HunterId, slot: EquipmentSlot): Result<Hunter, string> {
+    const away = this.awayError(hunterId);
+    if (away) return away;
     const hunter = this.session.roster.require(hunterId);
     const result = this.session.equipment.unequip(hunter, slot);
     if (isErr(result)) return result;
@@ -772,6 +792,7 @@ export class GuildCommands {
    * Convenience over `socketCard`, honouring the same compatibility rules.
    */
   socketWhatFits(hunterId: HunterId): number {
+    if (this.session.journeys.isAway(hunterId)) return 0;
     const hunter = this.session.roster.require(hunterId);
     let socketed = 0;
 
@@ -903,7 +924,7 @@ export class GuildCommands {
     if (isErr(plan)) return plan;
     const { region, proposal, result } = plan.value;
     const tick = this.session.clock.tick;
-    const times = timetable(tick, region.zoneTier, result.reachedNode, this.session.content.journey, this.session.clock.coarseStepRatio);
+    const times = timetable(tick, region.zoneTier, result.nodesEntered, this.session.content.journey, this.session.clock.coarseStepRatio);
     const journey = this.session.journeys.depart({
       regionId,
       hunterIds: proposal.members.map((m) => m.hunterId),
@@ -928,6 +949,62 @@ export class GuildCommands {
       inputs: { objective: proposal.objective.id, returnsAtTick: journey.returnsAtTick },
     });
     return ok(journey);
+  }
+
+  /**
+   * Order a party home (REQ-CW-010, DL-071). The recall overrides the Guild AI: a party still
+   * walking out turns round where it stands; a party at a node finishes that node and turns for
+   * home before the next.
+   *
+   * The route is re-run from the journey's own seeded fork with the recall as a hard stop, so
+   * everything up to the recall is the route the party was already walking — the same fights, the
+   * same draws — and only what it would have done afterwards is given up. Hunters who are away
+   * cannot be re-geared, retrained or retired (`awayError`), which is what keeps that re-run
+   * faithful to the departure.
+   */
+  recallJourney(journeyId: string): Result<JourneyRecord, string> {
+    const journey = this.session.journeys.get(journeyId);
+    if (!journey) return err(`no party is out on "${journeyId}"`);
+    const tick = this.session.clock.tick;
+    const where = phaseAt(journey, tick);
+    if (where.phase === 'inbound' || where.phase === 'home') return err('the party is already on its way home');
+    const worked = where.phase === 'outbound' ? 0 : where.node;
+    if (worked >= journey.result.nodesEntered) return err('the party turns for home after this stop anyway');
+
+    const baseRegion = this.session.content.worldRegionsById.get(journey.regionId);
+    if (!baseRegion) return err(`unknown region "${journey.regionId}"`);
+    const region = journey.worldBoss ? { ...baseRegion, boss: journey.worldBoss.bossId } : baseRegion;
+    const rng = this.session.streams.expedition.fork(`${journey.regionId}:${journey.departedAtTick}`);
+    const result = this.session.expedition.run(rng, region, journey.proposal, {
+      recallAfterNodes: worked,
+      ...(journey.worldBoss ? { worldBossId: journey.worldBoss.bossId } : {}),
+    });
+    const perNodeTicks = this.session.content.journey.stepsPerNode * this.session.clock.coarseStepRatio;
+    const revised: JourneyRecord = { ...journey, ...recallTimetable(journey, tick, result.nodesEntered, perNodeTicks), result, recalledAtTick: tick };
+    this.session.journeys.revise(revised);
+    for (const id of revised.hunterIds) {
+      const hunter = this.session.roster.get(id);
+      if (hunter) this.session.roster.update(withAvailability(hunter, { ...hunter.availability, readyAtTick: revised.returnsAtTick }));
+    }
+    this.session.audit.record({
+      actor: { kind: 'player' },
+      system: 'expedition',
+      sourceEvent: journey.id,
+      outcome: `recalled the party from ${region.name} after ${worked} of ${journey.result.nodesEntered} stops`,
+      reasonCodes: ['journey_recalled', `region:${journey.regionId}`],
+      inputs: { returnsAtTick: revised.returnsAtTick },
+    });
+    return ok(revised);
+  }
+
+  /**
+   * A hunter out on a journey is in the field: nothing in town can re-gear, retrain or retire
+   * them until they are home (DL-071). Undefined when the hunter is here.
+   */
+  private awayError(hunterId: HunterId): Result<never, string> | undefined {
+    if (!this.session.journeys.isAway(hunterId)) return undefined;
+    const name = this.session.roster.get(hunterId)?.name ?? hunterId;
+    return err(`${name} is away on an expedition`);
   }
 
   /** Apply every journey that is home by now, exactly as the instant path would have (DL-070). */

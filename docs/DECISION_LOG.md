@@ -844,7 +844,7 @@ resumes to the identical result. The instant path keeps working unchanged.
 **Not done yet, and why.** This is step 1 of five, not the continuous world.
 - The route is still resolved in full at the gate. The world during the journey — a new threat, a
   retreat order — cannot change it yet. That is step 2: resolving node by node on the tick.
-- Mid-journey retreat (REQ-CW-010) needs the resolver to stop after a given node; it is the next slice.
+- Mid-journey retreat (REQ-CW-010) needs the resolver to stop after a given node. Done in DL-071.
 - Personal carried loot (REQ-CW-008, -011) does not exist on hunters yet; loot still goes to the
   armoury on return.
 - The expedition screen, standing orders, endless runs and world-boss runs still use the instant
@@ -854,3 +854,41 @@ PENDING APPROVAL: the journey timings in `balance/journey.json`.
 
 **Reversal.** Remove `departExpedition` and the journey registry; `sendExpedition` never stopped
 working. Saves at v27 migrate forward only, so a reversal keeps the `journeys` field and ignores it.
+
+## DL-071 — Recalling a party mid-journey, and an away hunter is out of reach
+
+**Ambiguity.** REQ-CW-010 says a retreat overrides automatic engagement. A journey's route is
+resolved in full at the gate (DL-070), so a recall has nothing to stop: the result already contains
+the nodes after it. Re-running the route is the obvious fix, but a re-run only reproduces the nodes
+already worked if the party is exactly the party that left.
+
+**Decision.** `recallJourney` re-runs the route from the journey's own seeded fork — the fork is
+derived from the region and the departure tick, not from how far the parent stream has advanced — with
+a new `RunOptions.recallAfterNodes` as a hard stop. The stop is checked where every retreat is, before
+entering a node, so a party at a node finishes it and turns home before the next, and a party still
+walking out turns round where it stands and walks back the ground it covered. The re-run replaces the
+journey's result and timetable. The hunters' `readyAtTick` follows it.
+
+To keep that re-run faithful, **a hunter who is away cannot be changed from town**: equipping and
+unequipping, skills, books, attribute spending, respec, constellation nodes, rebirth, retirement and
+socketing all refuse with "…is away on an expedition" (`awayError`). That is the fiction as well as
+the safeguard — the armoury cannot reach a hunter three regions away.
+
+`ExpeditionResult` gains `nodesEntered`, the number of nodes actually worked. The timetable and
+`phaseAt` count time by it rather than by `reachedNode`, which is an index: a detour appends nodes
+with later indices and a shortcut skips some, so an index is not a count. Journeys saved at v27
+before this field existed are given `reachedNode` in its place on restore.
+
+**Evidence.** Five tests: the recalled route keeps its first node byte-identical and gives up the
+rest; a party recalled on its way out comes home with nothing gained; a recall that changes nothing
+is refused; a recalled party lands the same offline as live; and an away hunter is refused by the
+armoury, respec and the Mentor Hall. A probe recalled a party one node short of its end on six seeds,
+after up to four town steps had passed, and every node already worked was identical each time.
+
+**Not done yet.** Town-wide changes during a journey — a facility upgrade, a mentor bonus, an item
+upgraded by item id — still reach the re-run, because they are the guild's and not the hunter's. None
+changes a node already worked in the current content, but the guarantee is by test, not by
+construction. Resolving node by node on the tick (step 2) removes the re-run and the caveat with it.
+
+**Reversal.** Remove `recallJourney`, `recallAfterNodes` and the guards; `nodesEntered` is harmless
+to keep.
