@@ -745,3 +745,73 @@ describe('a standing order outranks the route decision too', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// The resumable engine (DL-074): stepping the route one stop at a time, with the
+// run state round-tripped through JSON between every stop, produces byte-for-byte
+// the same result as running it in one shot. This is what lets a journey resolve
+// node by node on the tick and survive a save mid-route.
+// ---------------------------------------------------------------------------
+
+describe('resumable expedition engine (DL-074)', () => {
+  function fixture(seed: string) {
+    const { session, debug } = testSession(seed);
+    stockGuild(session, debug);
+    return session;
+  }
+
+  /** Run the route one stop at a time, JSON round-tripping the state before every step. */
+  function stepwise(
+    session: ReturnType<typeof fixture>,
+    seed: string,
+    region: Parameters<typeof session.expedition.run>[1],
+    party: Parameters<typeof session.expedition.run>[2],
+    options: Parameters<typeof session.expedition.run>[3] = {},
+  ) {
+    const exp = session.expedition;
+    let state = JSON.parse(JSON.stringify(exp.begin(createRng(seed), region, party, options)));
+    for (let guard = 0; guard < 1000; guard++) {
+      const signal = exp.stepNode(state, region, party, options);
+      state = JSON.parse(JSON.stringify(state));
+      if (signal === 'done') return exp.finalize(state, region, party, options);
+    }
+    throw new Error('stepwise run did not finish');
+  }
+
+  const SCENARIOS: readonly {
+    readonly name: string;
+    readonly regionId: string;
+    readonly objective: 'clear' | 'survive' | 'slay';
+    readonly options?: (s: ReturnType<typeof fixture>) => Parameters<ReturnType<typeof fixture>['expedition']['run']>[3];
+  }[] = [
+    { name: 'blue clear', regionId: 'verdant_reach', objective: 'clear' },
+    { name: 'lethal survive', regionId: 'ashfall_barrows', objective: 'survive' },
+    { name: 'boss slay', regionId: 'ashfall_barrows', objective: 'slay' },
+    {
+      name: 'endless',
+      regionId: 'verdant_reach',
+      objective: 'clear',
+      options: (s) => ({ endless: { maxDepth: s.content.endless.maxDepth, statsPerDepth: s.content.endless.statsPerDepth } }),
+    },
+    { name: 'recalled after one node', regionId: 'verdant_reach', objective: 'clear', options: () => ({ recallAfterNodes: 1 }) },
+  ];
+
+  for (const scenario of SCENARIOS) {
+    it(`resolves ${scenario.name} identically stepwise and one-shot, across seeds`, () => {
+      let sawMultiNode = false;
+      for (let i = 0; i < 24; i++) {
+        const seed = `${scenario.name}-${i}`;
+        const session = fixture(seed);
+        const region = session.content.worldRegionsById.get(scenario.regionId)!;
+        const party = session.partyPlanner.propose(session.roster.all(), scenario.objective);
+        const options = scenario.options?.(session) ?? {};
+        const oneShot = session.expedition.run(createRng(seed), region, party, options);
+        const stepped = stepwise(session, seed, region, party, options);
+        expect(JSON.stringify(stepped)).toBe(JSON.stringify(oneShot));
+        if (oneShot.nodes.length > 1) sawMultiNode = true;
+      }
+      // Guard against a vacuous pass where every route ended at its first stop.
+      expect(sawMultiNode).toBe(true);
+    });
+  }
+});

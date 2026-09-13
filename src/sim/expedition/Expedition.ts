@@ -25,7 +25,8 @@ import type {
 } from '../../data/combatSchema.js';
 import type { CombatBalance, StatusDef } from '../../data/combatSchema.js';
 import type { SkillDef } from '../../data/schema.js';
-import type { Rng } from '../../core/rng.js';
+import type { Rng, RngState } from '../../core/rng.js';
+import { rngFromState } from '../../core/rng.js';
 import type { HunterId } from '../../core/ids.js';
 import type { Combatant } from '../../core/combat/Combatant.js';
 import { healthFraction } from '../../core/combat/Combatant.js';
@@ -157,6 +158,60 @@ export interface ResolvedEvent {
   readonly atNode: number;
 }
 
+/**
+ * A party member's state as it carries between nodes. Everything else about a combatant —
+ * threat, statuses, cooldowns, target, position — is reset at the start of each fight, so only
+ * these fields survive a node boundary. The combatant is rebuilt by `combatantFor` on resume and
+ * re-dressed with these, which is byte-identical to carrying the same object through.
+ */
+export interface RunCombatantState {
+  readonly hunterId: HunterId;
+  health: number;
+  resource: number;
+  dead: boolean;
+  downed: boolean;
+  downedRemaining: number;
+}
+
+/**
+ * The full, serialisable state of an expedition suspended at a node boundary (DL-074). It holds
+ * the RNG's four-word state, the route as walked so far (branches and detours included), the
+ * cursor, the party's carried combatant state, and every accumulator the final result is built
+ * from. `begin` produces it, `stepNode` advances it one stop, `finalize` turns it into an
+ * `ExpeditionResult`. It is plain data throughout — Maps are stored as records keyed by hunter id —
+ * so it round-trips through JSON and resumes on exactly the same sequence.
+ */
+export interface ExpeditionRunState {
+  rng: RngState;
+  walk: RouteNode[];
+  cursor: number;
+  readonly members: readonly HunterId[];
+  combatants: RunCombatantState[];
+  reports: NodeReport[];
+  decisions: ExpeditionDecision[];
+  events: ResolvedEvent[];
+  downedCounts: Record<string, number>;
+  xpEarned: Record<string, number>;
+  lootRolls: number;
+  retreated: boolean;
+  wiped: boolean;
+  bossDefeated: boolean;
+  reached: number;
+  entered: number;
+  depth: number;
+  depthsCleared: number;
+  elapsedSeconds: number;
+  outOfTime: boolean;
+  endedByEvent: boolean;
+  extraLoot: number;
+  fatigueFromEvents: number;
+  moraleFromEvents: number;
+  reputation: number;
+  ambushNext: boolean;
+  /** Set once the route has ended — the party has turned for home. */
+  done: boolean;
+}
+
 export interface ExpeditionDecision {
   readonly atNode: number;
   readonly choice: 'continue' | 'retreat' | 'commit';
@@ -282,102 +337,201 @@ export class Expedition {
    * continue-or-retreat decision real rather than cosmetic.
    */
   run(rng: Rng, region: RegionDef, party: PartyProposal, options: RunOptions = {}): ExpeditionResult {
-    const tier = this.deps.world.zoneTiers[region.zoneTier];
-    const nodes = this.route(rng, region);
-    const endless = options.endless;
-    let depth = 0;
-    let depthsCleared = 0;
-    const reports: NodeReport[] = [];
-    const decisions: ExpeditionDecision[] = [];
-    const events: ResolvedEvent[] = [];
+    const state = this.begin(rng, region, party, options);
+    while (this.stepNode(state, region, party, options) === 'continue') {
+      // One node per step; the loop drives the whole route to its end.
+    }
+    return this.finalize(state, region, party, options);
+  }
 
-    const combatants = new Map<HunterId, Combatant>();
-    for (const member of party.members) {
-      combatants.set(member.hunterId, this.deps.combatantFor(member.hunterId));
+  /**
+   * Draw the route and build the party, producing a run suspended before its first stop (DL-074).
+   * Consumes `rng` for the route draw only; every later draw runs from the state stored in the
+   * returned `ExpeditionRunState`, so the run can be stepped, saved and resumed on the same
+   * sequence. A mutable `walk` (rather than a fixed array) is what lets REQ-EXP-002's branching
+   * change the route while it is walked: an event may add nodes or skip some.
+   */
+  begin(rng: Rng, region: RegionDef, party: PartyProposal, _options: RunOptions = {}): ExpeditionRunState {
+    const nodes = this.route(rng, region);
+    const members = party.members.map((m) => m.hunterId);
+    const combatants = members.map((id) => sliceOf(this.deps.combatantFor(id), id));
+    return {
+      rng: rng.state(),
+      walk: [...nodes],
+      cursor: 0,
+      members,
+      combatants,
+      reports: [],
+      decisions: [],
+      events: [],
+      downedCounts: {},
+      xpEarned: {},
+      lootRolls: 0,
+      retreated: false,
+      wiped: false,
+      bossDefeated: false,
+      reached: 0,
+      entered: 0,
+      depth: 0,
+      depthsCleared: 0,
+      elapsedSeconds: 0,
+      outOfTime: false,
+      endedByEvent: false,
+      extraLoot: 0,
+      fatigueFromEvents: 0,
+      moraleFromEvents: 0,
+      reputation: 0,
+      ambushNext: false,
+      done: false,
+    };
+  }
+
+  /**
+   * Advance a suspended run by exactly one stop — one iteration of the route walk. Returns
+   * `'continue'` while there is more route to walk and `'done'` once the party has turned for
+   * home (`state.done` is then set and `finalize` may be called). The RNG and the party's carried
+   * combatant state are read from and written back to `state`, so the next call resumes on exactly
+   * the same sequence, even across a save. This is one iteration of the former monolithic loop.
+   */
+  stepNode(state: ExpeditionRunState, region: RegionDef, party: PartyProposal, options: RunOptions = {}): 'continue' | 'done' {
+    const tier = this.deps.world.zoneTiers[region.zoneTier];
+    const endless = options.endless;
+    const rng = rngFromState(state.rng);
+    const combatants = this.rebuildCombatants(state);
+
+    const save = (): void => {
+      state.rng = rng.state();
+      state.combatants = [...combatants.values()].map((c) => sliceOf(c, c.hunterId as HunterId));
+    };
+    const finish = (): 'done' => {
+      save();
+      state.done = true;
+      return 'done';
+    };
+    const advance = (by: number): 'continue' => {
+      save();
+      state.cursor += by;
+      return 'continue';
+    };
+
+    // REQ-END-002: an endless run does not end with its route. Each time one is behind the party,
+    // the next is laid down one depth deeper; the same continue-or-retreat decision governs it.
+    if (state.cursor >= state.walk.length) {
+      if (!endless || state.depth + 1 >= endless.maxDepth) {
+        if (endless) state.depthsCleared = state.depth + 1;
+        return finish();
+      }
+      state.depth += 1;
+      state.depthsCleared = state.depth;
+      const deeper = this.route(rng, region).map((next, i) => ({
+        ...next,
+        index: state.walk.length + i,
+        depth: state.depth,
+        label: `Depth ${state.depth + 1}: ${next.label}`,
+      }));
+      state.walk.push(...deeper);
+    }
+    const node = state.walk[state.cursor];
+    if (!node) return finish();
+
+    const living = [...combatants.values()].filter((c) => !c.dead);
+    if (living.length === 0) {
+      state.wiped = true;
+      return finish();
     }
 
-    const downedCounts = new Map<HunterId, number>();
-    const xpEarned = new Map<HunterId, number>();
-    let lootRolls = 0;
-    let retreated = false;
-    let wiped = false;
-    let bossDefeated = false;
-    let reached = 0;
-    let entered = 0;
+    // REQ-EXP-003 caps an expedition at ten minutes, checked before entering a node so the party
+    // is never sent into a fight it has no time to finish.
+    if (state.elapsedSeconds >= this.deps.balance.maxExpeditionSeconds) {
+      state.outOfTime = true;
+      state.decisions.push({
+        atNode: node.index,
+        choice: 'retreat',
+        explanation:
+          `The party is out of daylight after ` +
+          `${Math.round(state.elapsedSeconds / 60)} minutes and turns for home.`,
+        reasonCodes: [`node:${node.kind}`, 'out_of_time'],
+      });
+      return finish();
+    }
 
-    // A mutable walk rather than a for-of over a fixed array, because REQ-EXP-002's
-    // branching means the route can change while it is being walked: an event that sends
-    // the party the long way round adds nodes, one that pushes them deeper skips some.
-    const walk = [...nodes];
-    let cursor = 0;
-    /** Elapsed expedition time, against REQ-EXP-003's ten-minute cap. */
-    let elapsedSeconds = 0;
-    let outOfTime = false;
-    let endedByEvent = false;
-    let extraLoot = 0;
-    let fatigueFromEvents = 0;
-    let moraleFromEvents = 0;
-    let reputation = 0;
-    let ambushNext = false;
+    // REQ-CW-010: the guild's recall overrides the Guild AI, checked at the same point as any
+    // retreat — before entering — so everything up to here is the route it would have walked.
+    if (options.recallAfterNodes !== undefined && state.entered >= options.recallAfterNodes) {
+      state.retreated = true;
+      state.decisions.push({
+        atNode: node.index,
+        choice: 'retreat',
+        explanation: 'The guild has recalled the party, and it turns for home.',
+        reasonCodes: [`node:${node.kind}`, 'order:recalled'],
+      });
+      state.reports.push({
+        node,
+        outcome: 'skipped',
+        xp: 0,
+        highlights: [],
+        encounterSeconds: 0,
+        partyHealth: partyHealthFraction([...combatants.values()]),
+      });
+      return finish();
+    }
 
-    for (; ; cursor++) {
-      // REQ-END-002: an endless run does not end with its route. Each time the party walks a
-      // route to the end, the next one is laid down one depth deeper, and the same
-      // continue-or-retreat decision that governs every node decides whether they take it.
-      // The ten-minute cap (REQ-EXP-003) still applies, which is what makes depth a record.
-      if (cursor >= walk.length) {
-        if (!endless || depth + 1 >= endless.maxDepth) {
-          if (endless) depthsCleared = depth + 1;
-          break;
-        }
-        depth += 1;
-        depthsCleared = depth;
-        const deeper = this.route(rng, region).map((next, i) => ({
-          ...next,
-          index: walk.length + i,
-          depth,
-          label: `Depth ${depth + 1}: ${next.label}`,
-        }));
-        walk.push(...deeper);
+    // Decide before entering, not after — the party turns back at the edge of a fight, which is
+    // the only point at which turning back saves anyone.
+    const decision = this.decideAtNode(node, [...combatants.values()], party.objective, tier);
+    state.decisions.push(decision);
+    if (decision.choice === 'retreat') {
+      state.retreated = true;
+      state.reports.push({
+        node,
+        outcome: 'skipped',
+        xp: 0,
+        highlights: [],
+        encounterSeconds: 0,
+        partyHealth: partyHealthFraction([...combatants.values()]),
+      });
+      return finish();
+    }
+
+    state.reached = node.index + 1;
+    state.entered += 1;
+
+    if (node.kind === 'rest') {
+      const relief = this.deps.world.nodeKinds['rest']?.['fatigueRelief'] ?? 0.1;
+      for (const c of combatants.values()) {
+        if (c.dead) continue;
+        c.health = Math.min(c.maxHealth, c.health + Math.round(c.maxHealth * relief * 2));
+        c.resource = c.maxResource;
       }
-      const node = walk[cursor];
-      if (!node) break;
+      state.reports.push({
+        node,
+        outcome: 'rested',
+        xp: 0,
+        highlights: [],
+        encounterSeconds: 0,
+        partyHealth: partyHealthFraction([...combatants.values()]),
+      });
+      return advance(1);
+    }
 
-      const living = [...combatants.values()].filter((c) => !c.dead);
-      if (living.length === 0) {
-        wiped = true;
-        break;
-      }
+    if (node.kind === 'discovery') {
+      state.lootRolls += this.deps.world.nodeKinds['discovery']?.['lootRolls'] ?? 1;
+      state.elapsedSeconds += 30;
+      state.reports.push({
+        node,
+        outcome: 'found',
+        xp: 0,
+        highlights: [],
+        encounterSeconds: 0,
+        partyHealth: partyHealthFraction([...combatants.values()]),
+      });
+      return advance(1);
+    }
 
-      // REQ-EXP-003 caps an expedition at ten minutes. Checked before entering a node
-      // rather than after, so the party is never sent into a fight it has no time to
-      // finish — a cap that stops the clock mid-encounter would leave the run's outcome
-      // depending on where the tick landed.
-      if (elapsedSeconds >= this.deps.balance.maxExpeditionSeconds) {
-        outOfTime = true;
-        decisions.push({
-          atNode: node.index,
-          choice: 'retreat',
-          explanation:
-            `The party is out of daylight after ` +
-            `${Math.round(elapsedSeconds / 60)} minutes and turns for home.`,
-          reasonCodes: [`node:${node.kind}`, 'out_of_time'],
-        });
-        break;
-      }
-
-      // REQ-CW-010: the guild's recall overrides the Guild AI. Checked at the same point as every
-      // other retreat — before entering — so the party finishes the node it was working and
-      // everything up to here is exactly the route it would have walked anyway.
-      if (options.recallAfterNodes !== undefined && entered >= options.recallAfterNodes) {
-        retreated = true;
-        decisions.push({
-          atNode: node.index,
-          choice: 'retreat',
-          explanation: 'The guild has recalled the party, and it turns for home.',
-          reasonCodes: [`node:${node.kind}`, 'order:recalled'],
-        });
-        reports.push({
+    if (node.kind === 'event') {
+      const resolved = this.resolveEvent(rng, node, [...combatants.values()], party.objective);
+      if (!resolved) {
+        state.reports.push({
           node,
           outcome: 'skipped',
           xp: 0,
@@ -385,192 +539,151 @@ export class Expedition {
           encounterSeconds: 0,
           partyHealth: partyHealthFraction([...combatants.values()]),
         });
-        break;
+        return advance(1);
       }
 
-      // Decide before entering, not after — the party turns back at the edge of a fight,
-      // which is the only point at which turning back saves anyone.
-      const decision = this.decideAtNode(node, [...combatants.values()], party.objective, tier);
-      decisions.push(decision);
-      if (decision.choice === 'retreat') {
-        retreated = true;
-        reports.push({
-          node,
-          outcome: 'skipped',
-          xp: 0,
-          highlights: [],
-          encounterSeconds: 0,
-          partyHealth: partyHealthFraction([...combatants.values()]),
-        });
-        break;
-      }
+      const { event, option, decision: eventDecision } = resolved;
+      state.decisions.push(eventDecision);
 
-      reached = node.index + 1;
-      entered += 1;
+      const fx = option.effects;
+      state.extraLoot += fx.lootRolls ?? 0;
+      state.fatigueFromEvents += fx.fatigue ?? 0;
+      state.moraleFromEvents += fx.morale ?? 0;
+      state.reputation += fx.reputation ?? 0;
+      state.elapsedSeconds += fx.seconds ?? 30;
+      if (fx.ambush === true) state.ambushNext = true;
 
-      if (node.kind === 'rest') {
-        const relief = this.deps.world.nodeKinds['rest']?.['fatigueRelief'] ?? 0.1;
+      if (fx.heal !== undefined) {
         for (const c of combatants.values()) {
           if (c.dead) continue;
-          c.health = Math.min(c.maxHealth, c.health + Math.round(c.maxHealth * relief * 2));
+          c.health = Math.min(c.maxHealth, c.health + Math.round(c.maxHealth * fx.heal));
           c.resource = c.maxResource;
         }
-        reports.push({
-          node,
-          outcome: 'rested',
-          xp: 0,
-          highlights: [],
-          encounterSeconds: 0,
-          partyHealth: partyHealthFraction([...combatants.values()]),
-        });
-        continue;
       }
 
-      if (node.kind === 'discovery') {
-        lootRolls += this.deps.world.nodeKinds['discovery']?.['lootRolls'] ?? 1;
-        elapsedSeconds += 30;
-        reports.push({
-          node,
-          outcome: 'found',
-          xp: 0,
-          highlights: [],
-          encounterSeconds: 0,
-          partyHealth: partyHealthFraction([...combatants.values()]),
-        });
-        continue;
+      // The branching itself. Extra nodes are drawn from the same region pool, so the long way
+      // round is a real detour rather than a label; a shortcut skips ahead.
+      if (fx.extraNodes !== undefined && fx.extraNodes > 0) {
+        const inserted = this.extraNodes(rng, region, fx.extraNodes, state.walk.length);
+        state.walk.splice(state.cursor + 1, 0, ...inserted);
       }
+      const skip = fx.skipNodes !== undefined && fx.skipNodes > 0 ? fx.skipNodes : 0;
 
-      if (node.kind === 'event') {
-        const resolved = this.resolveEvent(rng, node, [...combatants.values()], party.objective);
-        if (!resolved) {
-          reports.push({
-            node,
-            outcome: 'skipped',
-            xp: 0,
-            highlights: [],
-            encounterSeconds: 0,
-            partyHealth: partyHealthFraction([...combatants.values()]),
-          });
-          continue;
-        }
-
-        const { event, option, decision } = resolved;
-        decisions.push(decision);
-
-        const fx = option.effects;
-        extraLoot += fx.lootRolls ?? 0;
-        fatigueFromEvents += fx.fatigue ?? 0;
-        moraleFromEvents += fx.morale ?? 0;
-        reputation += fx.reputation ?? 0;
-        elapsedSeconds += fx.seconds ?? 30;
-        if (fx.ambush === true) ambushNext = true;
-
-        if (fx.heal !== undefined) {
-          for (const c of combatants.values()) {
-            if (c.dead) continue;
-            c.health = Math.min(c.maxHealth, c.health + Math.round(c.maxHealth * fx.heal));
-            c.resource = c.maxResource;
-          }
-        }
-
-        // The branching itself. Extra nodes are drawn from the same region pool, so the
-        // long way round is a real detour rather than a label.
-        if (fx.extraNodes !== undefined && fx.extraNodes > 0) {
-          const inserted = this.extraNodes(rng, region, fx.extraNodes, walk.length);
-          walk.splice(cursor + 1, 0, ...inserted);
-        }
-        if (fx.skipNodes !== undefined && fx.skipNodes > 0) {
-          cursor += fx.skipNodes;
-        }
-
-        events.push({ eventId: event.id, optionId: option.id, atNode: node.index });
-        reports.push({
-          node,
-          outcome: 'resolved',
-          xp: 0,
-          highlights: [],
-          encounterSeconds: 0,
-          partyHealth: partyHealthFraction([...combatants.values()]),
-        });
-
-        if (fx.endsExpedition === true) {
-          endedByEvent = true;
-          break;
-        }
-        continue;
-      }
-
-      const result = this.fight(rng, node, combatants, region, party.objective, ambushNext, endless, options.worldBossId);
-      ambushNext = false;
-      elapsedSeconds += result.elapsedSeconds + 20;
-
-      for (const c of combatants.values()) {
-        if (c.downed) downedCounts.set(c.hunterId as HunterId, (downedCounts.get(c.hunterId as HunterId) ?? 0) + 1);
-      }
-
-      // XP is split across everyone who was still standing when the fight started; a hunter
-      // who went down still learns from it, one who was already dead does not.
-      const share = living.length > 0 ? Math.round(result.xp / living.length) : 0;
-      for (const c of living) {
-        const id = c.hunterId;
-        if (id) xpEarned.set(id, (xpEarned.get(id) ?? 0) + share);
-      }
-
-      reports.push({
+      state.events.push({ eventId: event.id, optionId: option.id, atNode: node.index });
+      state.reports.push({
         node,
-        outcome: NODE_OUTCOME[result.outcome],
-        xp: result.xp,
-        highlights: result.log.filter((e) => e.highlight),
-        encounterSeconds: Math.round(result.elapsedSeconds * 10) / 10,
+        outcome: 'resolved',
+        xp: 0,
+        highlights: [],
+        encounterSeconds: 0,
         partyHealth: partyHealthFraction([...combatants.values()]),
-        story: tellStory(result.facts, result.outcome, result.elapsedSeconds),
-        facts: result.facts,
       });
 
-      if (result.outcome === 'victory') {
-        lootRolls += node.kind === 'boss' ? 3 : 1;
-        if (node.kind === 'boss') bossDefeated = true;
-        // Survivors of a won fight get back up; the run continues with them wounded.
-        for (const c of combatants.values()) {
-          if (c.downed && !c.dead) {
-            c.downed = false;
-            c.health = Math.max(1, Math.round(c.maxHealth * this.deps.balance.downed.reviveHealthFraction));
-          }
-        }
-      } else if (result.outcome === 'defeat') {
-        wiped = true;
-        break;
-      } else {
-        // Withdrawal or stalemate. The party is alive and the route is over — treating
-        // either as a wipe would kill hunters who broke off precisely to avoid dying,
-        // which inverts the meaning of the decision they just made.
-        retreated = true;
-        break;
+      if (fx.endsExpedition === true) {
+        state.endedByEvent = true;
+        return finish();
       }
+      return advance(1 + skip);
     }
+
+    const result = this.fight(rng, node, combatants, region, party.objective, state.ambushNext, endless, options.worldBossId);
+    state.ambushNext = false;
+    state.elapsedSeconds += result.elapsedSeconds + 20;
+
+    for (const c of combatants.values()) {
+      if (c.downed) state.downedCounts[c.hunterId as HunterId] = (state.downedCounts[c.hunterId as HunterId] ?? 0) + 1;
+    }
+
+    // XP is split across everyone still standing when the fight started; a hunter who went down
+    // still learns from it, one already dead does not.
+    const share = living.length > 0 ? Math.round(result.xp / living.length) : 0;
+    for (const c of living) {
+      const id = c.hunterId;
+      if (id) state.xpEarned[id] = (state.xpEarned[id] ?? 0) + share;
+    }
+
+    state.reports.push({
+      node,
+      outcome: NODE_OUTCOME[result.outcome],
+      xp: result.xp,
+      highlights: result.log.filter((e) => e.highlight),
+      encounterSeconds: Math.round(result.elapsedSeconds * 10) / 10,
+      partyHealth: partyHealthFraction([...combatants.values()]),
+      story: tellStory(result.facts, result.outcome, result.elapsedSeconds),
+      facts: result.facts,
+    });
+
+    if (result.outcome === 'victory') {
+      state.lootRolls += node.kind === 'boss' ? 3 : 1;
+      if (node.kind === 'boss') state.bossDefeated = true;
+      // Survivors of a won fight get back up; the run continues with them wounded.
+      for (const c of combatants.values()) {
+        if (c.downed && !c.dead) {
+          c.downed = false;
+          c.health = Math.max(1, Math.round(c.maxHealth * this.deps.balance.downed.reviveHealthFraction));
+        }
+      }
+      return advance(1);
+    } else if (result.outcome === 'defeat') {
+      state.wiped = true;
+      return finish();
+    }
+    // Withdrawal or stalemate. The party is alive and the route is over — treating either as a
+    // wipe would kill hunters who broke off precisely to avoid dying.
+    state.retreated = true;
+    return finish();
+  }
+
+  /** Rebuild the live combatant map from the carried state: a fresh combatant re-dressed. */
+  private rebuildCombatants(state: ExpeditionRunState): Map<HunterId, Combatant> {
+    const combatants = new Map<HunterId, Combatant>();
+    for (const id of state.members) {
+      const c = this.deps.combatantFor(id);
+      const s = state.combatants.find((x) => x.hunterId === id);
+      if (s) {
+        c.health = s.health;
+        c.resource = s.resource;
+        c.dead = s.dead;
+        c.downed = s.downed;
+        c.downedRemaining = s.downedRemaining;
+      }
+      combatants.set(id, c);
+    }
+    return combatants;
+  }
+
+  /** Build the final result from a run that has turned for home (DL-074). */
+  finalize(state: ExpeditionRunState, region: RegionDef, party: PartyProposal, options: RunOptions = {}): ExpeditionResult {
+    const tier = this.deps.world.zoneTiers[region.zoneTier];
+    const endless = options.endless;
+    const combatants = this.rebuildCombatants(state);
+    const {
+      reports, decisions, events, downedCounts, xpEarned, lootRolls, retreated, wiped,
+      bossDefeated, reached, entered, depth, depthsCleared, elapsedSeconds, outOfTime,
+      endedByEvent, extraLoot, fatigueFromEvents, moraleFromEvents, reputation, walk,
+    } = state;
 
     const aftermath = party.members.map((member) => {
       const c = combatants.get(member.hunterId);
       const nodeCount = Math.max(1, reached);
 
-      // A hunter left down when the party was broken is lost, and so is one whose downed
-      // timer ran out mid-fight. The first case matters more than it looks: an encounter
-      // ends the moment the last hunter falls, so nobody's timer *can* expire in a wipe —
-      // relying on it alone would mean no hunter ever died, anywhere.
+      // A hunter left down when the party was broken is lost, and so is one whose downed timer
+      // ran out mid-fight. The first case matters more than it looks: an encounter ends the
+      // moment the last hunter falls, so nobody's timer *can* expire in a wipe.
       const lost = (c?.dead ?? false) || (wiped && (c?.downed ?? false));
 
-      // REQ-ZON-001: what a zone is *allowed* to do to a hunter is the zone's property, not
-      // the encounter's. A hunter lost in a BLUE zone comes home tired instead.
+      // REQ-ZON-001: what a zone is *allowed* to do is the zone's property. A hunter lost in a
+      // BLUE zone comes home tired instead.
       const died = lost && tier.canKill;
       const injured = !died && (lost || (c?.downed ?? false)) && tier.canInjure;
 
       return {
         hunterId: member.hunterId,
         survived: !died,
-        downedCount: downedCounts.get(member.hunterId) ?? 0,
+        downedCount: downedCounts[member.hunterId] ?? 0,
         died,
         injured,
-        xp: xpEarned.get(member.hunterId) ?? 0,
+        xp: xpEarned[member.hunterId] ?? 0,
         fatigueAdded: Math.min(
           1,
           Math.max(0, nodeCount * FATIGUE_PER_NODE * (wiped ? 1.5 : 1) + fatigueFromEvents),
@@ -581,15 +694,12 @@ export class Expedition {
     });
 
     const totalXp = reports.reduce((sum, r) => sum + r.xp, 0);
-    // An event that ends the run ends it *successfully* — carrying a stranger out is a
-    // completed expedition, not an abandoned one. Running out of daylight is neither a
-    // completion nor a retreat by choice, so it gets its own flag rather than being
-    // squeezed into one of theirs.
-    // An endless run has no end to reach; it counts as completed once a full route is behind
-    // the party and they came home.
+    // An event that ends the run ends it *successfully*. Running out of daylight is neither a
+    // completion nor a retreat by choice, so it gets its own flag. An endless run counts as
+    // completed once a full route is behind the party and they came home.
     const completed = endless
       ? depthsCleared >= 1 && !wiped
-      : endedByEvent || (!retreated && !wiped && !outOfTime && cursor >= walk.length);
+      : endedByEvent || (!retreated && !wiped && !outOfTime && state.cursor >= walk.length);
 
     return {
       regionId: region.id,
@@ -609,8 +719,8 @@ export class Expedition {
       elapsedSeconds: Math.round(elapsedSeconds),
       outOfTime,
       reputation,
-      // REQ-WLD-001: what the guild learned, whatever the outcome. A party wiped at the
-      // first node still learned that the first node is there.
+      // REQ-WLD-001: what the guild learned, whatever the outcome. A party wiped at the first
+      // node still learned that the first node is there.
       learned: {
         nodeKinds: [...new Set(reports.map((r) => r.node.kind))].sort(),
         monsters: [...new Set(reports.flatMap((r) => r.node.monsters))].sort(),
@@ -949,6 +1059,18 @@ function partyHealthFraction(party: readonly Combatant[]): number {
   const total = party.reduce((sum, c) => sum + c.maxHealth, 0);
   if (total === 0) return 0;
   return party.reduce((sum, c) => sum + Math.max(0, c.health), 0) / total;
+}
+
+/** The slice of a combatant's state that carries between nodes (DL-074). */
+function sliceOf(c: Combatant, id: HunterId): RunCombatantState {
+  return {
+    hunterId: id,
+    health: c.health,
+    resource: c.resource,
+    dead: c.dead,
+    downed: c.downed,
+    downedRemaining: c.downedRemaining,
+  };
 }
 
 function percent(value: number): string {

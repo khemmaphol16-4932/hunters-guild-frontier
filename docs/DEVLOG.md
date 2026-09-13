@@ -977,3 +977,31 @@ Endless and world-boss runs are still instant: each returns an outcome straight 
 a record or a one-off event, so each is its own change (DL-073 records what is left for them).
 
 **Verified:** 699 tests pass (1 skipped); TypeScript is clean; the production build succeeds.
+
+---
+
+# 2026-09-13 — A resumable expedition engine (DL-074, step 2 foundation)
+
+The owner blessed the emergent-return-time UX (board item 21), so step 2 begins. This is its
+foundation: `Expedition.run` is split into `begin` / `stepNode` / `finalize` over a serialisable
+`ExpeditionRunState`. `begin` draws the route and builds the party; `stepNode` is one iteration of
+the former loop — the endless depth-extension, the time cap, the decide-or-retreat, the
+rest/discovery/event branch with its walk splice and skip, or the fight — reading the RNG and the
+party's carried combatant state from the state object and writing them back; `finalize` is the
+aftermath and summary. `run` is now `begin` then `stepNode` until done then `finalize`, so the
+one-shot path is unchanged and every existing expedition test still holds.
+
+The state is plain data throughout: the RNG's four-word `RngState`, the walk (branches included),
+the cursor, each member's `{ health, resource, dead, downed, downedRemaining }` (all that carries a
+node boundary — a fight resets everything else at its start), and every accumulator, with the Maps
+stored as records keyed by hunter id. A combatant is rebuilt by `combatantFor` and re-dressed with
+its slice on resume, which is byte-identical to carrying the same object through.
+
+The proof is a new test: for five scenarios (blue clear, lethal survive, boss slay, endless, a
+recall after one node) across 24 seeds each, the route is stepped one stop at a time with the state
+round-tripped through JSON before every step, and the result is asserted byte-for-byte equal to
+one-shot `run`. Nothing wired yet — journeys still resolve at departure. Next: a journey carries a
+`RunState` and `stepNode`s on the tick; recall becomes a flag; the return time turns emergent; save
+v28.
+
+**Verified:** 704 tests pass (1 skipped); TypeScript is clean; the production build succeeds.
