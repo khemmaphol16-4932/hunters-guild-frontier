@@ -1005,3 +1005,36 @@ one-shot `run`. Nothing wired yet — journeys still resolve at departure. Next:
 v28.
 
 **Verified:** 704 tests pass (1 skipped); TypeScript is clean; the production build succeeds.
+
+---
+
+# 2026-09-13 — Journeys resolve stop by stop on the tick (DL-074 Stage B)
+
+Step 2 is wired. A `JourneyRecord` now carries a resumable `run` instead of a finished result;
+`departExpedition` resolves nothing at the gate, only fixing `arrivesAtTick`. `passTime` splits its
+chunk at the next journey event — a stop being reached or a party coming home (`nextEventTick`) — and
+`advanceJourneys` steps each party through the stops whose time has come, resolving each against the
+guild as it is at that tick. `completeJourneys` calls `Expedition.finalize` on return.
+
+The return time is now emergent: `turnsHomeAtTick`/`returnsAtTick` are set only when the party turns
+for home, because the number of stops it works is not known until it works them. The field card
+counts the stops *up* while the party is out ("At stop 3 … still out") and shows the countdown only
+once it has turned home — the owner-approved UX (board item 21). A stop resolves the moment the party
+*reaches* it, which lands the turn-for-home on its own tick so the walk home is a phase the player
+sees.
+
+Recall no longer re-runs the route from the seed (DL-071's caveat is gone by construction): it sets
+`run.recalled`, the next step takes the retreat branch, and every stop already worked — resolved live
+against the guild at its own tick — stands untouched. A mid-journey town change can no longer reach a
+stop the party already worked.
+
+Save bumps to v28. A v27 in-flight journey has a finished result and a fixed return; it migrates as a
+party already turning home, its result kept as `legacyResult` and applied unchanged, so no old save's
+outcome changes (two migration tests). The journey suite was rewritten for the emergent model: a
+journey whose guild does not change resolves the same route as the instant path (compared after it
+comes home), the field card counts up then down, and a recall keeps every worked stop.
+
+Because a working party forces `passTime` to land on each node boundary, offline catch-up with a
+party in the field advances a step at a time there — correct, and the same path live play takes.
+
+**Verified:** 706 tests pass (1 skipped); TypeScript is clean; the production build succeeds.

@@ -44,7 +44,7 @@ import type { WorldEventsSnapshot } from '../systems/world/WorldEvents.js';
 import type { FriendshipSnapshot } from '../systems/hunter/Friendship.js';
 import type { StandingOrdersSnapshot } from '../systems/guild/StandingOrders.js';
 
-export const CURRENT_SAVE_VERSION = 27;
+export const CURRENT_SAVE_VERSION = 28;
 
 export interface SaveEnvelope {
   readonly version: number;
@@ -229,7 +229,9 @@ export interface SavePayloadV25 extends SavePayloadV24 { readonly standingOrders
 /** v26 — per-hunter rebirth rank and permanent journey rewards. */
 export interface SavePayloadV26 extends SavePayloadV25 {}
 export interface SavePayloadV27 extends SavePayloadV26 { readonly journeys: JourneysSnapshot }
-export type CurrentSavePayload = SavePayloadV27;
+/** v28 — a journey resolves node by node and carries a resumable run, not a finished result (DL-074). */
+export interface SavePayloadV28 extends SavePayloadV27 {}
+export type CurrentSavePayload = SavePayloadV28;
 
 export interface Migration {
   readonly from: number;

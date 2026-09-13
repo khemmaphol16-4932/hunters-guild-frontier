@@ -208,6 +208,12 @@ export interface ExpeditionRunState {
   moraleFromEvents: number;
   reputation: number;
   ambushNext: boolean;
+  /**
+   * Set by a guild recall (REQ-CW-010, DL-074): the next `stepNode` takes the retreat branch
+   * before entering another node, so the party turns for home. This is the live equivalent of the
+   * `recallAfterNodes` run option, which the one-shot path still uses.
+   */
+  recalled: boolean;
   /** Set once the route has ended — the party has turned for home. */
   done: boolean;
 }
@@ -382,6 +388,7 @@ export class Expedition {
       moraleFromEvents: 0,
       reputation: 0,
       ambushNext: false,
+      recalled: false,
       done: false,
     };
   }
@@ -456,8 +463,9 @@ export class Expedition {
     }
 
     // REQ-CW-010: the guild's recall overrides the Guild AI, checked at the same point as any
-    // retreat — before entering — so everything up to here is the route it would have walked.
-    if (options.recallAfterNodes !== undefined && state.entered >= options.recallAfterNodes) {
+    // retreat — before entering — so everything up to here is the route it would have walked. The
+    // live journey path sets `state.recalled`; the one-shot path passes `recallAfterNodes`.
+    if (state.recalled || (options.recallAfterNodes !== undefined && state.entered >= options.recallAfterNodes)) {
       state.retreated = true;
       state.decisions.push({
         atNode: node.index,

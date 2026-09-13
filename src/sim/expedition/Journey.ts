@@ -1,22 +1,22 @@
 /**
  * Journeys — expeditions that take time in the world (CONTINUOUS_WORLD_ARCHITECTURE.md
- * §Migration, step 1; DL-070).
+ * §Migration; DL-070, DL-074).
  *
  * A journey is a party out in the world: travelling out, working through the nodes of its route,
  * and travelling home, on the simulation clock. It is state the simulation owns and the save
  * keeps, so a journey survives a reload and runs the same way offline as live (REQ-OFF-002).
  *
- * The rules engine is unchanged. The route is resolved at departure by the same deterministic
- * `Expedition.run` the instant path uses, from the same seeded fork, so a journey's outcome is
- * exactly the outcome the instant path would have produced. What changes is *when* it lands: the
- * consequences are applied on the step the party walks back through the gate, not the step it
- * left. Nothing here reads a wall clock.
+ * Step 2 (DL-074): the route is no longer resolved in full at the gate. The party carries a
+ * resumable `ExpeditionRunState` and resolves each stop as it reaches it, against the guild as it
+ * is at that tick. Because the number of stops it works is only known as it works them, the return
+ * time is *emergent*: `turnsHomeAtTick` and `returnsAtTick` are set the moment the party turns for
+ * home, not at departure. `arrivesAtTick` is fixed at the gate. Nothing here reads a wall clock.
  */
 
 import type { ZoneTier } from '../../data/combatSchema.js';
 import type { JourneyBalance } from '../../data/journeySchema.js';
 import type { HunterId } from '../../core/ids.js';
-import type { ExpeditionResult, NodeReport } from './Expedition.js';
+import type { ExpeditionResult, ExpeditionRunState, NodeReport } from './Expedition.js';
 import type { PartyProposal } from '../../systems/party/Party.js';
 import type { WorldBossEvent } from '../../systems/world/WorldEvents.js';
 
@@ -27,14 +27,23 @@ export interface JourneyRecord {
   readonly regionId: string;
   readonly hunterIds: readonly HunterId[];
   readonly departedAtTick: number;
-  /** Tick the party reaches the first node. */
+  /** Tick the party reaches the first node and begins working the route. Fixed at the gate. */
   readonly arrivesAtTick: number;
-  /** Tick the party leaves the last node it reached and turns for home. */
-  readonly turnsHomeAtTick: number;
-  /** Tick the party walks back through the gate and its consequences land. */
-  readonly returnsAtTick: number;
-  /** The resolved route, from the deterministic rules engine at departure. */
-  readonly result: ExpeditionResult;
+  /**
+   * The resumable run: the route as walked so far, the party's carried state, and every
+   * accumulator. Resolved a stop at a time by `Expedition.stepNode` (DL-074). Absent only for a
+   * journey migrated from a v27 save, which carries a `legacyResult` instead.
+   */
+  readonly run?: ExpeditionRunState;
+  /**
+   * A v27 in-flight journey resolved its whole route at the gate. On migration its finished result
+   * is kept here and applied on return unchanged, so no old save's outcome changes.
+   */
+  readonly legacyResult?: ExpeditionResult;
+  /** Tick the party turns for home — set when the route ends (emergent). Undefined while working. */
+  readonly turnsHomeAtTick?: number;
+  /** Tick the party walks back through the gate and its consequences land. Emergent, as above. */
+  readonly returnsAtTick?: number;
   /** The party as it left: who went, in what formation, for what objective. */
   readonly proposal: PartyProposal;
   /** Set when the journey was sent at a world boss, so its defeat is recorded on return. */
@@ -49,12 +58,11 @@ export interface JourneysSnapshot {
 }
 
 /**
- * A node report stripped of its presentation-only replay data. The combat `facts`, the `story`
- * and the per-fight `highlights` are read only by the route-replay UI and never feed back into
- * the rules (`GuildCommands.applyDispatch` reads none of them), so an in-flight journey does not
- * carry them in the save — they are the bulk of a stored result (per-second samples, damage and
- * healing maps, skill tallies). A journey interrupted by a save/reload still lands its exact
- * consequences on return; only the blow-by-blow of its replay is thinned to the per-node outcome.
+ * A node report stripped of its presentation-only replay data (DL-072). The combat `facts`, the
+ * `story` and the per-fight `highlights` are read only by the route-replay UI and never feed back
+ * into the rules, so an in-flight journey does not carry them in the save — they are the bulk of a
+ * stored run. A journey interrupted by a save/reload still lands its exact consequences on return;
+ * only the blow-by-blow of its replay is thinned to the per-node outcome.
  */
 function slimNodeForSave(report: NodeReport): NodeReport {
   return {
@@ -67,53 +75,71 @@ function slimNodeForSave(report: NodeReport): NodeReport {
   };
 }
 
+function slimRunForSave(run: ExpeditionRunState): ExpeditionRunState {
+  return { ...run, reports: run.reports.map(slimNodeForSave) };
+}
+
 function slimResultForSave(result: ExpeditionResult): ExpeditionResult {
   return { ...result, nodes: result.nodes.map(slimNodeForSave) };
 }
 
+/** Travel time to a region, each way, in clock ticks. Riskier regions lie further from the gate. */
+export function travelTicks(zoneTier: ZoneTier, balance: JourneyBalance, ticksPerStep: number): number {
+  return balance.travelSteps[zoneTier] * ticksPerStep;
+}
+
+/** How long the party spends working one node, in clock ticks. */
+export function perNodeTicks(balance: JourneyBalance, ticksPerStep: number): number {
+  return balance.stepsPerNode * ticksPerStep;
+}
+
+/** The tick a party reaches its first node, fixed at departure. */
+export function arrivalTick(departedAtTick: number, zoneTier: ZoneTier, balance: JourneyBalance, ticksPerStep: number): number {
+  return departedAtTick + travelTicks(zoneTier, balance, ticksPerStep);
+}
+
 /**
- * The timetable for a resolved route, in clock ticks. The party spends `stepsPerNode` at each node
- * it actually worked — a retreat or a wipe ends the route early, and the walk home starts from
- * there. Balance is authored in town steps; a step is `ticksPerStep` clock ticks (the clock's
- * coarse step ratio), so this converts rather than adding steps to ticks.
+ * The turn-home and return ticks for a party that has worked `nodesWorked` nodes and is turning
+ * for home from its route. Computed from `arrivesAtTick` and the count — never from the tick the
+ * turn was *detected* — so a party comes home on the same step offline as live (REQ-OFF-002).
  */
-export function timetable(departedAtTick: number, zoneTier: ZoneTier, nodesWorked: number, balance: JourneyBalance, ticksPerStep: number): {
-  arrivesAtTick: number;
+export function turnHomeFromRoute(arrivesAtTick: number, nodesWorked: number, travel: number, perNode: number): {
   turnsHomeAtTick: number;
   returnsAtTick: number;
 } {
-  const travel = balance.travelSteps[zoneTier] * ticksPerStep;
-  const arrivesAtTick = departedAtTick + travel;
-  const turnsHomeAtTick = arrivesAtTick + Math.max(1, nodesWorked) * balance.stepsPerNode * ticksPerStep;
-  return { arrivesAtTick, turnsHomeAtTick, returnsAtTick: turnsHomeAtTick + travel };
+  const turnsHomeAtTick = arrivesAtTick + Math.max(1, nodesWorked) * perNode;
+  return { turnsHomeAtTick, returnsAtTick: turnsHomeAtTick + travel };
 }
 
-/** Where a journey is at a given tick — for presentation; the rules only care about `returnsAtTick`. */
+/**
+ * The turn-home and return ticks for a party recalled while still walking out, before it reached
+ * a node (REQ-CW-010). It turns round where it stands and walks back the ground it covered.
+ */
+export function turnHomeWalkingOut(departedAtTick: number, tick: number): {
+  turnsHomeAtTick: number;
+  returnsAtTick: number;
+} {
+  return { turnsHomeAtTick: tick, returnsAtTick: tick + Math.max(0, tick - departedAtTick) };
+}
+
+/** The nodes a journey has worked so far — from its live run, or the migrated legacy result. */
+export function nodesWorkedSoFar(journey: JourneyRecord): number {
+  return journey.run ? journey.run.entered : (journey.legacyResult?.nodesEntered ?? 0);
+}
+
+/**
+ * Where a journey is at a given tick — for presentation; the rules only care about `returnsAtTick`.
+ * While the party is still working, the return time is not yet known, so the node counts *up* (the
+ * stops it has worked) rather than down; the countdown appears once it has turned for home (DL-074).
+ */
 export function phaseAt(journey: JourneyRecord, tick: number): { phase: JourneyPhase; node: number } {
-  const worked = journey.result.nodesEntered;
-  if (tick >= journey.returnsAtTick) return { phase: 'home', node: worked };
-  if (tick >= journey.turnsHomeAtTick) return { phase: 'inbound', node: worked };
+  const worked = nodesWorkedSoFar(journey);
+  if (journey.returnsAtTick !== undefined && tick >= journey.returnsAtTick) return { phase: 'home', node: worked };
+  if (journey.turnsHomeAtTick !== undefined && tick >= journey.turnsHomeAtTick) return { phase: 'inbound', node: worked };
   if (tick < journey.arrivesAtTick) return { phase: 'outbound', node: 0 };
-  const perNode = Math.max(1, (journey.turnsHomeAtTick - journey.arrivesAtTick) / Math.max(1, worked));
-  return { phase: 'working', node: Math.min(worked, 1 + Math.floor((tick - journey.arrivesAtTick) / perNode)) };
-}
-
-/**
- * The timetable after a recall at `tick` (REQ-CW-010). A party still walking out turns round
- * where it stands and walks back the ground it covered; a party at a node finishes that node and
- * then walks the whole way home. `nodesWorked` is the recalled route's count, from the re-run.
- */
-export function recallTimetable(journey: JourneyRecord, tick: number, nodesWorked: number, perNodeTicks: number): {
-  arrivesAtTick: number;
-  turnsHomeAtTick: number;
-  returnsAtTick: number;
-} {
-  const travel = journey.arrivesAtTick - journey.departedAtTick;
-  if (tick < journey.arrivesAtTick) {
-    return { arrivesAtTick: tick, turnsHomeAtTick: tick, returnsAtTick: tick + Math.max(0, tick - journey.departedAtTick) };
-  }
-  const turnsHomeAtTick = journey.arrivesAtTick + Math.max(1, nodesWorked) * perNodeTicks;
-  return { arrivesAtTick: journey.arrivesAtTick, turnsHomeAtTick, returnsAtTick: turnsHomeAtTick + travel };
+  // Working: a stop resolves the moment the party reaches it (DL-074), so the count worked is the
+  // stop it is on.
+  return { phase: 'working', node: worked };
 }
 
 export class Journeys {
@@ -135,7 +161,7 @@ export class Journeys {
     return this.active.find((j) => j.id === id);
   }
 
-  /** Swap a journey for its revised record — a recall changes the route's end and the timetable. */
+  /** Swap a journey for its revised record — stepping a stop or a recall changes its run and times. */
   revise(journey: JourneyRecord): void {
     this.active = this.active.map((j) => (j.id === journey.id ? journey : j));
   }
@@ -145,9 +171,19 @@ export class Journeys {
     return this.active.some((j) => j.hunterIds.includes(hunterId));
   }
 
-  /** The soonest return still ahead, so time can be split exactly at it. */
-  nextReturnTick(): number | undefined {
-    return this.active.reduce<number | undefined>((soonest, j) => (soonest === undefined || j.returnsAtTick < soonest ? j.returnsAtTick : soonest), undefined);
+  /**
+   * The soonest tick at which any active journey needs attention, so `passTime` can split its
+   * chunk exactly there and never step past a node boundary — which is what keeps each stop
+   * resolving against the same guild state offline as live (REQ-OFF-002, DL-074). A journey that
+   * has turned for home needs attention at its return; one still working needs it at its next
+   * node completion.
+   */
+  nextEventTick(perNode: number): number | undefined {
+    return this.active.reduce<number | undefined>((soonest, j) => {
+      // A stop resolves when the party reaches it, at `arrives + workedSoFar * perNode` (DL-074).
+      const at = j.returnsAtTick !== undefined ? j.returnsAtTick : j.arrivesAtTick + nodesWorkedSoFar(j) * perNode;
+      return soonest === undefined || at < soonest ? at : soonest;
+    }, undefined);
   }
 
   /**
@@ -155,22 +191,27 @@ export class Journeys {
    * parties coming back on the same step apply in the order they left.
    */
   takeReturned(tick: number): JourneyRecord[] {
-    const back = this.active.filter((j) => j.returnsAtTick <= tick).sort((a, b) => a.returnsAtTick - b.returnsAtTick || a.departedAtTick - b.departedAtTick || a.id.localeCompare(b.id));
-    this.active = this.active.filter((j) => j.returnsAtTick > tick);
+    const home = (j: JourneyRecord): boolean => j.returnsAtTick !== undefined && j.returnsAtTick <= tick;
+    const back = this.active.filter(home).sort((a, b) => (a.returnsAtTick ?? 0) - (b.returnsAtTick ?? 0) || a.departedAtTick - b.departedAtTick || a.id.localeCompare(b.id));
+    this.active = this.active.filter((j) => !home(j));
     return back;
   }
 
   snapshot(): JourneysSnapshot {
     // The live records keep their full combat facts for a same-session route replay; only the
-    // saved copy is slimmed, so a reload does not carry every fight's blow-by-blow.
-    return { next: this.next, active: this.active.map((j) => ({ ...j, result: slimResultForSave(j.result) })) };
+    // saved copy is slimmed, so a reload does not carry every fight's blow-by-blow (DL-072).
+    return {
+      next: this.next,
+      active: this.active.map((j) => ({
+        ...j,
+        ...(j.run ? { run: slimRunForSave(j.run) } : {}),
+        ...(j.legacyResult ? { legacyResult: slimResultForSave(j.legacyResult) } : {}),
+      })),
+    };
   }
 
   restore(snapshot: JourneysSnapshot | undefined): void {
-    // Journeys saved before `nodesEntered` existed (v27, before recall) counted nodes by index.
-    this.active = (snapshot?.active ?? []).map((j) =>
-      j.result.nodesEntered === undefined ? { ...j, result: { ...j.result, nodesEntered: j.result.reachedNode } } : j,
-    );
+    this.active = [...(snapshot?.active ?? [])];
     this.next = snapshot?.next ?? 1;
   }
 }

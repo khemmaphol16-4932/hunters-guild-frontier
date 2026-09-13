@@ -514,6 +514,35 @@ const v26ToV27: Migration = {
   },
 };
 
+const v27ToV28: Migration = {
+  from: 27,
+  to: 28,
+  describe: 'a journey resolves node by node and carries a resumable run (DL-074)',
+  migrate(payload: unknown): unknown {
+    // A v27 journey resolved its whole route at the gate and carries a finished `result` with a
+    // fixed return time. It has no resumable run and cannot get one, so it is migrated as a party
+    // that has already turned for home: the finished result becomes `legacyResult`, applied on
+    // return exactly as it was, and the fixed `returnsAtTick` still brings it home on schedule —
+    // no v27 save's outcome changes. New journeys (v28) carry a `run` instead.
+    const record = asRecord(payload, 27);
+    const journeys = record['journeys'];
+    if (typeof journeys !== 'object' || journeys === null) return { ...record, journeys: { next: 1, active: [] } };
+    const snapshot = journeys as Record<string, unknown>;
+    const active = Array.isArray(snapshot['active']) ? snapshot['active'] : [];
+    const migrated = active.map((value) => {
+      if (typeof value !== 'object' || value === null) return value;
+      const { result, ...rest } = value as Record<string, unknown>;
+      if (result === undefined) return value;
+      // Journeys saved before `nodesEntered` existed counted nodes by `reachedNode` (DL-071).
+      const resultRecord = result as Record<string, unknown>;
+      const legacyResult =
+        resultRecord['nodesEntered'] === undefined ? { ...resultRecord, nodesEntered: resultRecord['reachedNode'] ?? 0 } : resultRecord;
+      return { ...rest, legacyResult };
+    });
+    return { ...record, journeys: { ...snapshot, active: migrated } };
+  },
+};
+
 export const MIGRATIONS: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -541,6 +570,7 @@ export const MIGRATIONS: readonly Migration[] = [
   v24ToV25,
   v25ToV26,
   v26ToV27,
+  v27ToV28,
 ];
 
 /** Walk the chain from `fromVersion` up to `toVersion`. */

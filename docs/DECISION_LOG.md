@@ -1046,3 +1046,17 @@ one-shot path through `run`; the new tests guard that stepwise-with-serialisatio
 
 **Reversal.** Keep `begin`/`stepNode`/`finalize` (a harmless internal shape) but have journeys call
 `run` once at departure again and restore the fixed timetable; delete the per-node `passTime` branch.
+
+**Implemented (2026-09-13).** Both stages landed. Stage A: the resumable engine, byte-identical to
+one-shot (proven by the round-trip equivalence test). Stage B: a `JourneyRecord` now carries a
+`run`, `departExpedition` resolves nothing at the gate, `passTime` splits its chunk at the next node
+boundary (`Journeys.nextEventTick`) and steps each journey with `advanceJourneys`, `recallJourney`
+sets `run.recalled` (no re-run), and the return time is emergent. Save v28 migrates a v27 journey to
+a `legacyResult` applied on return unchanged.
+
+One refinement the implementation settled: a stop resolves the moment the party **reaches** it (the
+start of its window, `arrives + workedSoFar·perNode`), not the end. This is what lets the turn-for-
+home land on its own tick — so the walk home is a phase the player sees, not a step that vanishes
+when travel and per-node time are equal — and, because an away party's hunters are frozen in town,
+it changes no outcome versus resolving at the window's end. `recallAfterNodes` stays on the run
+options for the one-shot equivalence test; the live path uses the flag.

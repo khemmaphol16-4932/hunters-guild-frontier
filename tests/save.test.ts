@@ -229,6 +229,46 @@ describe('migration chain (risk R4)', () => {
     if (loaded.ok) expect(loaded.value.clock).toEqual({ tick: 0, accumulatorMs: 0 });
   });
 
+  it('migrates a v27 in-flight journey to a resumable one that keeps its result (DL-074)', () => {
+    // A v27 journey resolved its whole route at the gate: it has a finished `result` and a fixed
+    // return. It migrates to v28 as a party already turning home — the result becomes `legacyResult`
+    // and the return tick is kept, so it lands exactly as it would have.
+    const v27 = {
+      journeys: {
+        next: 3,
+        active: [
+          {
+            id: 'journey-2',
+            regionId: 'verdant_reach',
+            hunterIds: ['h1'],
+            departedAtTick: 100,
+            arrivesAtTick: 110,
+            turnsHomeAtTick: 130,
+            returnsAtTick: 140,
+            proposal: { members: [], objective: { id: 'clear' } },
+            result: { reachedNode: 3, nodesEntered: 3, nodes: [], aftermath: [] },
+          },
+        ],
+      },
+    };
+    const migrated = migratePayload(v27, 27, 28) as { journeys: { active: Record<string, unknown>[] } };
+    const journey = migrated.journeys.active[0]!;
+    expect(journey['result']).toBeUndefined();
+    expect(journey['run']).toBeUndefined();
+    expect(journey['legacyResult']).toEqual({ reachedNode: 3, nodesEntered: 3, nodes: [], aftermath: [] });
+    expect(journey['returnsAtTick']).toBe(140);
+    expect(journey['arrivesAtTick']).toBe(110);
+  });
+
+  it('back-fills nodesEntered when migrating a pre-recall v27 journey (DL-074)', () => {
+    const v27 = {
+      journeys: { next: 2, active: [{ id: 'journey-1', regionId: 'verdant_reach', hunterIds: [], departedAtTick: 0, arrivesAtTick: 1, turnsHomeAtTick: 4, returnsAtTick: 5, proposal: { members: [], objective: { id: 'clear' } }, result: { reachedNode: 2, nodes: [] } }] },
+    };
+    const migrated = migratePayload(v27, 27, 28) as { journeys: { active: Record<string, unknown>[] } };
+    const legacy = migrated.journeys.active[0]!['legacyResult'] as Record<string, unknown>;
+    expect(legacy['nodesEntered']).toBe(2);
+  });
+
   it('refuses a save from a newer build rather than silently dropping data', () => {
     expect(() => migratePayload({}, CURRENT_SAVE_VERSION + 5, CURRENT_SAVE_VERSION)).toThrow(
       /newer than this build understands/,

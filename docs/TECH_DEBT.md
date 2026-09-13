@@ -135,9 +135,9 @@ A null object satisfies the compiler but proves nothing about whether the consum
 | Limit | Consequence | Next step |
 |---|---|---|
 | The route is resolved in full at departure | Nothing that happens in the world during a journey can change its outcome | Step 2: resolve node by node on the tick |
-| The whole `ExpeditionResult`, combat facts included, is stored in the save | A save grows by one expedition's worth of combat facts per party out; fine for a handful, not for many | Store only what apply and the replay need, or re-derive from the seed |
-| ~~No mid-journey retreat~~ | — | **done** (DL-071) — `recallJourney` re-runs from the journey's fork with a hard stop |
-| A recall re-runs the route against the guild as it stands | Town-wide changes during a journey (facility upgrades, mentor bonuses, items upgraded by id) reach the re-run; away hunters themselves are locked | Step 2's node-by-node resolution removes the re-run |
+| ~~The whole `ExpeditionResult`, combat facts included, is stored in the save~~ | — | **done** (DL-072) — the saved journey drops presentation-only combat facts; only the per-node outcome is kept |
+| ~~No mid-journey retreat~~ | — | **done** (DL-071/DL-074) — `recallJourney` sets `run.recalled`; no re-run |
+| ~~A recall re-runs the route against the guild as it stands~~ | — | **done** (DL-074) — stops resolve live on the tick; a recall keeps every worked stop, no re-run, no caveat |
 | No personal carried loot | REQ-CW-008 and -011 are unmet; loot goes to the armoury on return | Hunter inventories, then sale to the Guild on return |
-| Standing orders, endless and world-boss runs use the instant path ("Send them" departs a journey since DL-071) | Offline standing orders still bring a party home on the step it left | Switch each to `departExpedition`, checking offline pacing and endless records |
+| ~~Standing orders use the instant path~~ / endless and world-boss runs use the instant path | Standing orders now depart journeys (DL-073); endless and world-boss runs still resolve instantly | Switch endless and world-boss to `departExpedition` (machinery ready; DL-073 notes what is left) |
 | The last return's route replay is not saved | After a reload, the expedition screen no longer shows the party that came home before it | Keep the Guild Report as the record, or save the last outcome's summary |

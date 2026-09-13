@@ -100,7 +100,7 @@ still resolve synchronously into a replay.
 | # | Item | Lane | Owner | Status |
 |---|---|---|---|---|
 | 9 | Persistent journey/activity state owned by the simulation | Code | Claude | ✅ journeys, save v27 (DL-070) |
-| 10 | Travel, encounter, combat, return, recovery and selling advance on fixed ticks | Code | Claude | 🔨 travel and return on the tick (DL-070); recall mid-journey and "Send them" departs a journey (DL-071); standing orders on journeys (DL-073); slim journey saves (DL-072); node-by-node (DL-074): emergent-return UX approved by owner, resumable engine landed (`begin`/`stepNode`/`finalize`, byte-identical, tested); next: wire journeys to `stepNode` on the tick (save v28) then carried loot |
+| 10 | Travel, encounter, combat, return, recovery and selling advance on fixed ticks | Code | Claude | 🔨 travel/return on the tick (DL-070); recall (DL-071); standing orders on journeys (DL-073); slim saves (DL-072); **node-by-node resolution done (DL-074, save v28)** — stops resolve live on the tick, emergent return, recall-as-flag, no re-run; next: carried loot, then endless/world-boss on journeys |
 | 11 | Region loading and camera observation as consumers of that state | Code | | ⬜ |
 | 12 | Keep seeded combat facts and the audit trail for off-screen fidelity | Code | | ⬜ |
 | 13 | Live observation primary; reports for history and missed events | Code | | ⬜ |

@@ -46,7 +46,17 @@ import type { RefineResult } from '../systems/items/Refinement.js';
 import { REASON } from '../core/audit.js';
 import type { ObjectiveId, PartyProposal } from '../systems/party/Party.js';
 import type { ExpeditionResult } from '../sim/expedition/Expedition.js';
-import { phaseAt, recallTimetable, timetable, type JourneyPhase, type JourneyRecord } from '../sim/expedition/Journey.js';
+import {
+  arrivalTick,
+  nodesWorkedSoFar,
+  perNodeTicks,
+  phaseAt,
+  travelTicks,
+  turnHomeFromRoute,
+  turnHomeWalkingOut,
+  type JourneyPhase,
+  type JourneyRecord,
+} from '../sim/expedition/Journey.js';
 import type { KnowledgeTier, RegionDef as WorldRegionDef } from '../data/combatSchema.js';
 import { KNOWLEDGE_TIERS } from '../data/combatSchema.js';
 import type { Rotation, TownDepartmentId } from '../data/townSchema.js';
@@ -84,35 +94,44 @@ export interface FieldParty {
   readonly hunterIds: readonly HunterId[];
   readonly hunterNames: readonly string[];
   readonly phase: JourneyPhase;
-  /** The node being worked, from 1; 0 while walking out. */
+  /** The stop being worked, from 1; 0 while walking out. Counts up until the party turns home. */
   readonly node: number;
-  /** How many nodes the party will work before it turns for home. */
-  readonly nodes: number;
-  readonly stepsUntilHome: number;
+  /** Whether the party has turned for home, so its return time (and countdown) is known (DL-074). */
+  readonly turnedHome: boolean;
+  /** Steps until the party is home — present only once it has turned for home. */
+  readonly stepsUntilHome?: number;
   readonly recalled: boolean;
   /** Why a recall would change nothing, when it would not. */
   readonly recallBlockedBy?: string;
 }
 
 /**
- * How many nodes a recall at `tick` lets the party finish, or why a recall would change nothing.
- * A party walking out has worked none; a party at a node finishes it.
+ * Which stop a recall at `tick` lets the party finish, or why a recall would change nothing. A
+ * party walking out has worked none; a party at a stop finishes it. Once the party has turned for
+ * home there is nothing left to recall. With emergent resolution (DL-074) the guild no longer knows
+ * in advance which stop is the last, so recalling on the final stop is allowed and simply does what
+ * the party would have done anyway.
  */
 function recallPoint(journey: JourneyRecord, tick: number): number | string {
   const where = phaseAt(journey, tick);
   if (where.phase === 'inbound' || where.phase === 'home') return 'the party is already on its way home';
-  const worked = where.phase === 'outbound' ? 0 : where.node;
-  if (worked >= journey.result.nodesEntered) return 'the party turns for home after this stop anyway';
-  return worked;
+  return where.phase === 'outbound' ? 0 : where.node;
 }
 
-/** A route resolved at the gate and not yet applied (DL-070). */
-interface DispatchPlan {
+/**
+ * A dispatch prepared at the gate — the region is open and the party is chosen — but not yet
+ * resolved. The instant path runs it at once; a journey resolves it a stop at a time (DL-074).
+ */
+interface PreparedPlan {
   readonly regionId: string;
   readonly region: WorldRegionDef;
   readonly proposal: PartyProposal;
   readonly endless: EndlessObjectiveDef | undefined;
   readonly worldBoss: WorldBossEvent | undefined;
+}
+
+/** A route resolved at the gate and not yet applied (DL-070). */
+interface DispatchPlan extends PreparedPlan {
   readonly result: ExpeditionResult;
 }
 
@@ -952,76 +971,157 @@ export class GuildCommands {
    * other party. `passTime` brings them home.
    */
   departExpedition(regionId: string, objective: ObjectiveId, party?: PartyProposal): Result<JourneyRecord, string> {
-    const plan = this.planDispatch(regionId, objective, party, undefined, undefined);
-    if (isErr(plan)) return plan;
-    const { region, proposal, result } = plan.value;
+    return this.departJourney(regionId, objective, party, undefined, undefined);
+  }
+
+  /**
+   * Send a party out on a journey (DL-070, DL-074). The route is *not* resolved at the gate: the
+   * party carries a resumable run and works each stop as it reaches it, on the clock, against the
+   * guild as it is at that tick. Its return time is therefore unknown until it turns for home
+   * (emergent, DL-074). Until then its hunters are away — assigned to the journey, out of the town
+   * rota, unavailable to any other party. `passTime` walks it through its stops and brings it home.
+   */
+  private departJourney(
+    regionId: string,
+    objective: ObjectiveId,
+    party: PartyProposal | undefined,
+    endless: EndlessObjectiveDef | undefined,
+    worldBoss: WorldBossEvent | undefined,
+  ): Result<JourneyRecord, string> {
+    const prepared = this.preparePlan(regionId, objective, party, endless, worldBoss);
+    if (isErr(prepared)) return prepared;
+    const plan = prepared.value;
     const tick = this.session.clock.tick;
-    const times = timetable(tick, region.zoneTier, result.nodesEntered, this.session.content.journey, this.session.clock.coarseStepRatio);
+    // The same seeded fork the instant path uses, so a journey whose guild does not change while it
+    // is out resolves the identical route (proven by test against `sendExpedition`).
+    const rng = this.session.streams.expedition.fork(`${regionId}:${tick}`);
+    const run = this.session.expedition.begin(rng, plan.region, plan.proposal, this.runOptionsFor(plan));
     const journey = this.session.journeys.depart({
       regionId,
-      hunterIds: proposal.members.map((m) => m.hunterId),
+      hunterIds: plan.proposal.members.map((m) => m.hunterId),
       departedAtTick: tick,
-      ...times,
-      proposal,
-      result,
+      arrivesAtTick: arrivalTick(tick, plan.region.zoneTier, this.session.content.journey, this.session.clock.coarseStepRatio),
+      run,
+      proposal: plan.proposal,
+      ...(worldBoss ? { worldBoss } : {}),
     });
-    for (const member of proposal.members) {
+    for (const member of plan.proposal.members) {
       const hunter = this.session.roster.require(member.hunterId);
       this.session.townJobs.release(hunter.id);
+      // The return tick is not known yet, so `readyAtTick` is left undefined until the party turns
+      // for home; the town treats an away hunter as unavailable regardless.
       this.session.roster.update(
-        withAvailability(hunter, { state: 'assigned', assignment: journey.id, readyAtTick: journey.returnsAtTick, recallCompletesAtTick: undefined }),
+        withAvailability(hunter, { state: 'assigned', assignment: journey.id, readyAtTick: undefined, recallCompletesAtTick: undefined }),
       );
     }
     this.session.audit.record({
       actor: { kind: 'system', name: 'guild-ai' },
       system: 'expedition',
       sourceEvent: journey.id,
-      outcome: `${proposal.members.length} hunters left for ${region.name}, back in ${(journey.returnsAtTick - tick) / this.session.clock.coarseStepRatio} steps`,
+      outcome: `${plan.proposal.members.length} hunters left for ${plan.region.name}`,
       reasonCodes: ['journey_departed', `region:${regionId}`],
-      inputs: { objective: proposal.objective.id, returnsAtTick: journey.returnsAtTick },
+      inputs: { objective: plan.proposal.objective.id, arrivesAtTick: journey.arrivesAtTick },
     });
     return ok(journey);
   }
 
+  /** Resolve a region and the run options for an in-flight journey, or undefined if the region is gone. */
+  private rehydrateJourney(journey: JourneyRecord): { region: WorldRegionDef; options: ReturnType<GuildCommands['runOptionsFor']> } | undefined {
+    const baseRegion = this.session.content.worldRegionsById.get(journey.regionId);
+    if (!baseRegion) return undefined;
+    const region = journey.worldBoss ? { ...baseRegion, boss: journey.worldBoss.bossId } : baseRegion;
+    const options = this.runOptionsFor({ regionId: journey.regionId, region, proposal: journey.proposal, endless: undefined, worldBoss: journey.worldBoss });
+    return { region, options };
+  }
+
   /**
-   * Order a party home (REQ-CW-010, DL-071). The recall overrides the Guild AI: a party still
-   * walking out turns round where it stands; a party at a node finishes that node and turns for
-   * home before the next.
+   * Walk every in-flight journey up to `tick` (DL-074): resolve each stop whose time has come, and
+   * set the emergent return the moment a party turns for home. `passTime` splits its chunks at the
+   * next node boundary (see `Journeys.nextEventTick`), so a stop resolves against the same guild
+   * state offline as live and a party comes home on the same step either way (REQ-OFF-002).
+   */
+  private advanceJourneys(tick: number): void {
+    const perNode = perNodeTicks(this.session.content.journey, this.session.clock.coarseStepRatio);
+    for (const journey of this.session.journeys.all()) {
+      if (journey.returnsAtTick !== undefined || !journey.run) continue; // turned home, or migrated legacy
+      if (tick < journey.arrivesAtTick) continue; // still walking out
+      const rehydrated = this.rehydrateJourney(journey);
+      if (!rehydrated) continue;
+      // A stop resolves the moment the party reaches it: it has reached one stop at `arrivesAtTick`
+      // and one more every `perNode` after (DL-074). Resolving on reach — the start of the stop's
+      // window rather than the end — is what lets the turn-for-home land on its own tick, so the
+      // walk home is a phase the player sees rather than a step that vanishes.
+      const reached = Math.floor((tick - journey.arrivesAtTick) / perNode) + 1;
+      while (journey.run.entered < reached && !journey.run.done) {
+        this.session.expedition.stepNode(journey.run, rehydrated.region, journey.proposal, rehydrated.options);
+      }
+      if (journey.run.done) this.turnHomeFromRun(journey, tick);
+    }
+  }
+
+  /** Set a journey's emergent return once its run has ended at a stop on the route. */
+  private turnHomeFromRun(journey: JourneyRecord, _tick: number): void {
+    const region = this.session.content.worldRegionsById.get(journey.regionId);
+    const travel = region ? travelTicks(region.zoneTier, this.session.content.journey, this.session.clock.coarseStepRatio) : 0;
+    const times = turnHomeFromRoute(journey.arrivesAtTick, nodesWorkedSoFar(journey), travel, perNodeTicks(this.session.content.journey, this.session.clock.coarseStepRatio));
+    this.markTurnedHome(journey, times);
+  }
+
+  /** Record the return time on a journey and give its away hunters a `readyAtTick` at last. */
+  private markTurnedHome(journey: JourneyRecord, times: { turnsHomeAtTick: number; returnsAtTick: number }): JourneyRecord {
+    const revised: JourneyRecord = { ...journey, ...times };
+    this.session.journeys.revise(revised);
+    for (const id of revised.hunterIds) {
+      const hunter = this.session.roster.get(id);
+      if (hunter && hunter.availability.state === 'assigned') {
+        this.session.roster.update(withAvailability(hunter, { ...hunter.availability, readyAtTick: revised.returnsAtTick }));
+      }
+    }
+    return revised;
+  }
+
+  /**
+   * Order a party home (REQ-CW-010, DL-071, DL-074). The recall overrides the Guild AI: a party
+   * still walking out turns round where it stands with nothing gained; a party at a stop finishes
+   * that stop and turns for home before the next.
    *
-   * The route is re-run from the journey's own seeded fork with the recall as a hard stop, so
-   * everything up to the recall is the route the party was already walking — the same fights, the
-   * same draws — and only what it would have done afterwards is given up. Hunters who are away
-   * cannot be re-geared, retrained or retired (`awayError`), which is what keeps that re-run
-   * faithful to the departure.
+   * There is no re-run any more (DL-074): every stop the party worked was resolved live and stands
+   * untouched. The recall finishes the stop the party is on, then sets `run.recalled` so the next
+   * step takes the retreat branch. Because the stops already worked were resolved against the guild
+   * as it was at each of their ticks, a mid-journey guild change can no longer reach them.
    */
   recallJourney(journeyId: string): Result<JourneyRecord, string> {
     const journey = this.session.journeys.get(journeyId);
     if (!journey) return err(`no party is out on "${journeyId}"`);
-    const tick = this.session.clock.tick;
-    const point = recallPoint(journey, tick);
+    if (!journey.run || journey.returnsAtTick !== undefined) return err('the party is already on its way home');
+    const point = recallPoint(journey, this.session.clock.tick);
     if (typeof point === 'string') return err(point);
-    const worked = point;
+    const tick = this.session.clock.tick;
 
-    const baseRegion = this.session.content.worldRegionsById.get(journey.regionId);
-    if (!baseRegion) return err(`unknown region "${journey.regionId}"`);
-    const region = journey.worldBoss ? { ...baseRegion, boss: journey.worldBoss.bossId } : baseRegion;
-    const rng = this.session.streams.expedition.fork(`${journey.regionId}:${journey.departedAtTick}`);
-    const result = this.session.expedition.run(rng, region, journey.proposal, {
-      recallAfterNodes: worked,
-      ...(journey.worldBoss ? { worldBossId: journey.worldBoss.bossId } : {}),
-    });
-    const perNodeTicks = this.session.content.journey.stepsPerNode * this.session.clock.coarseStepRatio;
-    const revised: JourneyRecord = { ...journey, ...recallTimetable(journey, tick, result.nodesEntered, perNodeTicks), result, recalledAtTick: tick };
-    this.session.journeys.revise(revised);
-    for (const id of revised.hunterIds) {
-      const hunter = this.session.roster.get(id);
-      if (hunter) this.session.roster.update(withAvailability(hunter, { ...hunter.availability, readyAtTick: revised.returnsAtTick }));
+    const rehydrated = this.rehydrateJourney(journey);
+    if (!rehydrated) return err(`unknown region "${journey.regionId}"`);
+
+    // The stop the party is on is already resolved (stops resolve on reach, DL-074), so the recall
+    // keeps every stop worked and only gives up the rest: set the flag and take the retreat branch.
+    journey.run.recalled = true;
+    if (!journey.run.done) {
+      this.session.expedition.stepNode(journey.run, rehydrated.region, journey.proposal, rehydrated.options);
     }
+    let times: { turnsHomeAtTick: number; returnsAtTick: number };
+    if (tick < journey.arrivesAtTick) {
+      // Walking out: turn round where it stands and walk back the ground it covered, nothing gained.
+      times = turnHomeWalkingOut(journey.departedAtTick, tick);
+    } else {
+      const travel = travelTicks(rehydrated.region.zoneTier, this.session.content.journey, this.session.clock.coarseStepRatio);
+      times = turnHomeFromRoute(journey.arrivesAtTick, journey.run.entered, travel, perNodeTicks(this.session.content.journey, this.session.clock.coarseStepRatio));
+    }
+
+    const revised = this.markTurnedHome({ ...journey, recalledAtTick: tick }, times);
     this.session.audit.record({
       actor: { kind: 'player' },
       system: 'expedition',
       sourceEvent: journey.id,
-      outcome: `recalled the party from ${region.name} after ${worked} of ${journey.result.nodesEntered} stops`,
+      outcome: `recalled the party from ${rehydrated.region.name} after ${nodesWorkedSoFar(revised)} stops`,
       reasonCodes: ['journey_recalled', `region:${journey.regionId}`],
       inputs: { returnsAtTick: revised.returnsAtTick },
     });
@@ -1038,6 +1138,9 @@ export class GuildCommands {
     return this.session.journeys.all().map((journey) => {
       const where = phaseAt(journey, tick);
       const point = recallPoint(journey, tick);
+      // The countdown home is known only once the party has turned for home (DL-074); while it is
+      // still working, the stop counts up and there is no time-to-home yet.
+      const stepsUntilHome = journey.returnsAtTick !== undefined ? Math.max(0, Math.ceil((journey.returnsAtTick - tick) / ratio)) : undefined;
       return {
         journeyId: journey.id,
         regionName: this.session.content.worldRegionsById.get(journey.regionId)?.name ?? journey.regionId,
@@ -1045,8 +1148,8 @@ export class GuildCommands {
         hunterNames: journey.hunterIds.map((id) => this.session.roster.get(id)?.name ?? id),
         phase: where.phase,
         node: where.node,
-        nodes: journey.result.nodesEntered,
-        stepsUntilHome: Math.max(0, Math.ceil((journey.returnsAtTick - tick) / ratio)),
+        turnedHome: journey.turnsHomeAtTick !== undefined,
+        ...(stepsUntilHome !== undefined ? { stepsUntilHome } : {}),
         recalled: journey.recalledAtTick !== undefined,
         ...(typeof point === 'string' ? { recallBlockedBy: point } : {}),
       };
@@ -1076,15 +1179,27 @@ export class GuildCommands {
     return err(`${name} is away on an expedition`);
   }
 
+  /**
+   * The finished result of a journey: from its live run via `Expedition.finalize`, or the
+   * precomputed result a v27 save migrated forward. Used on return and by the route replay.
+   */
+  finalizedResult(journey: JourneyRecord): ExpeditionResult {
+    if (journey.legacyResult) return journey.legacyResult;
+    const rehydrated = this.rehydrateJourney(journey);
+    if (!rehydrated || !journey.run) throw new Error(`journey ${journey.id} has neither a run nor a legacy result`);
+    return this.session.expedition.finalize(journey.run, rehydrated.region, journey.proposal, rehydrated.options);
+  }
+
   /** Apply every journey that is home by now, exactly as the instant path would have (DL-070). */
   private completeJourneys(recorder: ReportRecorder): void {
     for (const journey of this.session.journeys.takeReturned(this.session.clock.tick)) {
       const baseRegion = this.session.content.worldRegionsById.get(journey.regionId);
       if (!baseRegion) continue;
       const region = journey.worldBoss ? { ...baseRegion, boss: journey.worldBoss.bossId } : baseRegion;
+      const finished = this.finalizedResult(journey);
       // A hunter who left the roster while away (never expected, but a save can be edited)
       // is dropped from the aftermath rather than crashing the return.
-      const result = { ...journey.result, aftermath: journey.result.aftermath.filter((a) => this.session.roster.get(a.hunterId) !== undefined) };
+      const result = { ...finished, aftermath: finished.aftermath.filter((a) => this.session.roster.get(a.hunterId) !== undefined) };
       const outcome = this.applyDispatch({ regionId: journey.regionId, region, proposal: journey.proposal, endless: undefined, worldBoss: journey.worldBoss, result });
       recorder.noteExpedition(
         { regionName: region.name, summary: outcome.result.summary, completed: outcome.result.completed, wiped: outcome.result.wiped },
@@ -1174,16 +1289,17 @@ export class GuildCommands {
   }
 
   /**
-   * Everything that happens at the gate: the region is open, the party is chosen, and the route
-   * is resolved by the deterministic rules engine. Nothing is applied yet (DL-070).
+   * Everything that happens at the gate short of resolving the route: the region is open and the
+   * party is chosen. The instant path and a journey share this; only *when* the route resolves
+   * differs (DL-074).
    */
-  private planDispatch(
+  private preparePlan(
     regionId: string,
     objective: ObjectiveId,
     party: PartyProposal | undefined,
     endless: EndlessObjectiveDef | undefined,
     worldBoss: WorldBossEvent | undefined,
-  ): Result<DispatchPlan, string> {
+  ): Result<PreparedPlan, string> {
     const baseRegion = this.session.content.worldRegionsById.get(regionId);
     if (!baseRegion) return err(`unknown region "${regionId}"`);
     const region = worldBoss ? { ...baseRegion, boss: worldBoss.bossId } : baseRegion;
@@ -1204,20 +1320,38 @@ export class GuildCommands {
     const proposal = shaped.value;
     if (proposal.members.length === 0) return err('no hunter is available to deploy');
 
-    // A fresh fork per expedition, labelled by region and tick, so two expeditions in the
-    // same session never share a draw sequence and each one replays on its own.
-    const rng = this.session.streams.expedition.fork(`${regionId}:${this.session.clock.tick}`);
+    return ok({ regionId, region, proposal, endless, worldBoss });
+  }
+
+  /** The rules-engine run options for a prepared dispatch — the endless config and the world boss. */
+  private runOptionsFor(plan: PreparedPlan): { endless?: { maxDepth: number; statsPerDepth: Readonly<Record<string, number>> }; worldBossId?: string } {
     const endlessConfig = this.session.content.endless;
-    const result = this.session.expedition.run(
-      rng,
-      region,
-      proposal,
-      {
-        ...(endless ? { endless: { maxDepth: endlessConfig.maxDepth, statsPerDepth: endlessConfig.statsPerDepth } } : {}),
-        ...(worldBoss ? { worldBossId: worldBoss.bossId } : {}),
-      },
-    );
-    return ok({ regionId, region, proposal, endless, worldBoss, result });
+    return {
+      ...(plan.endless ? { endless: { maxDepth: endlessConfig.maxDepth, statsPerDepth: endlessConfig.statsPerDepth } } : {}),
+      ...(plan.worldBoss ? { worldBossId: plan.worldBoss.bossId } : {}),
+    };
+  }
+
+  /**
+   * Everything that happens at the gate: prepare the dispatch and resolve the whole route by the
+   * deterministic rules engine in one shot. Nothing is applied yet (DL-070). The journey path
+   * (`departJourney`) resolves the same route a stop at a time instead.
+   */
+  private planDispatch(
+    regionId: string,
+    objective: ObjectiveId,
+    party: PartyProposal | undefined,
+    endless: EndlessObjectiveDef | undefined,
+    worldBoss: WorldBossEvent | undefined,
+  ): Result<DispatchPlan, string> {
+    const prepared = this.preparePlan(regionId, objective, party, endless, worldBoss);
+    if (isErr(prepared)) return prepared;
+    const plan = prepared.value;
+    // A fresh fork per expedition, labelled by region and tick, so two expeditions in the same
+    // session never share a draw sequence and each one replays on its own.
+    const rng = this.session.streams.expedition.fork(`${regionId}:${this.session.clock.tick}`);
+    const result = this.session.expedition.run(rng, plan.region, plan.proposal, this.runOptionsFor(plan));
+    return ok({ ...plan, result });
   }
 
   /**
@@ -1535,20 +1669,24 @@ export class GuildCommands {
     const recorder = new ReportRecorder(this.session, options.offline ?? false);
     const chunk = this.session.content.time.catchUpChunkSteps;
     let remaining = Math.max(0, Math.floor(steps));
+    const ratio = this.session.clock.coarseStepRatio;
+    const perNode = perNodeTicks(this.session.content.journey, ratio);
     while (remaining > 0) {
       this.runStandingOrder(recorder);
-      // Split the chunk exactly at the next journey's return, so a party comes home on the same
-      // step offline as live (REQ-OFF-002) rather than up to a chunk late.
-      const nextReturn = this.session.journeys.nextReturnTick();
+      // Split the chunk exactly at the next journey event — a stop resolving or a party coming home
+      // (DL-074). Never stepping past a node boundary is what makes each stop resolve against the
+      // same guild state offline as live, and a party come home on the same step (REQ-OFF-002).
+      const nextEvent = this.session.journeys.nextEventTick(perNode);
       // Journey times are clock ticks; advanceTown counts town steps of coarseStepRatio ticks each.
-      const untilReturn = nextReturn === undefined ? Infinity : Math.max(1, Math.ceil((nextReturn - this.session.clock.tick) / this.session.clock.coarseStepRatio));
-      const n = Math.min(chunk, remaining, untilReturn);
+      const untilEvent = nextEvent === undefined ? Infinity : Math.max(1, Math.ceil((nextEvent - this.session.clock.tick) / ratio));
+      const n = Math.min(chunk, remaining, untilEvent);
       const result = this.advanceTown(n);
       recorder.addSteps(n);
       recorder.noteHunts(result.hunts);
       recorder.noteRecovered(result.recovered.length);
       recorder.noteCrafted(result.completedCrafts.map((item) => item.name));
       if (result.defense) recorder.noteDefense(result.defense.summary, result.defense.held);
+      this.advanceJourneys(this.session.clock.tick);
       this.completeJourneys(recorder);
       if (this.session.standingOrders.autoRepair) this.repairDamaged(recorder);
       // Asking is what lets the world boss appear on schedule (and announce itself).
