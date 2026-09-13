@@ -935,3 +935,23 @@ Not verified in a browser. The dev server cannot be viewed from this session, so
 new card and the inspector button is checked by type and by the production build only.
 
 **Verified:** 697 tests pass; TypeScript is clean; the production build succeeds.
+
+---
+
+# 2026-09-13 — A journey's combat facts stay out of the save (DL-072)
+
+A party in the field carried its whole resolved route in the save, and the heaviest part of that
+was per-node combat facts: the per-second health samples, the damage, healing and skill tallies,
+and the kill/down/death/rescue lists. They exist for the route replay and nothing else — no
+consequence a return applies reads them, only `ui/expeditionView.ts` does.
+
+So `Journeys.snapshot` now slims each in-flight journey: every node keeps its outcome, xp,
+`encounterSeconds` and party health, and drops the `facts`, the `story` and the fight `highlights`.
+The live record in memory is untouched, so a party that comes home in the same session still
+replays blow by blow; only a journey interrupted by a save and reload comes back with a replay
+thinned to the per-node outcome. Consequences are identical either way, by construction and by a
+new test that reloads a journey from a slimmed save and lands the same levels, xp and availability
+as one never saved. No save-version bump: the slimmed result is still a valid `ExpeditionResult`,
+so a v27 save round-trips both directions.
+
+**Verified:** 698 tests pass (1 skipped); TypeScript is clean; the production build succeeds.

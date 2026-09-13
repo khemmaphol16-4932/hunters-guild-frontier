@@ -902,3 +902,31 @@ instantly: each changes offline pacing or a record, so each gets its own look.
 
 **Reversal.** Remove `recallJourney`, `recallAfterNodes` and the guards; `nodesEntered` is harmless
 to keep. Pointing "Send them" back at `sendExpedition` restores the instant screen.
+
+## DL-072 — A journey's combat facts are not persisted
+
+**Ambiguity.** A journey (DL-070) stores its whole resolved `ExpeditionResult` until the party is
+home. The heaviest part of that result is per-node combat `facts` — per-second health samples, the
+damage, healing and skill tallies, and the kill/down/death/rescue lists — kept for the route replay
+(REQ-UX-004). Every party in the field carried all of it in the save, and nothing said it had to.
+
+**Decision.** The saved copy of an in-flight journey is slimmed: each node keeps its outcome, xp,
+`encounterSeconds` and party health, and drops the combat `facts`, the `story` and the fight
+`highlights`. The live record in memory keeps them, so a party that comes home in the same session
+still replays blow by blow. `Journeys.snapshot` does the slimming; `all()` and `takeReturned` still
+return the full live records, so consequences are untouched.
+
+**Why conservative.** `GuildCommands.applyDispatch` — everything a return does to the roster, the
+economy, the world knowledge and the records — reads none of `facts`, `story` or `highlights`; they
+are read only by `ui/expeditionView.ts`. So dropping them from the save cannot change a single
+gameplay consequence, and it does not: a journey reloaded from a slimmed save lands the same levels,
+xp and availability as one never saved (new test). The only thing lost is the blow-by-blow of a
+replay for a journey that happened to be interrupted by a save and reload, which reduces to the
+per-node outcome and health — cosmetic, and only in that one case.
+
+**Shape.** No save-version bump. The slimmed result is still a valid `ExpeditionResult`
+(`facts`/`story` are optional, `highlights` becomes `[]`), so a v27 save round-trips both ways: old
+code reads a slimmed save as factless journeys, new code reads a full v27 save unchanged.
+
+**Reversal.** Have `snapshot` return the live records unslimmed. Nothing else depends on the
+distinction.

@@ -115,6 +115,33 @@ describe('journeys (DL-070)', () => {
     expect(avail(offline)).toEqual(avail(live));
   });
 
+  it('leave the combat facts out of the save, keeping the consequences exact', () => {
+    const h = founded();
+    const res = h.commands.departExpedition('verdant_reach', 'clear');
+    if (!res.ok) throw new Error(res.error);
+    // The live record still carries a fight's facts for a same-session replay...
+    expect(res.value.result.nodes.some((n) => n.facts !== undefined || n.highlights.length > 0)).toBe(true);
+    // ...but the saved copy carries none of the presentation-only replay data.
+    const snap = h.session.snapshot();
+    const saved = JSON.parse(JSON.stringify(snap)) as typeof snap;
+    const savedNodes = saved.journeys.active[0]!.result.nodes;
+    for (const n of savedNodes) {
+      expect(n.facts).toBeUndefined();
+      expect(n.story).toBeUndefined();
+      expect(n.highlights).toEqual([]);
+    }
+
+    // A journey reloaded from that slimmed save lands the same consequences as one never saved.
+    const straight = founded();
+    const b = straight.commands.departExpedition('verdant_reach', 'clear');
+    if (!b.ok) throw new Error(b.error);
+    const fresh = testSession('journey-seed');
+    fresh.session.restore(saved);
+    stepUntilHome(straight);
+    stepUntilHome(fresh);
+    expect(snapshotOf(fresh, res.value.hunterIds)).toEqual(snapshotOf(straight, b.value.hunterIds));
+  });
+
   it('survive a save and reload mid-journey', () => {
     const straight = founded();
     const reloaded = founded();

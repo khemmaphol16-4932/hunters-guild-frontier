@@ -16,7 +16,7 @@
 import type { ZoneTier } from '../../data/combatSchema.js';
 import type { JourneyBalance } from '../../data/journeySchema.js';
 import type { HunterId } from '../../core/ids.js';
-import type { ExpeditionResult } from './Expedition.js';
+import type { ExpeditionResult, NodeReport } from './Expedition.js';
 import type { PartyProposal } from '../../systems/party/Party.js';
 import type { WorldBossEvent } from '../../systems/world/WorldEvents.js';
 
@@ -46,6 +46,29 @@ export interface JourneyRecord {
 export interface JourneysSnapshot {
   readonly next: number;
   readonly active: readonly JourneyRecord[];
+}
+
+/**
+ * A node report stripped of its presentation-only replay data. The combat `facts`, the `story`
+ * and the per-fight `highlights` are read only by the route-replay UI and never feed back into
+ * the rules (`GuildCommands.applyDispatch` reads none of them), so an in-flight journey does not
+ * carry them in the save — they are the bulk of a stored result (per-second samples, damage and
+ * healing maps, skill tallies). A journey interrupted by a save/reload still lands its exact
+ * consequences on return; only the blow-by-blow of its replay is thinned to the per-node outcome.
+ */
+function slimNodeForSave(report: NodeReport): NodeReport {
+  return {
+    node: report.node,
+    outcome: report.outcome,
+    xp: report.xp,
+    highlights: [],
+    encounterSeconds: report.encounterSeconds,
+    partyHealth: report.partyHealth,
+  };
+}
+
+function slimResultForSave(result: ExpeditionResult): ExpeditionResult {
+  return { ...result, nodes: result.nodes.map(slimNodeForSave) };
 }
 
 /**
@@ -138,7 +161,9 @@ export class Journeys {
   }
 
   snapshot(): JourneysSnapshot {
-    return { next: this.next, active: [...this.active] };
+    // The live records keep their full combat facts for a same-session route replay; only the
+    // saved copy is slimmed, so a reload does not carry every fight's blow-by-blow.
+    return { next: this.next, active: this.active.map((j) => ({ ...j, result: slimResultForSave(j.result) })) };
   }
 
   restore(snapshot: JourneysSnapshot | undefined): void {
