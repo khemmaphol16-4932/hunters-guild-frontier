@@ -1004,6 +1004,7 @@ export class GuildCommands {
       run,
       proposal: plan.proposal,
       ...(worldBoss ? { worldBoss } : {}),
+      ...(endless ? { endlessObjectiveId: endless.id } : {}),
     });
     for (const member of plan.proposal.members) {
       const hunter = this.session.roster.require(member.hunterId);
@@ -1025,13 +1026,18 @@ export class GuildCommands {
     return ok(journey);
   }
 
-  /** Resolve a region and the run options for an in-flight journey, or undefined if the region is gone. */
-  private rehydrateJourney(journey: JourneyRecord): { region: WorldRegionDef; options: ReturnType<GuildCommands['runOptionsFor']> } | undefined {
+  /**
+   * Resolve a region, the endless objective and the run options for an in-flight journey, or
+   * undefined if the region is gone. The endless objective is re-resolved from its id rather than
+   * stored, so a save carries content by reference, not a snapshot that could drift.
+   */
+  private rehydrateJourney(journey: JourneyRecord): { region: WorldRegionDef; endless: EndlessObjectiveDef | undefined; options: ReturnType<GuildCommands['runOptionsFor']> } | undefined {
     const baseRegion = this.session.content.worldRegionsById.get(journey.regionId);
     if (!baseRegion) return undefined;
     const region = journey.worldBoss ? { ...baseRegion, boss: journey.worldBoss.bossId } : baseRegion;
-    const options = this.runOptionsFor({ regionId: journey.regionId, region, proposal: journey.proposal, endless: undefined, worldBoss: journey.worldBoss });
-    return { region, options };
+    const endless = journey.endlessObjectiveId !== undefined ? this.session.content.endless.objectives.find((o) => o.id === journey.endlessObjectiveId) : undefined;
+    const options = this.runOptionsFor({ regionId: journey.regionId, region, proposal: journey.proposal, endless, worldBoss: journey.worldBoss });
+    return { region, endless, options };
   }
 
   /**
@@ -1193,14 +1199,14 @@ export class GuildCommands {
   /** Apply every journey that is home by now, exactly as the instant path would have (DL-070). */
   private completeJourneys(recorder: ReportRecorder): void {
     for (const journey of this.session.journeys.takeReturned(this.session.clock.tick)) {
-      const baseRegion = this.session.content.worldRegionsById.get(journey.regionId);
-      if (!baseRegion) continue;
-      const region = journey.worldBoss ? { ...baseRegion, boss: journey.worldBoss.bossId } : baseRegion;
+      const rehydrated = this.rehydrateJourney(journey);
+      if (!rehydrated) continue;
+      const { region, endless } = rehydrated;
       const finished = this.finalizedResult(journey);
       // A hunter who left the roster while away (never expected, but a save can be edited)
       // is dropped from the aftermath rather than crashing the return.
       const result = { ...finished, aftermath: finished.aftermath.filter((a) => this.session.roster.get(a.hunterId) !== undefined) };
-      const outcome = this.applyDispatch({ regionId: journey.regionId, region, proposal: journey.proposal, endless: undefined, worldBoss: journey.worldBoss, result });
+      const outcome = this.applyDispatch({ regionId: journey.regionId, region, proposal: journey.proposal, endless, worldBoss: journey.worldBoss, result });
       recorder.noteExpedition(
         { regionName: region.name, summary: outcome.result.summary, completed: outcome.result.completed, wiped: outcome.result.wiped },
         outcome.result.aftermath,
@@ -1214,10 +1220,11 @@ export class GuildCommands {
     return this.session.worldEvents.currentWorldBoss(this.session.clock.tick);
   }
 
-  sendWorldBossExpedition(party?: PartyProposal): Result<ExpeditionOutcome, string> {
+  /** Send a party to a world boss (REQ-BOS-003). Like any expedition now, it takes world time (DL-074). */
+  sendWorldBossExpedition(party?: PartyProposal): Result<JourneyRecord, string> {
     const event = this.worldBossEvent();
     if (!event) return err('no world boss is currently active');
-    return this.dispatch(event.regionId, 'slay', party, undefined, event);
+    return this.departJourney(event.regionId, 'slay', party, undefined, event);
   }
 
   /**
@@ -1269,12 +1276,13 @@ export class GuildCommands {
     regionId: string,
     endlessObjectiveId: string,
     party?: PartyProposal,
-  ): Result<ExpeditionOutcome, string> {
+  ): Result<JourneyRecord, string> {
     const objective = this.session.content.endless.objectives.find((o) => o.id === endlessObjectiveId);
     if (!objective) return err(`unknown endless objective "${endlessObjectiveId}"`);
     const availability = this.endlessAvailability();
     if (!availability.open) return err(availability.reason);
-    return this.dispatch(regionId, objective.baseObjective, party, objective, undefined);
+    // An endless run departs a journey like any other; its depth record lands on return (DL-074).
+    return this.departJourney(regionId, objective.baseObjective, party, objective, undefined);
   }
 
   private dispatch(

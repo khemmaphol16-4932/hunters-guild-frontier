@@ -16,11 +16,20 @@ function veterans(seed: string) {
   return h;
 }
 
-/** Challenge the world boss until it falls (a strong party needs a try or two). */
+/**
+ * Challenge the world boss until it falls (a strong party needs a try or two). The challenge now
+ * departs a journey and lands on return (DL-074): send it, walk the town until the party is home,
+ * and read the outcome the return produced.
+ */
 function killWorldBoss(h: ReturnType<typeof veterans>) {
   for (let attempt = 0; attempt < 10; attempt++) {
-    const outcome = h.commands.sendWorldBossExpedition();
-    if (outcome.ok && outcome.value.result.bossDefeated) return outcome.value;
+    const dep = h.commands.sendWorldBossExpedition();
+    if (dep.ok) {
+      let steps = 0;
+      while (h.session.journeys.all().length > 0 && steps < 500) { h.commands.passTime(1); steps++; }
+      const outcome = h.commands.latestReturn();
+      if (outcome?.result.bossDefeated) return outcome;
+    }
     h.commands.advanceTown(100);
   }
   throw new Error('the world boss was never defeated');

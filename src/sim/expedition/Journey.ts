@@ -48,6 +48,8 @@ export interface JourneyRecord {
   readonly proposal: PartyProposal;
   /** Set when the journey was sent at a world boss, so its defeat is recorded on return. */
   readonly worldBoss?: WorldBossEvent;
+  /** Set for an endless run: the objective it was sent on, so its depth record lands on return. */
+  readonly endlessObjectiveId?: string;
   /** Tick the guild ordered the party home (REQ-CW-010), when it did. */
   readonly recalledAtTick?: number;
 }

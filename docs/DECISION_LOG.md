@@ -1060,3 +1060,28 @@ home land on its own tick — so the walk home is a phase the player sees, not a
 when travel and per-node time are equal — and, because an away party's hunters are frozen in town,
 it changes no outcome versus resolving at the window's end. `recallAfterNodes` stays on the run
 options for the one-shot equivalence test; the live path uses the flag.
+
+## DL-075 — Endless and world-boss runs depart journeys
+
+**Ambiguity.** DL-073 put the standing order on a journey but left the two single, player-initiated
+dispatches — an endless run and a world-boss challenge — resolving instantly, each because it
+returns straight to a record (endless depth) or a one-off event (the boss defeat and its card).
+
+**Decision.** Both now call `departJourney`: they send a party out and land on return like any other
+expedition (DL-074). The machinery was ready — a `JourneyRecord` already carried `worldBoss`, and
+`applyDispatch` already records endless depth and rolls the boss card on return. The only gap was
+endless: the record now carries `endlessObjectiveId`, re-resolved to its objective on return (by id,
+not a stored snapshot, so a save carries content by reference), and `completeJourneys` passes it to
+`applyDispatch`. The two send methods return a `JourneyRecord`; the expedition screen shows "the
+party set out" and the outcome lands later through the field card and the Guild Report, exactly as
+"Send them" already did.
+
+**Why conservative.** It reuses the one return path every journey already takes; the depth record and
+the boss defeat land through the same `applyDispatch`, now on the tick the party gets home rather
+than the tick it left. A world boss that is somehow gone by the time the party returns simply records
+no defeat — `applyDispatch` guards the defeat on `result.bossDefeated` and the boss still being the
+one fought. The endless and world-event suites were updated to send, walk the party home, then read
+the outcome the return produced.
+
+**Reversal.** Point both send methods back at `dispatch` (the instant path is untouched); drop
+`endlessObjectiveId`.

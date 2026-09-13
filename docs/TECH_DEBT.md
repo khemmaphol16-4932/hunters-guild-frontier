@@ -139,5 +139,5 @@ A null object satisfies the compiler but proves nothing about whether the consum
 | ~~No mid-journey retreat~~ | — | **done** (DL-071/DL-074) — `recallJourney` sets `run.recalled`; no re-run |
 | ~~A recall re-runs the route against the guild as it stands~~ | — | **done** (DL-074) — stops resolve live on the tick; a recall keeps every worked stop, no re-run, no caveat |
 | No personal carried loot | REQ-CW-008 and -011 are unmet; loot goes to the armoury on return | Hunter inventories, then sale to the Guild on return |
-| ~~Standing orders use the instant path~~ / endless and world-boss runs use the instant path | Standing orders now depart journeys (DL-073); endless and world-boss runs still resolve instantly | Switch endless and world-boss to `departExpedition` (machinery ready; DL-073 notes what is left) |
+| ~~Standing orders / endless / world-boss runs use the instant path~~ | — | **done** (DL-073, DL-075) — all runs depart journeys; every dispatch takes world time |
 | The last return's route replay is not saved | After a reload, the expedition screen no longer shows the party that came home before it | Keep the Guild Report as the record, or save the last outcome's summary |

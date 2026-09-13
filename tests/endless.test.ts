@@ -15,6 +15,20 @@ function veteranGuild(seed: string, level = 40) {
   return h;
 }
 
+/**
+ * An endless run now departs a journey and lands on return (DL-074). Send it, walk the town until
+ * the party is home, and hand back the outcome the return produced.
+ */
+function endlessOutcome(h: ReturnType<typeof veteranGuild>, regionId: string, objectiveId: string) {
+  const dep = h.commands.sendEndlessExpedition(regionId, objectiveId);
+  if (!dep.ok) throw new Error(dep.error);
+  let steps = 0;
+  while (h.session.journeys.all().length > 0 && steps < 500) { h.commands.passTime(1); steps++; }
+  const outcome = h.commands.latestReturn();
+  if (!outcome) throw new Error('the endless run never came home');
+  return outcome;
+}
+
 describe('endless expeditions (REQ-END-002)', () => {
   it('are gated behind Guild Mastery, and say so', () => {
     const h = testSession('endless-gate');
@@ -34,42 +48,35 @@ describe('endless expeditions (REQ-END-002)', () => {
 
   it('a strong party goes past the end of the first route into deeper, labelled depths', () => {
     const h = veteranGuild('endless-deep', 60);
-    const outcome = h.commands.sendEndlessExpedition('verdant_reach', 'record_attempt');
-    expect(outcome.ok).toBe(true);
-    if (!outcome.ok) return;
-    const endless = outcome.value.result.endless;
+    const outcome = endlessOutcome(h, 'verdant_reach', 'record_attempt');
+    const endless = outcome.result.endless;
     expect(endless).toBeDefined();
     expect(endless!.deepestDepth).toBeGreaterThan(1);
-    expect(outcome.value.result.nodes.some((report) => report.node.label.startsWith('Depth 2'))).toBe(true);
+    expect(outcome.result.nodes.some((report) => report.node.label.startsWith('Depth 2'))).toBe(true);
   });
 
   it('deeper nodes field stronger monsters than the first route', () => {
     const h = veteranGuild('endless-scale', 60);
-    const outcome = h.commands.sendEndlessExpedition('verdant_reach', 'record_attempt');
-    expect(outcome.ok).toBe(true);
-    if (!outcome.ok) return;
-    const deeper = outcome.value.result.nodes.filter((r) => (r.node.depth ?? 0) > 0);
+    const outcome = endlessOutcome(h, 'verdant_reach', 'record_attempt');
+    const deeper = outcome.result.nodes.filter((r) => (r.node.depth ?? 0) > 0);
     expect(deeper.length).toBeGreaterThan(0);
   });
 
   it('never raises item level, however deep the run goes (v1.0 §12)', () => {
     const h = veteranGuild('endless-ilvl', 60);
     const region = h.session.content.worldRegionsById.get('verdant_reach')!;
-    const outcome = h.commands.sendEndlessExpedition('verdant_reach', 'max_loot');
-    expect(outcome.ok).toBe(true);
-    if (!outcome.ok) return;
-    for (const item of outcome.value.loot) expect(item.itemLevel).toBe(region.itemLevel);
+    const outcome = endlessOutcome(h, 'verdant_reach', 'max_loot');
+    for (const item of outcome.loot) expect(item.itemLevel).toBe(region.itemLevel);
   });
 
   it('pays more for depth, weighted by the objective', () => {
     const h = veteranGuild('endless-pay', 60);
-    const outcome = h.commands.sendEndlessExpedition('verdant_reach', 'resource_gathering');
-    expect(outcome.ok).toBe(true);
-    if (!outcome.ok || outcome.value.result.wiped) return;
+    const outcome = endlessOutcome(h, 'verdant_reach', 'resource_gathering');
+    if (outcome.result.wiped) return;
     const base = h.session.content.economy.expeditionRewards.blue;
-    const cleared = outcome.value.result.endless!.depthsCleared;
+    const cleared = outcome.result.endless!.depthsCleared;
     const scale = 1 + h.session.content.endless.rewardPerDepth * cleared;
-    expect(outcome.value.resources.food).toBe(Math.round(base.food * scale * 2));
+    expect(outcome.resources.food).toBe(Math.round(base.food * scale * 2));
   });
 
   it('does not satisfy or get blocked by an ordinary contract', () => {
@@ -96,11 +103,9 @@ describe('personal records (REQ-END-003)', () => {
 
   it('an endless run records itself, and a milestone depth is carved on the Monument', () => {
     const h = veteranGuild('records-run', 60);
-    const outcome = h.commands.sendEndlessExpedition('verdant_reach', 'record_attempt');
-    expect(outcome.ok).toBe(true);
-    if (!outcome.ok) return;
-    expect(outcome.value.record?.improved).toBe(true);
-    const depth = outcome.value.result.endless!.deepestDepth;
+    const outcome = endlessOutcome(h, 'verdant_reach', 'record_attempt');
+    expect(outcome.record?.improved).toBe(true);
+    const depth = outcome.result.endless!.deepestDepth;
     expect(h.session.endlessRecords.get('verdant_reach', 'record_attempt')?.depth).toBe(depth);
     const milestone = h.session.content.endless.recordMilestone;
     const plaques = h.session.monument.all().filter((e) => e.kind === 'endlessRecord');

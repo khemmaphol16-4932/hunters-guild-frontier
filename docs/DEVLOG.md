@@ -1038,3 +1038,23 @@ Because a working party forces `passTime` to land on each node boundary, offline
 party in the field advances a step at a time there — correct, and the same path live play takes.
 
 **Verified:** 706 tests pass (1 skipped); TypeScript is clean; the production build succeeds.
+
+---
+
+# 2026-09-13 — Endless and world-boss runs depart journeys (DL-075)
+
+The last two instant dispatches are on the clock. `sendEndlessExpedition` and
+`sendWorldBossExpedition` now call `departJourney`, so an endless run and a world-boss challenge send
+a party out and land on return like any other expedition. The record carries `endlessObjectiveId`,
+re-resolved on return so the depth record lands through the same `applyDispatch`; the world boss was
+already carried, and its defeat and card already roll on return. The expedition screen shows "the
+party set out" and the outcome — the depth record, the boss defeat, the card — arrives later through
+the field card and the Guild Report.
+
+The endless and world-event suites were updated to send, walk the party home, and read the outcome
+the return produced (a `latestReturn` helper). "Switch all runs to journeys" is now complete.
+
+Verified in the running game: a party sent to the Verdant Reach showed "Walking out … still out",
+counted its stops up as it worked them, and came home to Recovering — the DL-074 lifecycle end to end.
+
+**Verified:** 706 tests pass (1 skipped); TypeScript is clean; the production build succeeds.

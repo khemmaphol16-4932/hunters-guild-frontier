@@ -482,12 +482,14 @@ export class ExpeditionView {
     );
     const send = el('button', undefined, 'Challenge world boss') as HTMLButtonElement;
     send.onclick = () => {
-      const outcome = this.commands.sendWorldBossExpedition();
-      if (!outcome.ok) {
-        this.state.message = outcome.error;
+      const journey = this.commands.sendWorldBossExpedition();
+      if (!journey.ok) {
+        this.state.message = journey.error;
         this.state.messageIsError = true;
       } else {
-        this.show(outcome.value, outcome.value.result.summary);
+        const party = this.commands.partiesInField().find((p) => p.journeyId === journey.value.id);
+        this.state.message = party ? `${party.hunterNames.join(', ')} set out to face the boss. ${describeParty(party)}.` : 'The party set out to face the boss.';
+        this.state.messageIsError = false;
       }
       this.render();
     };
@@ -536,17 +538,14 @@ export class ExpeditionView {
 
     const go = el('button', undefined, 'Go endless') as HTMLButtonElement;
     go.onclick = () => {
-      const outcome = this.commands.sendEndlessExpedition(this.state.regionId, this.state.endlessObjective);
-      if (!outcome.ok) {
-        this.state.message = outcome.error;
+      const journey = this.commands.sendEndlessExpedition(this.state.regionId, this.state.endlessObjective);
+      if (!journey.ok) {
+        this.state.message = journey.error;
         this.state.messageIsError = true;
       } else {
-        const recordLine = outcome.value.record?.improved
-          ? ` New record: depth ${outcome.value.record.current.depth}.`
-          : outcome.value.record
-            ? ` The record stands at depth ${outcome.value.record.current.depth}.`
-            : '';
-        this.show(outcome.value, outcome.value.result.summary + recordLine);
+        const party = this.commands.partiesInField().find((p) => p.journeyId === journey.value.id);
+        this.state.message = party ? `${party.hunterNames.join(', ')} set out on an endless run. ${describeParty(party)}.` : 'The party set out on an endless run.';
+        this.state.messageIsError = false;
       }
       this.render();
     };
