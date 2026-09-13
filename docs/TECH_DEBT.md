@@ -139,4 +139,5 @@ A null object satisfies the compiler but proves nothing about whether the consum
 | ~~No mid-journey retreat~~ | — | **done** (DL-071) — `recallJourney` re-runs from the journey's fork with a hard stop |
 | A recall re-runs the route against the guild as it stands | Town-wide changes during a journey (facility upgrades, mentor bonuses, items upgraded by id) reach the re-run; away hunters themselves are locked | Step 2's node-by-node resolution removes the re-run |
 | No personal carried loot | REQ-CW-008 and -011 are unmet; loot goes to the armoury on return | Hunter inventories, then sale to the Guild on return |
-| Expedition screen, standing orders, endless and world-boss runs use the instant path | Players cannot yet start a journey from the UI | Switch them to `departExpedition` |
+| Standing orders, endless and world-boss runs use the instant path ("Send them" departs a journey since DL-071) | Offline standing orders still bring a party home on the step it left | Switch each to `departExpedition`, checking offline pacing and endless records |
+| The last return's route replay is not saved | After a reload, the expedition screen no longer shows the party that came home before it | Keep the Guild Report as the record, or save the last outcome's summary |

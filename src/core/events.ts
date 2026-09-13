@@ -73,6 +73,8 @@ export interface DomainEventMap {
   /** The world boss has appeared somewhere in the world (REQ-BOS-003). */
   'worldBoss.appeared': { bossId: string; regionId: string };
   'endless.recordSet': { regionId: string; regionName: string; objectiveName: string; depth: number; milestone: boolean };
+  /** A party out on a journey walked back through the gate and its consequences landed (DL-070). */
+  'journey.returned': { journeyId: string; regionName: string; wiped: boolean };
 }
 
 export type DomainEventName = keyof DomainEventMap;

@@ -19,6 +19,7 @@ export const NOTIFICATION_KINDS = [
   'hunterLeveled',
   'rescue',
   'bossDefeated',
+  'partyReturned',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 

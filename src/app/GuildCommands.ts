@@ -46,7 +46,7 @@ import type { RefineResult } from '../systems/items/Refinement.js';
 import { REASON } from '../core/audit.js';
 import type { ObjectiveId, PartyProposal } from '../systems/party/Party.js';
 import type { ExpeditionResult } from '../sim/expedition/Expedition.js';
-import { phaseAt, recallTimetable, timetable, type JourneyRecord } from '../sim/expedition/Journey.js';
+import { phaseAt, recallTimetable, timetable, type JourneyPhase, type JourneyRecord } from '../sim/expedition/Journey.js';
 import type { KnowledgeTier, RegionDef as WorldRegionDef } from '../data/combatSchema.js';
 import { KNOWLEDGE_TIERS } from '../data/combatSchema.js';
 import type { Rotation, TownDepartmentId } from '../data/townSchema.js';
@@ -77,6 +77,35 @@ function knowledgeAtLeast(actual: KnowledgeTier, needed: KnowledgeTier): boolean
   return KNOWLEDGE_TIERS.indexOf(actual) >= KNOWLEDGE_TIERS.indexOf(needed);
 }
 
+/** A party out in the world, as the player sees it (DL-071). */
+export interface FieldParty {
+  readonly journeyId: string;
+  readonly regionName: string;
+  readonly hunterIds: readonly HunterId[];
+  readonly hunterNames: readonly string[];
+  readonly phase: JourneyPhase;
+  /** The node being worked, from 1; 0 while walking out. */
+  readonly node: number;
+  /** How many nodes the party will work before it turns for home. */
+  readonly nodes: number;
+  readonly stepsUntilHome: number;
+  readonly recalled: boolean;
+  /** Why a recall would change nothing, when it would not. */
+  readonly recallBlockedBy?: string;
+}
+
+/**
+ * How many nodes a recall at `tick` lets the party finish, or why a recall would change nothing.
+ * A party walking out has worked none; a party at a node finishes it.
+ */
+function recallPoint(journey: JourneyRecord, tick: number): number | string {
+  const where = phaseAt(journey, tick);
+  if (where.phase === 'inbound' || where.phase === 'home') return 'the party is already on its way home';
+  const worked = where.phase === 'outbound' ? 0 : where.node;
+  if (worked >= journey.result.nodesEntered) return 'the party turns for home after this stop anyway';
+  return worked;
+}
+
 /** A route resolved at the gate and not yet applied (DL-070). */
 interface DispatchPlan {
   readonly regionId: string;
@@ -105,6 +134,9 @@ export interface ExpeditionOutcome {
  */
 
 export class GuildCommands {
+  /** The most recent journey to come home; see `latestReturn`. */
+  private lastReturn: ExpeditionOutcome | undefined;
+
   constructor(private readonly session: Session) {}
 
   private get masteryPoints() {
@@ -966,10 +998,9 @@ export class GuildCommands {
     const journey = this.session.journeys.get(journeyId);
     if (!journey) return err(`no party is out on "${journeyId}"`);
     const tick = this.session.clock.tick;
-    const where = phaseAt(journey, tick);
-    if (where.phase === 'inbound' || where.phase === 'home') return err('the party is already on its way home');
-    const worked = where.phase === 'outbound' ? 0 : where.node;
-    if (worked >= journey.result.nodesEntered) return err('the party turns for home after this stop anyway');
+    const point = recallPoint(journey, tick);
+    if (typeof point === 'string') return err(point);
+    const worked = point;
 
     const baseRegion = this.session.content.worldRegionsById.get(journey.regionId);
     if (!baseRegion) return err(`unknown region "${journey.regionId}"`);
@@ -998,6 +1029,44 @@ export class GuildCommands {
   }
 
   /**
+   * Every party out in the world, as the player sees it: where it is, how long until it is home,
+   * and whether a recall would change anything. Presentation reads this; it decides nothing.
+   */
+  partiesInField(): readonly FieldParty[] {
+    const tick = this.session.clock.tick;
+    const ratio = this.session.clock.coarseStepRatio;
+    return this.session.journeys.all().map((journey) => {
+      const where = phaseAt(journey, tick);
+      const point = recallPoint(journey, tick);
+      return {
+        journeyId: journey.id,
+        regionName: this.session.content.worldRegionsById.get(journey.regionId)?.name ?? journey.regionId,
+        hunterIds: journey.hunterIds,
+        hunterNames: journey.hunterIds.map((id) => this.session.roster.get(id)?.name ?? id),
+        phase: where.phase,
+        node: where.node,
+        nodes: journey.result.nodesEntered,
+        stepsUntilHome: Math.max(0, Math.ceil((journey.returnsAtTick - tick) / ratio)),
+        recalled: journey.recalledAtTick !== undefined,
+        ...(typeof point === 'string' ? { recallBlockedBy: point } : {}),
+      };
+    });
+  }
+
+  /** The party a hunter is out with, if they are away. */
+  partyOf(hunterId: HunterId): FieldParty | undefined {
+    return this.partiesInField().find((p) => p.hunterIds.includes(hunterId));
+  }
+
+  /**
+   * The most recent journey to come home, for the expedition screen's route replay. Kept for
+   * the session only: the lasting record is the Guild Report, the chronicle and the audit.
+   */
+  latestReturn(): ExpeditionOutcome | undefined {
+    return this.lastReturn;
+  }
+
+  /**
    * A hunter out on a journey is in the field: nothing in town can re-gear, retrain or retire
    * them until they are home (DL-071). Undefined when the hunter is here.
    */
@@ -1021,6 +1090,8 @@ export class GuildCommands {
         { regionName: region.name, summary: outcome.result.summary, completed: outcome.result.completed, wiped: outcome.result.wiped },
         outcome.result.aftermath,
       );
+      this.lastReturn = outcome;
+      this.session.events.emit('journey.returned', { journeyId: journey.id, regionName: region.name, wiped: outcome.result.wiped });
     }
   }
 

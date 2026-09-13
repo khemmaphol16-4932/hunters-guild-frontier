@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { testSession } from './helpers.js';
 import { phaseAt, timetable } from '../src/sim/expedition/Journey.js';
 import type { HunterId } from '../src/core/ids.js';
+import { describeAway, describeParty } from '../src/ui/fieldParty.js';
 
 /**
  * Journeys (CONTINUOUS_WORLD_ARCHITECTURE.md §Migration step 1, DL-070): an expedition that takes
@@ -201,5 +202,49 @@ describe('recalling a journey (REQ-CW-010, DL-071)', () => {
     }
     const away = h.commands.unequipSlot(id, 'weapon');
     if (!away.ok) expect(away.error).toMatch(/away on an expedition/);
+  });
+});
+
+describe('parties in the field, as the player sees them (DL-071)', () => {
+  it('follow a party out, through its stops, and home', () => {
+    const h = founded();
+    const res = h.commands.departExpedition('verdant_reach', 'clear');
+    if (!res.ok) throw new Error(res.error);
+    const seen: string[] = [];
+    for (let guard = 0; h.commands.partiesInField().length > 0 && guard < 50; guard++) {
+      const [party] = h.commands.partiesInField();
+      if (!party) break;
+      expect(party.hunterIds).toEqual(res.value.hunterIds);
+      expect(h.commands.partyOf(party.hunterIds[0]!)?.journeyId).toBe(res.value.id);
+      seen.push(`${party.phase}:${party.node}:${party.stepsUntilHome}:${party.recallBlockedBy ? 'no' : 'yes'}`);
+      h.commands.passTime(1);
+    }
+    const n = res.value.result.nodesEntered;
+    // Out, one line per stop, then home: steps to home count down by one each step, and the
+    // recall is offered until the party is at its last stop.
+    expect(seen[0]).toBe(`outbound:0:${n + 2}:yes`);
+    expect(seen.at(-1)).toBe('inbound:' + n + ':1:no');
+    expect(seen.map((line) => Number(line.split(':')[2]))).toEqual(Array.from({ length: n + 2 }, (_, i) => n + 2 - i));
+    expect(seen.filter((line) => line.startsWith('working:')).map((line) => line.split(':')[1])).toEqual(Array.from({ length: n }, (_, i) => String(i + 1)));
+    expect(h.commands.partyOf(res.value.hunterIds[0]!)).toBeUndefined();
+  });
+
+  it('keep the return for the route replay and announce it', () => {
+    const h = founded();
+    expect(h.commands.latestReturn()).toBeUndefined();
+    const res = h.commands.departExpedition('verdant_reach', 'clear');
+    if (!res.ok) throw new Error(res.error);
+    stepUntilHome(h);
+    expect(JSON.stringify(h.commands.latestReturn()?.result.nodes)).toBe(JSON.stringify(res.value.result.nodes));
+    const notice = h.session.notifications.all().find((n) => n.kind === 'partyReturned');
+    expect(notice?.text).toBe('The party is home from The Verdant Reach.');
+  });
+
+  it('read in plain words', () => {
+    const base = { journeyId: 'journey-1', regionName: 'Verdant Reach', hunterIds: [], hunterNames: [], node: 2, nodes: 4, stepsUntilHome: 3, recalled: false } as const;
+    expect(describeParty({ ...base, phase: 'working' })).toBe('At stop 2 of 4 in Verdant Reach · home in 3 steps');
+    expect(describeParty({ ...base, phase: 'inbound', recalled: true, stepsUntilHome: 1 })).toBe('Recalled — heading home from Verdant Reach · home in 1 step');
+    expect(describeParty({ ...base, phase: 'outbound' })).toBe('Walking out to Verdant Reach · home in 3 steps');
+    expect(describeAway({ ...base, phase: 'working' })).toBe('Verdant Reach · stop 2/4');
   });
 });

@@ -915,3 +915,23 @@ every node already worked was byte-identical each time. What is left is recorded
 the guild as a whole during a journey still reach the re-run, a caveat that step 2 removes.
 
 **Verified:** 694 tests pass; TypeScript is clean.
+
+---
+
+# 2026-09-13 — Journeys on screen (DL-071)
+
+Players can now use journeys. "Send them" departs a party instead of resolving the route on the
+spot. The expedition screen has an "In the field" card with each party's position, its time to
+home and a Recall button; the town dock says where an away hunter is, and the hunter inspector can
+recall the party. A return raises a notice and opens the party's route replay on the expedition
+screen.
+
+The screens decide nothing. `GuildCommands.partiesInField` gives the phase, the stop, the steps to
+home and why a recall would be refused, and `ui/fieldParty.ts` only turns that into words. A test
+walks one party out, through each stop and home, and checks every line: the steps to home count down
+by one each step, the stops count up from one, and the recall is offered until the last stop.
+
+Not verified in a browser. The dev server cannot be viewed from this session, so the layout of the
+new card and the inspector button is checked by type and by the production build only.
+
+**Verified:** 697 tests pass; TypeScript is clean; the production build succeeds.

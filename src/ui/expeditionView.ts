@@ -10,8 +10,8 @@
  *   1. pick a region, and read what it can do to you (REQ-ZON-001)
  *   2. pick an objective
  *   3. read the AI's party proposal *and its reasoning*, before committing
- *   4. send
- *   5. read the route back, decision by decision (v1.0 §14)
+ *   4. send — the party walks out into the world and is away until it comes home (DL-070)
+ *   5. read the route back, decision by decision (v1.0 §14), once it is home
  *
  * REQ-TEC-010: no game logic here. Every number and every sentence comes from the systems
  * that produced it.
@@ -25,6 +25,7 @@ import { activatable } from './a11y.js';
 import { describeAvailability } from '../core/hunter/availability.js';
 import { STANDING_ORDERS, contradictionsIn } from '../ai/policy/orders.js';
 import type { NodeReport } from '../sim/expedition/Expedition.js';
+import { describeParty } from './fieldParty.js';
 
 const el = (tag: string, className?: string, text?: string): HTMLElement => {
   const node = document.createElement(tag);
@@ -51,6 +52,8 @@ interface ViewState {
 
 export class ExpeditionView {
   private readonly state: ViewState;
+  /** The last journey return this screen has shown, so a newer one replaces the account. */
+  private shownReturn: ExpeditionOutcome | undefined;
 
   constructor(
     private readonly host: HTMLElement,
@@ -69,12 +72,18 @@ export class ExpeditionView {
   }
 
   render(): void {
+    const latest = this.commands.latestReturn();
+    if (latest && latest !== this.shownReturn) {
+      this.shownReturn = latest;
+      this.show(latest, latest.result.summary);
+    }
     this.host.replaceChildren();
     const grid = el('div', 'grid');
     grid.append(
       this.renderPlanner(),
       this.renderOrders(),
       this.renderProposal(),
+      this.renderField(),
       this.renderWorldBoss(),
       this.renderEndless(),
       this.renderStandingOrder(),
@@ -336,22 +345,56 @@ export class ExpeditionView {
 
     const send = el('button', undefined, 'Send them') as HTMLButtonElement;
     send.onclick = () => {
-      const outcome = this.commands.sendExpedition(this.state.regionId, this.state.objective);
-      if (!outcome.ok) {
-        this.state.message = outcome.error;
+      const journey = this.commands.departExpedition(this.state.regionId, this.state.objective);
+      if (!journey.ok) {
+        this.state.message = journey.error;
         this.state.messageIsError = true;
       } else {
-        this.state.outcome = outcome.value;
-        this.state.message = outcome.value.result.summary;
-        this.state.messageIsError = outcome.value.result.wiped;
-        const firstFight = outcome.value.result.nodes.findIndex((node) => node.facts);
-        this.state.expandedNode = firstFight >= 0 ? firstFight : undefined;
+        const party = this.commands.partiesInField().find((p) => p.journeyId === journey.value.id);
+        this.state.message = party ? `${party.hunterNames.join(', ')} set out. ${describeParty(party)}.` : 'The party set out.';
+        this.state.messageIsError = false;
       }
       this.render();
     };
     card.append(send);
 
     return card;
+  }
+
+  /** Parties out in the world, and the recall (REQ-CW-010). */
+  private renderField(): HTMLElement {
+    const card = el('div', 'card');
+    card.append(el('h3', undefined, 'In the field'));
+    const parties = this.commands.partiesInField();
+    if (parties.length === 0) {
+      card.append(el('p', 'empty', 'Nobody is out. A party you send walks out into the world and reports when it is home.'));
+      return card;
+    }
+    for (const party of parties) {
+      card.append(el('p', 'headline', describeParty(party)), el('p', 'subhead', party.hunterNames.join(', ')));
+      const recall = el('button', undefined, 'Recall the party') as HTMLButtonElement;
+      if (party.recallBlockedBy) {
+        recall.disabled = true;
+        recall.title = party.recallBlockedBy;
+      }
+      recall.onclick = () => {
+        const res = this.commands.recallJourney(party.journeyId);
+        this.state.message = res.ok ? `Recalled. The party will be home in ${this.commands.partiesInField().find((p) => p.journeyId === party.journeyId)?.stepsUntilHome ?? 0} steps.` : res.error;
+        this.state.messageIsError = !res.ok;
+        this.render();
+      };
+      card.append(recall);
+    }
+    return card;
+  }
+
+  /** Put an outcome's account on screen, opened at its first fight. */
+  private show(outcome: ExpeditionOutcome, message: string): void {
+    this.state.outcome = outcome;
+    this.state.message = message;
+    this.state.messageIsError = outcome.result.wiped;
+    const firstFight = outcome.result.nodes.findIndex((node) => node.facts);
+    this.state.expandedNode = firstFight >= 0 ? firstFight : undefined;
   }
 
   // --- REQ-OFF-001..004: what the guild does while you are away ------------
@@ -444,11 +487,7 @@ export class ExpeditionView {
         this.state.message = outcome.error;
         this.state.messageIsError = true;
       } else {
-        this.state.outcome = outcome.value;
-        this.state.message = outcome.value.result.summary;
-        this.state.messageIsError = outcome.value.result.wiped;
-        const firstFight = outcome.value.result.nodes.findIndex((node) => node.facts);
-        this.state.expandedNode = firstFight >= 0 ? firstFight : undefined;
+        this.show(outcome.value, outcome.value.result.summary);
       }
       this.render();
     };
@@ -502,16 +541,12 @@ export class ExpeditionView {
         this.state.message = outcome.error;
         this.state.messageIsError = true;
       } else {
-        this.state.outcome = outcome.value;
         const recordLine = outcome.value.record?.improved
           ? ` New record: depth ${outcome.value.record.current.depth}.`
           : outcome.value.record
             ? ` The record stands at depth ${outcome.value.record.current.depth}.`
             : '';
-        this.state.message = outcome.value.result.summary + recordLine;
-        this.state.messageIsError = outcome.value.result.wiped;
-        const firstFight = outcome.value.result.nodes.findIndex((node) => node.facts);
-        this.state.expandedNode = firstFight >= 0 ? firstFight : undefined;
+        this.show(outcome.value, outcome.value.result.summary + recordLine);
       }
       this.render();
     };

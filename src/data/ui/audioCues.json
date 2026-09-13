@@ -15,6 +15,7 @@
     "townDefended": null,
     "hunterLeveled": "tick",
     "rescue": null,
-    "bossDefeated": "drum"
+    "bossDefeated": "drum",
+    "partyReturned": "gate"
   }
 }

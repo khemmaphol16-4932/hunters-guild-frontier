@@ -63,6 +63,8 @@ export class Notifications {
       bossesSeen.add(key);
       this.push(worldBoss ? 'worldBossDefeated' : 'bossDefeated', `${monster(bossId)} fell.`);
     }));
+    on.push(events.on('journey.returned', ({ regionName, wiped }) =>
+      this.push('partyReturned', wiped ? `The party was carried home from ${regionName}.` : `The party is home from ${regionName}.`)));
     on.push(events.on('endless.recordSet', ({ regionName, depth }) => this.push('endlessRecord', `New endless record: depth ${depth} in ${regionName}.`)));
     on.push(events.on('zone.firstEntered', ({ hunterId, zoneId, tier }) => {
       if (tier === 'red' || tier === 'black') this.push('frontierEntered', `${name(hunterId)}'s party entered ${region(zoneId)} for the first time.`);

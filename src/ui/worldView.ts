@@ -10,6 +10,7 @@ import { BuildDashboard } from './buildDashboard.js';
 import type { GuidanceScreen } from '../data/guidanceSchema.js';
 import { buildDrawList, layoutKey, projectTile, type DrawItem, type PlacedBuilding } from './world/sceneModel.js';
 import { buildingArtIndex, spriteImage } from './world/buildingArt.js';
+import { describeAway, describeParty } from './fieldParty.js';
 
 const el = (tag: string, cls = '', text?: string): HTMLElement => {
   const n = document.createElement(tag); n.className = cls;
@@ -69,7 +70,7 @@ export class WorldView {
   constructor(
     private readonly host: HTMLElement,
     private readonly session: Session,
-    commands: GuildCommands,
+    private readonly commands: GuildCommands,
     private readonly onPanelChange: () => void = () => {},
   ) {
     this.town = new TownView(this.panelBody, session, commands);
@@ -259,11 +260,19 @@ export class WorldView {
     ctx.filter = 'none';
   }
 
+  /** What a hunter is doing, in the dock's words: out in the field, at a town job, or their availability. */
+  private activityOf(hunterId: HunterId): string {
+    const h = this.session.roster.require(hunterId);
+    const party = this.commands.partyOf(hunterId);
+    if (party) return describeAway(party);
+    const job = this.session.townJobs.all().find(a => a.hunterId === h.id);
+    return job ? this.session.content.townJobsById.get(job.jobId)?.name ?? job.jobId : describeAvailability(h.availability);
+  }
+
   private renderRoster(): void {
     this.roster.replaceChildren(el('span', 'dock-label', `${this.session.roster.size} HUNTERS`));
     for (const h of this.session.roster.all()) {
-      const job = this.session.townJobs.all().find(a => a.hunterId === h.id);
-      const activity = job ? this.session.content.townJobsById.get(job.jobId)?.name ?? job.jobId : describeAvailability(h.availability);
+      const activity = this.activityOf(h.id);
       const b = button('', () => { this.selected = h.id; this.renderInspector(); }, `dock-hunter role-${this.session.buildIdentity.profileOf(h).primaryRole}`);
       b.setAttribute('aria-label', `${h.name}, level ${h.level}, ${activity}. Inspect hunter`);
       b.append(el('span', 'hunter-avatar', h.name[0]), el('span', 'dock-name', h.name.split(' ')[0]), el('span', 'dock-activity', activity)); this.roster.append(b);
@@ -273,12 +282,22 @@ export class WorldView {
   private renderInspector(): void {
     const h = this.selected ? this.session.roster.get(this.selected) : undefined;
     this.inspector.hidden = !h; this.inspector.replaceChildren(); if (!h) return;
-    const job = this.session.townJobs.all().find(a => a.hunterId === h.id);
     const head = el('div', 'drawer-heading');
     head.append(el('h2', '', h.name), button('×', () => { this.selected = undefined; this.renderInspector(); }));
     head.lastElementChild?.setAttribute('aria-label', 'Close hunter inspector');
     this.inspector.append(head, el('p', 'inspector-subtitle', `Level ${h.level} · ${this.session.buildIdentity.profileOf(h).primaryRole}`));
-    this.inspector.append(el('p', 'current-activity', job ? this.session.content.townJobsById.get(job.jobId)?.name ?? job.jobId : describeAvailability(h.availability)));
+    const party = this.commands.partyOf(h.id);
+    this.inspector.append(el('p', 'current-activity', party ? describeParty(party) : this.activityOf(h.id)));
+    if (party) {
+      // REQ-CW-010: the recall is a Guild order to the whole party, so it lives with any one of them.
+      const recall = button('Recall the party', () => {
+        const res = this.commands.recallJourney(party.journeyId);
+        if (!res.ok) recall.title = res.error;
+        this.renderRoster(); this.renderInspector();
+      }, 'profile-action');
+      if (party.recallBlockedBy) { recall.disabled = true; recall.title = party.recallBlockedBy; }
+      this.inspector.append(recall);
+    }
     for (const [label, value] of [['Rested', 1-h.condition.fatigue], ['Fed', 1-h.condition.hunger], ['Morale', h.condition.morale]] as const) {
       const row = el('label', 'condition-meter', label); const meter = document.createElement('meter'); meter.min = 0; meter.max = 1; meter.value = value; row.append(meter, el('span', '', `${Math.round(value*100)}%`)); this.inspector.append(row);
     }

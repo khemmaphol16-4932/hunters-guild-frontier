@@ -890,5 +890,15 @@ upgraded by item id — still reach the re-run, because they are the guild's and
 changes a node already worked in the current content, but the guarantee is by test, not by
 construction. Resolving node by node on the tick (step 2) removes the re-run and the caveat with it.
 
+**On screen.** The expedition screen's "Send them" now departs a journey instead of resolving on the
+spot. An "In the field" card lists every party out, where it is ("At stop 2 of 4 in The Verdant
+Reach · home in 3 steps") and a Recall button, disabled with the reason when a recall would change
+nothing. On the town screen an away hunter's dock line says where they are, and the hunter inspector
+carries the same Recall. A return raises a `partyReturned` notice (important: unread badge, no
+banner; PENDING APPROVAL with the rest of `ui/notifications.json`), and the expedition screen opens
+the returned party's route replay. `GuildCommands.partiesInField` owns every number and the recall
+rule; the screens only phrase it. Standing orders, endless runs and world-boss runs still resolve
+instantly: each changes offline pacing or a record, so each gets its own look.
+
 **Reversal.** Remove `recallJourney`, `recallAfterNodes` and the guards; `nodesEntered` is harmless
-to keep.
+to keep. Pointing "Send them" back at `sendExpedition` restores the instant screen.

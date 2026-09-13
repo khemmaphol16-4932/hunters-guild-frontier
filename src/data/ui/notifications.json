@@ -16,6 +16,7 @@
     "townDefended": "routine",
     "hunterLeveled": "routine",
     "rescue": "routine",
-    "bossDefeated": "routine"
+    "bossDefeated": "routine",
+    "partyReturned": "important"
   }
 }
