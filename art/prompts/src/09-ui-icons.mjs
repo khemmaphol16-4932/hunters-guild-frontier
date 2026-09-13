@@ -69,6 +69,7 @@ export default {
           contractResolved: 'a sealed contract', worldBossDefeated: 'a bell hanging still on a bracket', endlessRecord: 'a notched depth post',
           rareFound: 'an item with a plain rare frame corner', frontierEntered: 'a trail cairn', townDefended: 'an upright shield on a wall',
           hunterLeveled: 'a small upward notch on a staff', rescue: 'an arm around a shoulder', bossDefeated: 'a lowered boss crest',
+          partyReturned: 'a party pennant crossing through the town gate',
         }, Object.keys(notifications), 'notification', 'notification'), { extra: 'Critical kinds — hunterDied, townBreached, worldBossAppeared, legendaryFound — carry a heavier 2-pixel outline.' }),
         set('job', 'town jobs', need({
           hunter_drill: 'a wooden practice sword', escort_duty: 'a lantern on a pole', forge_work: 'a smith\'s hammer', leatherwork: 'a curved leather knife',

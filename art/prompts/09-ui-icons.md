@@ -183,7 +183,7 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 | Priority | P1 |
 | Output | `art/ui/icons/notification/icon_notification_sheet@2x.png` |
 | Panel | 96 × 96 px `@2x` |
-| Covers | `notification:hunterDied` `notification:townBreached` `notification:worldBossAppeared` `notification:legendaryFound` `notification:stageReached` `notification:researchCompleted` `notification:contractResolved` `notification:worldBossDefeated` `notification:endlessRecord` `notification:rareFound` `notification:frontierEntered` `notification:townDefended` `notification:hunterLeveled` `notification:rescue` `notification:bossDefeated` |
+| Covers | `notification:hunterDied` `notification:townBreached` `notification:worldBossAppeared` `notification:legendaryFound` `notification:stageReached` `notification:researchCompleted` `notification:contractResolved` `notification:worldBossDefeated` `notification:endlessRecord` `notification:rareFound` `notification:frontierEntered` `notification:townDefended` `notification:hunterLeveled` `notification:rescue` `notification:bossDefeated` `notification:partyReturned` |
 
 | # | Member | Output |
 |---|---|---|
@@ -202,13 +202,14 @@ photorealistic, 3D render, octane, unreal engine, smooth vector art, flat vector
 | 13 | `hunterLeveled` | `art/ui/icons/notification/icon_notification_hunterLeveled@2x.png` |
 | 14 | `rescue` | `art/ui/icons/notification/icon_notification_rescue@2x.png` |
 | 15 | `bossDefeated` | `art/ui/icons/notification/icon_notification_bossDefeated@2x.png` |
+| 16 | `partyReturned` | `art/ui/icons/notification/icon_notification_partyReturned@2x.png` |
 
 **Prompt**
 
 ```text
 Hand-crafted isometric pixel art for a 2.5D management RPG, in the style of premium modern pixel art: crisp hand-placed pixels on a strict grid, clean readable silhouette first, soft ambient shading with limited dithering, no anti-aliasing on the outer silhouette edge. True 2:1 dimetric projection, camera fixed, viewed from above at 26.565 degrees. Grounded frontier fantasy: timber, stone, leather, iron, wool, rope. Lived-in and practical, warm and inhabited rather than heroic or ornate. Restrained palette, strong value separation between silhouette and ground. Fully transparent background. Several panels on one canvas, laid out exactly as listed below, evenly spaced on a shared baseline, each panel a complete subject. No text, no numbers, no UI, no frame, no border, no watermark, no signature, no drop shadow baked into the sprite.
 
-A user-interface icon sheet for a frontier guild management game: the notice kinds set. Each icon is one clear physical object from the game world rather than an abstract glyph, centred in its panel with a 4-pixel margin, a 1-pixel outline in a darker shade of its own colour, lit from the upper left, on transparency, no frame. Every icon must read instantly at 24 by 24 pixels, and the whole set must look like one family. Critical kinds — hunterDied, townBreached, worldBossAppeared, legendaryFound — carry a heavier 2-pixel outline. Lay out 15 panels in 3 rows of 5, each panel 96 by 96 pixels, separated by 16 pixels of empty space, in this order, left to right and top to bottom: 1) a lowered, furled banner — never a skull; 2) a broken palisade stake; 3) a drowned bronze bell; 4) an item with a notched legendary frame corner; 5) a raised town banner; 6) a brass instrument; 7) a sealed contract; 8) a bell hanging still on a bracket; 9) a notched depth post; 10) an item with a plain rare frame corner; 11) a trail cairn; 12) an upright shield on a wall; 13) a small upward notch on a staff; 14) an arm around a shoulder; 15) a lowered boss crest.
+A user-interface icon sheet for a frontier guild management game: the notice kinds set. Each icon is one clear physical object from the game world rather than an abstract glyph, centred in its panel with a 4-pixel margin, a 1-pixel outline in a darker shade of its own colour, lit from the upper left, on transparency, no frame. Every icon must read instantly at 24 by 24 pixels, and the whole set must look like one family. Critical kinds — hunterDied, townBreached, worldBossAppeared, legendaryFound — carry a heavier 2-pixel outline. Lay out 16 panels in 4 rows of 5, each panel 96 by 96 pixels, separated by 16 pixels of empty space, in this order, left to right and top to bottom: 1) a lowered, furled banner — never a skull; 2) a broken palisade stake; 3) a drowned bronze bell; 4) an item with a notched legendary frame corner; 5) a raised town banner; 6) a brass instrument; 7) a sealed contract; 8) a bell hanging still on a bracket; 9) a notched depth post; 10) an item with a plain rare frame corner; 11) a trail cairn; 12) an upright shield on a wall; 13) a small upward notch on a staff; 14) an arm around a shoulder; 15) a lowered boss crest; 16) a party pennant crossing through the town gate.
 ```
 
 **Negative prompt**

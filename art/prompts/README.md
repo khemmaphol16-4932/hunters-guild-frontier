@@ -20,7 +20,7 @@
 | 11 | [Animation Keyframes](11-animations.md) | 85 | 17 | 0 |
 | 12 | [Loading and Promotional Art](12-promotional.md) | 10 | 0 | 1 |
 
-**Coverage:** 222 of 222 content ids in `src/data` have art — complete.
+**Coverage:** 223 of 223 content ids in `src/data` have art — complete.
 
 ## How to use
 
