@@ -102,6 +102,7 @@ still resolve synchronously into a replay.
 | 9 | Persistent journey/activity state owned by the simulation | Code | Claude | ✅ journeys, save v27 (DL-070) |
 | 10 | Travel, encounter, combat, return, recovery and selling advance on fixed ticks | Code | Claude | 🔨 travel/return on the tick (DL-070); recall (DL-071); slim saves (DL-072); standing orders (DL-073); **node-by-node resolution (DL-074, save v28)** — stops resolve live on the tick, emergent return, recall-as-flag, no re-run; **all runs on journeys (DL-075)** — endless + world-boss too; next: carried loot + selling (REQ-CW-008/011) |
 | 10a | Playable prototype presentation: visible hunters, field combat, loot, sale and equipment loop | Code | Codex | ✅ owner-requested vertical slice |
+| 10b | Hunter-development playable loop, progression UI and removal of prototype shortcuts | Code | Codex | 🔨 |
 | 11 | Region loading and camera observation as consumers of that state | Code | | ⬜ |
 | 12 | Keep seeded combat facts and the audit trail for off-screen fidelity | Code | | ⬜ |
 | 13 | Live observation primary; reports for history and missed events | Code | | ⬜ |
