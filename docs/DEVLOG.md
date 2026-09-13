@@ -955,3 +955,25 @@ as one never saved. No save-version bump: the slimmed result is still a valid `E
 so a v27 save round-trips both directions.
 
 **Verified:** 698 tests pass (1 skipped); TypeScript is clean; the production build succeeds.
+
+---
+
+# 2026-09-13 — A standing order sends a party on a journey (DL-073)
+
+DL-070 put player expeditions on the clock but left the standing order dispatching instant round
+trips during catch-up — the old synchronous model. `runStandingOrder` now calls `departExpedition`:
+the order sends a party out on a journey, its hunters are away until they walk home, and
+`completeJourneys` reports the return into the same catch-up recorder. Because `passTime` already
+splits its chunks at the next return, a standing-order party comes home on the same step offline as
+live, and its consequences still flow through the one `applyDispatch`.
+
+The change is self-throttling — an order that sends the available hunters and finds none left skips
+with "no hunter available" instead of pretending a party left and returned between two ticks. The
+whole offline suite still holds (the founding town surviving three days, orders on cadence, the
+lethal-zone refusal, the report contents), and a new test watches a standing order put a party in
+the field and bring it home into the report.
+
+Endless and world-boss runs are still instant: each returns an outcome straight to the screen and to
+a record or a one-off event, so each is its own change (DL-073 records what is left for them).
+
+**Verified:** 699 tests pass (1 skipped); TypeScript is clean; the production build succeeds.

@@ -1636,20 +1636,16 @@ export class GuildCommands {
       recorder.noteSkipped(`${region.name} can kill, and the standing order does not allow lethal zones.`);
       return;
     }
-    const outcome = this.sendExpedition(order.regionId, order.objective as ObjectiveId);
-    if (!outcome.ok) {
-      recorder.noteSkipped(`${region.name}: ${outcome.error}`);
-      return;
+    // A standing order sends a party out on a journey (DL-073), not an instant round trip: the
+    // automated dispatch now takes world time like a player's does. The party is away until it
+    // walks back through the gate, and `completeJourneys` reports the return into this same
+    // recorder — so a return that lands inside this catch-up shows in the report, and one still
+    // in the field when the window ends simply comes home later. Sending the whole roster on
+    // one order and finding no hunter left for the next is the correct, self-throttling result.
+    const journey = this.departExpedition(order.regionId, order.objective as ObjectiveId);
+    if (!journey.ok) {
+      recorder.noteSkipped(`${region.name}: ${journey.error}`);
     }
-    recorder.noteExpedition(
-      {
-        regionName: region.name,
-        summary: outcome.value.result.summary,
-        completed: outcome.value.result.completed,
-        wiped: outcome.value.result.wiped,
-      },
-      outcome.value.result.aftermath,
-    );
   }
 
   // --- The town -------------------------------------------------------------

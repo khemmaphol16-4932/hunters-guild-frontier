@@ -930,3 +930,36 @@ code reads a slimmed save as factless journeys, new code reads a full v27 save u
 
 **Reversal.** Have `snapshot` return the live records unslimmed. Nothing else depends on the
 distinction.
+
+## DL-073 — A standing order sends a party on a journey
+
+**Ambiguity.** DL-070 put player expeditions on the clock as journeys but left the three automated
+or single-shot dispatches — the standing order, endless runs and world-boss runs — resolving
+instantly, "each changes offline pacing or a record, so each gets its own look." This is the
+standing order's look. REQ-CW wants activity to take world time; a standing order dispatching an
+instant round trip during catch-up is the old synchronous model.
+
+**Decision.** `runStandingOrder` now calls `departExpedition`, not `sendExpedition`. The order sends
+a party out on a journey; the hunters are away until they walk back through the gate, and
+`completeJourneys` reports the return into the same catch-up recorder. A return that lands inside the
+window shows in the Guild Report; a party still in the field when the window ends comes home in a
+later step or catch-up, exactly as a player's journey does.
+
+**Why conservative.** It reuses the journey machinery DL-070/071 already proved rather than inventing
+a path: `passTime` already splits its chunks at `nextReturnTick`, so a standing-order party comes home
+on the same step offline as live. Consequences still flow through the one `applyDispatch`. The change
+is self-throttling and correct: an order that sends the available hunters and finds none left for the
+next attempt simply skips it with "no hunter available," instead of the old model's fiction of a
+party that leaves and returns between two ticks. The offline suite — the founding town surviving
+three days, orders on their cadence, the lethal-zone refusal, the report contents — all still hold.
+
+**Not done here.** Endless and world-boss runs are still instant. Both are single, player-initiated
+actions that return an `ExpeditionOutcome` straight to the screen and to a record (endless depth) or
+a one-off event (the world-boss window and its card). Turning them into journeys changes those
+return types, the screens that call them, and *when* a record or a boss defeat lands — its own change
+with its own rulings, not this one. The machinery is ready for them: a `JourneyRecord` already
+carries `worldBoss`, and `applyDispatch` already records endless depth and rolls the boss card on
+return; what remains is to store the endless objective on the record and point the two send methods
+at `departExpedition`.
+
+**Reversal.** Point `runStandingOrder` back at `sendExpedition`. Nothing else changed.

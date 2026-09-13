@@ -54,6 +54,26 @@ describe('standing orders (REQ-OFF-003/004)', () => {
     expect(report.expeditions[0]?.regionName).toBe('The Verdant Reach');
   });
 
+  it('send the party out on a journey, not an instant round trip (DL-073)', () => {
+    const h = guild('orders-journey');
+    expect(h.commands.setStandingOrder({ regionId: 'verdant_reach', objective: 'clear', everySteps: 40, allowLethal: false }).ok).toBe(true);
+    // One step is enough for the order to come due and depart; the party is then in the field,
+    // its hunters assigned to the journey, not back in town already.
+    h.commands.passTime(1);
+    const parties = h.commands.partiesInField();
+    expect(parties.length).toBeGreaterThan(0);
+    const journeyId = parties[0]!.journeyId;
+    for (const id of parties[0]!.hunterIds) {
+      expect(h.session.roster.require(id).availability.assignment).toBe(journeyId);
+    }
+    // And it comes home: stepping on lands the return in the report.
+    let reported = 0;
+    for (let i = 0; i < 200 && h.commands.partiesInField().length > 0; i++) {
+      reported += h.commands.passTime(1).expeditions.length;
+    }
+    expect(reported).toBeGreaterThan(0);
+  });
+
   it('never send hunters where they can die unless the player allowed it, and say why', () => {
     const h = guild('orders-lethal');
     h.commands.setStandingOrder({ regionId: 'ashfall_barrows', objective: 'clear', everySteps: 40, allowLethal: false });
