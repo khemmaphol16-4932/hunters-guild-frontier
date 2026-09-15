@@ -8,6 +8,20 @@
       "variant": "01",
       "width": 60,
       "review": "Codex: first south-east idle candidate. Review single and three-wasp overlap at 0.55 before owner approval; production promotion remains blocked by the two unapproved reference gates."
+    },
+    {
+      "file": "thicket_wasp_idle_ne_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "01-ne",
+      "width": 60,
+      "review": "Codex: north-east back-three-quarter idle candidate. Identity and four-wing silhouette match SE; production promotion remains blocked by the two unapproved reference gates."
+    },
+    {
+      "file": "thicket_wasp_idle_se_frame02-v2_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "02",
+      "width": 60,
+      "review": "Codex: south-east idle frame 02 wing-downstroke candidate; use frame 01 as the reduced-motion hold. Two more loop frames and the NE loop remain outstanding."
     }
   ]
 }
