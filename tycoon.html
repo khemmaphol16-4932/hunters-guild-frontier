@@ -62,6 +62,9 @@ body{
 .pill .sub{color:var(--muted);font-weight:500}
 #buildToast{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--accent);
   border-radius:12px;padding:8px 14px;font-size:12.5px;font-weight:600;display:none;z-index:5;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+#worldLog{position:absolute;left:8px;bottom:64px;max-width:70%;font-size:10.5px;line-height:1.5;color:var(--muted);
+  pointer-events:none;z-index:4;text-shadow:0 1px 2px rgba(0,0,0,.7);font-variant-numeric:tabular-nums}
+#worldLog div{opacity:.9}
 
 /* cards */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
@@ -155,7 +158,7 @@ select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);bo
   </div>
 
   <div id="main">
-    <!-- TOWN -->
+    <!-- WORLD (seamless: town + wilds on one canvas) -->
     <div class="view active" id="view-town">
       <div id="townWrap">
         <canvas id="town"></canvas>
@@ -164,6 +167,7 @@ select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);bo
           <div class="pill" id="pillPop">👥 <span id="hudPop">0</span> <span class="sub">ชาวเมือง</span></div>
           <div class="pill" id="pillIncome">📈 <span id="hudIncome">0</span>/นาที</div>
           <div class="pill" id="pillBuild">🏗️ สร้าง/อัพเกรด</div>
+          <div class="pill" id="pillHome">🏠 เมือง</div>
         </div>
       </div>
     </div>
@@ -174,14 +178,6 @@ select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);bo
         <div class="view-title">นักล่า</div>
         <div id="huntersList"></div>
         <div class="card" id="recruitCard"></div>
-      </div>
-    </div>
-
-    <!-- FIELD -->
-    <div class="view" id="view-field">
-      <div class="scroll">
-        <div class="view-title">พื้นที่ล่า</div>
-        <div id="fieldList"></div>
       </div>
     </div>
 
@@ -202,17 +198,7 @@ select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);bo
       </div>
     </div>
 
-    <!-- combat overlay -->
-    <div id="combat">
-      <div id="combatTop">
-        <button class="close" id="combatBack">↩</button>
-        <div class="grow"><b id="combatTitle">Field</b><div class="small muted" id="combatSub"></div></div>
-        <div class="tag" id="combatWave">Wave 1</div>
-      </div>
-      <div id="combatCanvasWrap"><canvas id="combatCv"></canvas></div>
-      <div id="combatLog"></div>
-    </div>
-
+    <div id="worldLog"></div>
     <div id="toastup" class="toastup"></div>
   </div>
 
@@ -223,9 +209,8 @@ select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);bo
   </div></div>
 
   <nav id="nav">
-    <button data-view="town" class="on"><span class="ic">🏘️</span>เมือง</button>
+    <button data-view="town" class="on"><span class="ic">🌍</span>โลก</button>
     <button data-view="hunters"><span class="ic">🛡️</span>นักล่า<span class="badge" id="navBadgeH" style="display:none"></span></button>
-    <button data-view="field"><span class="ic">🗺️</span>ล่า</button>
     <button data-view="gear"><span class="ic">⚔️</span>อุปกรณ์<span class="badge" id="navBadgeG" style="display:none"></span></button>
     <button data-view="shop"><span class="ic">🏗️</span>ธุรกิจ</button>
   </nav>
@@ -463,12 +448,15 @@ function freshHunter(cls, lv=1){
   return {
     id:"h"+Math.random().toString(36).slice(2,8),
     name: pick(FIRST_NAMES)+" "+pick(["","","of the Reach","the Younger","Ashborn","Quickhand","Ironwood"]).trim(),
-    cls, lv, xp:0, hp:1, energy:BAL.energyMax,
+    cls, lv, xp:0, hp:1, energy:BAL.energyMax, star:0,
     eq:{weapon:null,helm:null,armor:null,gloves:null,boots:null,trinket:null},
-    field:null, state:"idle", // idle | traveling | fighting | returning | resting
-    // town wander
-    tx:rnd(2,6), ty:rnd(2,6), gx:rnd(2,6), gy:rnd(2,6), dwell:0, visiting:null,
-    kills:0,
+    // seamless world agent
+    ai:"TOWN_IDLE", aiT:0, facing:1,
+    wx: TOWN_X + rnd(-5,5), wy: rnd(-2.5,2.5),
+    gx: TOWN_X, gy: 0, dest:null,
+    assignedZone:"auto",
+    bag:{gold:0, items:[]},
+    _skcd:null, kills:0,
   };
 }
 function newGame(){
@@ -479,7 +467,7 @@ function newGame(){
     town:{pop:6}, bonusCap:0, quests:{},
     settings:{lang:"th", theme:"dark", speed:1},
     seenGear:true,
-    stats:{kills:0, bossKills:0, goldEarned:0, dropsL:0},
+    stats:{kills:0, bossKills:0, goldEarned:0, dropsL:0, sold:0},
   };
   const c1=freshHunter("vanguard"); c1.hp=hunterMaxHp(c1);
   const c2=freshHunter("ranger");   c2.hp=hunterMaxHp(c2);
@@ -533,6 +521,7 @@ function hunterStats(h){
     if(n>=4 && st.b4){ if(st.b4.hp)hpP+=st.b4.hp*100; if(st.b4.atk)atkP+=st.b4.atk*100; if(st.b4.crit)crit+=st.b4.crit; }
   }
   hp*=1+hpP/100; atk*=1+atkP/100; spd/=1+spdpct/100;
+  const sm=1+(h.star||0)*0.12; hp*=sm; atk*=sm; def*=sm;   // ascension bonus
   return {
     hp:Math.round(hp), atk:Math.round(atk), def:Math.round(def),
     spd:Math.max(0.5,spd), crit:clamp(crit,0,0.75), cd, ranged:c.role==="ranged"||c.role==="mage",
@@ -542,9 +531,22 @@ function hunterMaxHp(h){ return hunterStats(h).hp; }
 function hunterPower(h){ const s=hunterStats(h); return Math.round(s.hp*0.25 + s.atk*(1+s.crit*(s.cd-1))/s.spd*3 + s.def*2); }
 function xpToNext(lv){ return Math.floor(BAL.xpBase*Math.pow(BAL.xpStep,lv-1)); }
 function giveXp(h, amt){
+  const cap=capForStar(h.star||0);
   h.xp+=amt;
-  while(h.xp>=xpToNext(h.lv)){ h.xp-=xpToNext(h.lv); h.lv++; h.hp=hunterMaxHp(h); }
+  while(h.lv<cap && h.xp>=xpToNext(h.lv)){ h.xp-=xpToNext(h.lv); h.lv++; h.hp=hunterMaxHp(h); }
+  if(h.lv>=cap) h.xp=Math.min(h.xp, xpToNext(h.lv)); // hold at cap until ascended
 }
+/* ---- Ascension (EHT-style star / grade) ---- */
+const GRADES=["E","D","C","B","A","S"];
+function gradeOf(h){ return GRADES[Math.min(h.star||0,5)]; }
+function capForStar(star){ return 20 + (star||0)*20; }
+function ascendCost(h){ const s=h.star||0; return {gold:Math.round(3000*Math.pow(3.2,s)), gems:5+s*5}; }
+function atCap(h){ return h.lv>=capForStar(h.star||0); }
+function canAscend(h){ return (h.star||0)<5 && atCap(h); }
+function ascend(h){ if(!canAscend(h)) return false; const c=ascendCost(h);
+  if(S.gold<c.gold || S.gems<c.gems) return false;
+  S.gold-=c.gold; S.gems-=c.gems; h.star=(h.star||0)+1; h.hp=hunterMaxHp(h);
+  refreshTopbar(); queueSave(); return true; }
 
 /* -------------------- Gear generation -------------------- */
 function rollRarity(luck=0){
@@ -595,6 +597,18 @@ function load(){
     S.buildings=S.buildings||{}; for(const b in BUILDINGS){ if(!S.buildings[b]) S.buildings[b]={lv:b==="guild_hall"?1:0}; }
     S.settings=S.settings||{lang:"th",theme:"dark",speed:1};
     if(S.bonusCap==null) S.bonusCap=0; if(!S.quests) S.quests={};
+    if(!S.stats) S.stats={kills:0,bossKills:0,goldEarned:0,dropsL:0,sold:0};
+    if(S.stats.sold==null) S.stats.sold=0;
+    // migrate hunters to seamless-world agents
+    for(const h of S.hunters){
+      if(h.star==null) h.star=0;
+      if(h.ai==null){ h.ai="TOWN_IDLE"; h.aiT=0; h.facing=1;
+        h.wx=TOWN_X+rnd(-5,5); h.wy=rnd(-2.5,2.5); h.gx=TOWN_X; h.gy=0; h.dest=null;
+        h.assignedZone= h.field||"auto"; h.bag={gold:0,items:[]}; h._skcd=null; }
+      if(!h.bag) h.bag={gold:0,items:[]};
+      h.hp=Math.max(1,h.hp||1); h.energy=h.energy==null?BAL.energyMax:h.energy;
+    }
+    S.world={mobs:[],bossT:{}};
     layoutTown(); return true;
   }catch(e){ return false; }
 }
@@ -665,19 +679,7 @@ function resizeTown(){
   townCv.width=w*townDpr; townCv.height=h*townDpr; townCv.style.width=w+"px"; townCv.style.height=h+"px";
   TILE=clamp(Math.floor(w/16),18,42);
 }
-function townTap(cx,cy){
-  // convert screen to iso tile (approx) to find tapped building
-  const rect=townCv.getBoundingClientRect();
-  const H=townCv.height/townDpr;
-  const px=(cx-rect.left)-townCv.width/townDpr/2-camX;
-  const py=(cy-rect.top)-(H*0.5 - GRID*TILE*0.5)-camY;
-  let best=null,bd=1e9;
-  for(const p of townPlaced){
-    const sx=isoX(p.r+0.5,p.c+0.5), sy=isoY(p.r+0.5,p.c+0.5);
-    const d=Math.hypot(px-sx,py-sy); if(d<bd){bd=d;best=p;}
-  }
-  if(best && bd< TILE*1.1){ openBuilding(best.b); }
-}
+function townTap(cx,cy){ worldTap(cx,cy); }
 // hunter town sprite icons
 function drawIsoTile(r,c,col){
   const x=isoX(r,c),y=isoY(r,c);
@@ -830,7 +832,7 @@ function buildingIncome(bid){
   return bd.baseIncome * st.lv * util;
 }
 function totalIncomePerMin(){ let g=0; for(const b in BUILDINGS) g+=buildingIncome(b); return g*60; }
-function idleHunters(){ return S.hunters.filter(h=>h.state==="idle"||h.state==="resting"); }
+function idleHunters(){ return S.hunters.filter(h=>h.ai==="TOWN_IDLE"||(h.ai&&h.ai.startsWith("GO_"))); }
 function guildCap(){ return 3 + (S.buildings.guild_hall.lv-1)*1 + Math.floor(S.buildings.guild_hall.lv/2) + (S.bonusCap||0); }
 
 function serviceLevel(kind){ // returns 0..n aggregated service strength
@@ -1133,17 +1135,369 @@ function roundRectC(x,y,w,h,r){ cctx.beginPath(); cctx.moveTo(x+r,y); cctx.arcTo
 /* =========================================================================
    GAME LOOP
    ========================================================================= */
+/* =========================================================================
+   SEAMLESS WORLD ENGINE — one continuous map: town + road + wild zones.
+   Heroes are autonomous agents; combat happens in-world. No screen switch.
+   ========================================================================= */
+const TOWN_X=16, GATE_X=30, ZONE_GAP=22, BAG_CAP=8;
+function zoneCenterX(i){ return GATE_X + 15 + i*ZONE_GAP; }
+function worldMaxX(){ return zoneCenterX(FIELDS.length-1) + 16; }
+const WBUILD = {
+  guild_hall:{x:16,y:-1.5}, restaurant:{x:11,y:-1.9}, smithy:{x:20,y:-2.0},
+  inn:{x:8,y:-0.3}, clinic:{x:22,y:0.3}, tavern:{x:10,y:1.9}, market:{x:24,y:1.7},
+};
+const WDECOR=[
+  {x:4,y:2.4,key:"tree_broadleaf",h:2.0},{x:27,y:-2.6,key:"tree_conifer",h:2.0},
+  {x:13,y:2.5,key:"woodpile",h:0.7},{x:18,y:2.4,key:"bench",h:0.5},{x:6,y:-2.2,key:"handcart",h:0.7},
+  {x:26,y:2.6,key:"weapon_rack",h:1.0},{x:14,y:-2.6,key:"firepit",h:0.55},
+  // wilds trees
+  {x:34,y:2.6,key:"tree_conifer",h:1.9},{x:39,y:-2.7,key:"tree_broadleaf",h:1.9},
+  {x:48,y:2.7,key:"tree_birch",h:1.9},{x:56,y:-2.6,key:"tree_conifer",h:1.9},
+  {x:64,y:2.7,key:"tree_broadleaf",h:1.9},{x:73,y:-2.7,key:"tree_birch",h:1.9},
+  {x:82,y:2.7,key:"tree_conifer",h:1.9},{x:92,y:-2.6,key:"tree_broadleaf",h:1.9},
+  {x:100,y:2.7,key:"tree_birch",h:1.9},{x:110,y:-2.7,key:"tree_conifer",h:1.9},
+];
+// camera / projection (reuse townCv,tctx,townDpr,camX,camY)
+let TW=26, GY=300, camInit=false, follow=null;
+function worldMetrics(){ const W=townCv.width/townDpr, H=townCv.height/townDpr;
+  TW=clamp(W/12,16,36); GY=H*0.52; return {W,H}; }
+function drawHills(baseY,amp,par,col){ const W=townCv.width/townDpr; tctx.fillStyle=col;
+  tctx.beginPath(); tctx.moveTo(0,baseY+amp*2); const off=camX*par;
+  for(let x=0;x<=W;x+=16){ const y=baseY - amp*0.5*(1+Math.sin((x-off)/110)); tctx.lineTo(x,y); }
+  tctx.lineTo(W,baseY+amp*2); tctx.closePath(); tctx.fill(); }
+function screenX(wx){ return camX + wx*TW; }
+function screenY(wy){ return GY + wy*(TW*0.62); }
+function clampCam(W){ const minX=-(worldMaxX()*TW - W*0.85), maxX=W*0.5 - TOWN_X*TW + 40;
+  camX=clamp(camX, Math.min(minX,maxX), maxX); }
+function centerOnX(wx){ const W=townCv.width/townDpr; camX = W*0.5 - wx*TW; }
+function goHome(){ follow=null; const W=townCv.width/townDpr; camX=W*0.5 - TOWN_X*TW; camY=0; }
+
+// --- helpers ---
+function zoneUnlocked(i){ return fieldUnlocked(FIELDS[i]); }
+function zonePowerReq(i){ return FIELDS[i].lv*38 + 20; }
+function autoZoneFor(h){
+  const p=hunterPower(h); let best=0;
+  for(let i=0;i<FIELDS.length;i++){ if(zoneUnlocked(i) && p>=zonePowerReq(i)) best=i; }
+  // allow one stretch zone if nothing matches beyond 0
+  return best;
+}
+function heroZoneIdx(h){
+  if(h.assignedZone==="auto" || h.assignedZone==null) return autoZoneFor(h);
+  let i=FIELDS.findIndex(f=>f.id===h.assignedZone);
+  if(i<0) i=0; while(i>0 && !zoneUnlocked(i)) i--; return i;
+}
+function buildingBuilt(bid){ return bid==="guild_hall" || (S.buildings[bid]&&S.buildings[bid].lv>0); }
+function serviceSite(kind){ // world pos of best built building for a need (fallback guild_hall)
+  let bid=null;
+  if(kind==="heal") bid = buildingBuilt("clinic")?"clinic":"guild_hall";
+  else if(kind==="rest") bid = buildingBuilt("inn")?"inn":(buildingBuilt("tavern")?"tavern":(buildingBuilt("restaurant")?"restaurant":"guild_hall"));
+  else if(kind==="sell") bid = buildingBuilt("market")?"market":"guild_hall";
+  else bid="guild_hall";
+  return {bid, ...WBUILD[bid]};
+}
+function moveToward(h,tx,ty,speed,dt){ const dx=tx-h.wx, dy=ty-h.wy, d=Math.hypot(dx,dy);
+  if(d<0.3) return true; if(Math.abs(dx)>0.05) h.facing = dx<0?-1:1;
+  h.wx+=dx/d*speed*dt; h.wy+=dy/d*speed*dt; return false; }
+
+// --- world combat log + floaties ---
+let worldFx=[]; let wlog=[];
+function worldFloaty(wx,wy,txt,col,big){ worldFx.push({wx,wy,txt,col,life:0.9,big}); if(worldFx.length>60) worldFx.shift(); }
+function worldLog(msg){ wlog.push(msg); if(wlog.length>4) wlog.shift(); const el=$("#worldLog"); if(el) el.innerHTML=wlog.map(m=>`<div>${m}</div>`).join(""); }
+
+// --- monsters as world entities ---
+function worldMobUnit(mid, zoneI, boss){
+  const f=FIELDS[zoneI]; const lv=f.lv + Math.floor(S.stats.kills/40);
+  const scale=1+zoneI*0.15;
+  const base=mobUnit(mid, lv, scale*(boss? (2+zoneI*0.5):1), boss);
+  base.zone=zoneI; base.wx=zoneCenterX(zoneI)+rnd(-7,7); base.wy=rnd(-2.4,2.4);
+  base.gx=base.wx; base.gy=base.wy; base.atkT=rnd(0,base.spd); base.wanderT=rnd(1,3);
+  return base;
+}
+function zoneMobs(i){ return S.world.mobs.filter(m=>m.zone===i && m.hp>0); }
+function spawnMonsters(dt){
+  if(!S.world) S.world={mobs:[], bossT:{}};
+  for(let i=0;i<FIELDS.length;i++){
+    if(!zoneUnlocked(i)) continue;
+    const cap=4+i;
+    const list=zoneMobs(i);
+    if(list.length<cap && Math.random()<dt*0.9){
+      S.world.mobs.push(worldMobUnit(pick(FIELDS[i].pool), i, false));
+    }
+    // periodic boss
+    S.world.bossT[i]=(S.world.bossT[i]||rnd(40,70))-dt;
+    if(S.world.bossT[i]<=0 && !list.some(m=>m.boss)){
+      S.world.bossT[i]=rnd(60,110);
+      S.world.mobs.push(worldMobUnit(FIELDS[i].boss, i, true));
+    }
+  }
+  // prune far-dead
+  S.world.mobs=S.world.mobs.filter(m=>m.hp>0);
+}
+
+// --- hero AI ---
+function heroLog(h,msg){ /* only surface if near camera-follow or occasionally */ }
+function heroAI(h, dt){
+  const mhp=hunterMaxHp(h), st=hunterStats(h);
+  if(h.hp<=0) h.hp=1;
+  switch(h.ai){
+    case "TOWN_IDLE": {
+      if(h.bag.items.length>0 || h.bag.gold>0){ h.ai="GO_SELL"; }
+      else if(h.hp < mhp*0.97){ h.ai="GO_HEAL"; }
+      else if(h.energy < BAL.energyMax*0.6){ h.ai="GO_REST"; }
+      else { h.ai="WALK_OUT"; h._zone=heroZoneIdx(h); h._skcd=null; }
+      break; }
+    case "GO_HEAL": { const s=serviceSite("heal");
+      if(moveToward(h,s.x,s.y,3.4,dt)){ const rate=8+serviceLevel("heal")*7; h.hp=Math.min(mhp,h.hp+rate*dt);
+        payService(s.bid,dt,0.4); if(h.hp>=mhp*0.999){ h.ai="TOWN_IDLE"; } } break; }
+    case "GO_REST": { const s=serviceSite("rest");
+      if(moveToward(h,s.x,s.y,3.4,dt)){ const rate=7+serviceLevel("rest")*4+serviceLevel("energy")*3; h.energy=Math.min(BAL.energyMax,h.energy+rate*dt);
+        payService(s.bid,dt,0.3); if(h.energy>=BAL.energyMax*0.999){ h.ai="TOWN_IDLE"; } } break; }
+    case "GO_SELL": { const s=serviceSite("sell");
+      if(moveToward(h,s.x,s.y,3.4,dt)){ sellBag(h,s.bid); h.ai="TOWN_IDLE"; } break; }
+    case "WALK_OUT": {
+      const zc=zoneCenterX(h._zone==null?(h._zone=heroZoneIdx(h)):h._zone);
+      if(h.wx < zc-6){ moveToward(h, zc, h.wy||rnd(-2,2), 4.0, dt); }
+      else { h.ai="HUNT"; }
+      // re-evaluate retreat early if something changed
+      break; }
+    case "HUNT": {
+      // retreat conditions
+      if(h.hp<mhp*0.42 || h.energy<=2 || h.bag.items.length>=BAG_CAP){ h.ai="WALK_HOME"; break; }
+      h.energy=Math.max(0,h.energy - 2.2*dt);
+      const zi=h._zone;
+      // skill
+      const sk=SKILLS[h.cls];
+      if(sk){ if(h._skcd==null) h._skcd=sk.cd*rnd(0.4,0.8); h._skcd-=dt;
+        if(h._skcd<=0){ h._skcd=sk.cd; worldSkill(h,st,sk,zi); } }
+      // target nearest live mob in zone
+      const cands=zoneMobs(zi);
+      if(!cands.length){ // nothing here — wander toward center
+        moveToward(h, zoneCenterX(zi)+rnd(-4,4), rnd(-2,2), 2.2, dt); break; }
+      let tgt=null,bd=1e9; for(const m of cands){ const d=Math.hypot(m.wx-h.wx,m.wy-h.wy); if(d<bd){bd=d;tgt=m;} }
+      const range = st.ranged?6:1.3;
+      if(bd>range){ moveToward(h,tgt.wx,tgt.wy,2.6,dt); }
+      else { h.facing = tgt.wx<h.wx?-1:1;
+        h._atkT=(h._atkT||0)-dt;
+        if(h._atkT<=0){ h._atkT=st.spd; heroHit(h,st,tgt); } }
+      break; }
+    case "WALK_HOME": {
+      const spd = h.hp<=mhp*0.15?2.2:3.6; // limp if badly hurt
+      if(moveToward(h, TOWN_X+rnd(-4,4), rnd(-1.5,1.5), spd, dt)){ h.ai="TOWN_IDLE"; h.dest=null; } break; }
+    default: h.ai="TOWN_IDLE";
+  }
+}
+function payService(bid,dt,rate){ // heroes paying for services = tycoon income
+  if(bid && BUILDINGS[bid] && BUILDINGS[bid].baseIncome){ const g=BUILDINGS[bid].baseIncome*(S.buildings[bid].lv||1)*rate*dt*4;
+    S.gold+=g; S.stats.goldEarned+=g; } }
+function sellBag(h,bid){
+  const mult = 1 + (buildingBuilt("market")?(S.buildings.market.lv*0.12):-0.4);
+  let gold=Math.round(h.bag.gold*Math.max(0.4,mult));
+  S.gold+=gold; S.stats.goldEarned+=gold; S.stats.sold=(S.stats.sold||0)+gold;
+  for(const it of h.bag.items) addItem(it);
+  if(follow===h.id) worldLog(`🪙 ${h.name} ขายของ +${fmt(gold)}${h.bag.items.length?` · เก็บ ${h.bag.items.length} ชิ้น`:""}`);
+  h.bag={gold:0,items:[]};
+}
+function heroHit(h,st,mob){
+  let dmg=Math.max(1, st.atk - mob.def*0.5); const crit=Math.random()<st.crit; if(crit) dmg*=st.cd;
+  dmg=Math.round(dmg*rnd(0.9,1.1)); mob.hp-=dmg; mob.hitFx=0.22;
+  worldFloaty(mob.wx,mob.wy-1.2,"-"+dmg,crit?"#f2c14e":"#fff",crit);
+  if(mob.hp<=0) mobDies(mob,h);
+}
+function worldSkill(h,st,sk,zi){
+  const near=zoneMobs(zi).filter(m=>Math.abs(m.wx-h.wx)<8);
+  const allies=S.hunters.filter(a=>a.ai==="HUNT" && a._zone===zi && Math.abs(a.wx-h.wx)<8);
+  if(follow===h.id) worldLog(`✨ ${h.name} · ${sk.th}`);
+  if(sk.kind==="heal"){ for(const a of allies){ const am=hunterMaxHp(a); const v=Math.round(am*sk.pow); a.hp=Math.min(am,a.hp+v); worldFloaty(a.wx,a.wy-1.4,"+"+v,"#54c98a"); } }
+  else if(sk.kind==="aoe"){ for(const m of [...near]) hitMobSkill(h,st.atk*sk.pow-m.def*0.5,m,sk.col,true); }
+  else if(sk.kind==="multi"){ near.sort((a,b)=>Math.hypot(a.wx-h.wx,a.wy-h.wy)-Math.hypot(b.wx-h.wx,b.wy-h.wy));
+    for(const m of near.slice(0,sk.hits)) hitMobSkill(h,st.atk*sk.pow-m.def*0.5,m,sk.col,false); }
+  else if(sk.kind==="smart"){ const hurt=allies.filter(a=>a.hp<hunterMaxHp(a)*0.6).sort((a,b)=>a.hp-b.hp)[0];
+    if(hurt){ const v=Math.round(st.atk*4); hurt.hp=Math.min(hunterMaxHp(hurt),hurt.hp+v); worldFloaty(hurt.wx,hurt.wy-1.4,"+"+v,"#54c98a"); }
+    else for(const m of [...near]) hitMobSkill(h,st.atk*sk.pow-m.def*0.5,m,sk.col,true); }
+}
+function hitMobSkill(h,dmg,mob,col,big){ if(mob.hp<=0) return; dmg=Math.max(1,Math.round(dmg)); mob.hp-=dmg; mob.hitFx=0.22;
+  worldFloaty(mob.wx,mob.wy-1.2,"-"+dmg,col||"#fff",big); if(mob.hp<=0) mobDies(mob,h); }
+function mobDies(mob,h){
+  const f=FIELDS[mob.zone];
+  const gold=ri(f.gold[0],f.gold[1])*(mob.boss?8:1);
+  h.bag.gold+=gold; giveXp(h, Math.round(mob.xp/2)+1);
+  S.stats.kills++; h.kills++;
+  if(mob.boss){ S.stats.bossKills++; S.gems+=BAL.gemPerBoss; if(follow===h.id) worldLog(`🎉 ${h.name} ล้มบอส ${mob.name}! +💎${BAL.gemPerBoss}`); }
+  const dropChance=mob.boss?1.0:0.24;
+  if(Math.random()<dropChance && h.bag.items.length<BAG_CAP){
+    const it=makeItem(f.lv+mob.zone*2, mob.boss?(Math.random()<0.35?"legendary":"epic"):undefined);
+    h.bag.items.push(it);
+    if(follow===h.id) worldLog(`📦 ${h.name} เก็บ ${rarById(it.rarity).name} ${slotById(it.slot).name}`);
+  }
+  mob.hp=0;
+}
+function stepWorldMobs(dt){
+  for(const m of S.world.mobs){ if(m.hp<=0) continue;
+    m.hitFx=Math.max(0,(m.hitFx||0)-dt);
+    // find a hero in this zone within aggro
+    let tgt=null,bd=1e9;
+    for(const h of S.hunters){ if(h.ai!=="HUNT"||h._zone!==m.zone||h.hp<=1) continue;
+      const d=Math.hypot(h.wx-m.wx,h.wy-m.wy); if(d<bd){bd=d;tgt=h;} }
+    const range=m.ranged?6:1.4;
+    if(tgt && bd<=range){ m.atkT-=dt; if(m.atkT<=0){ m.atkT=m.spd;
+      const ts=hunterStats(tgt); let dmg=Math.max(1,m.atk-ts.def*0.6); dmg=Math.round(dmg*rnd(0.85,1.15));
+      tgt.hp-=dmg; worldFloaty(tgt.wx,tgt.wy-1.4,"-"+dmg,"#e05a5a",false);
+      if(tgt.hp<=1){ tgt.hp=1; if(tgt.ai==="HUNT"){ tgt.ai="WALK_HOME"; if(follow===tgt.id) worldLog(`💀 ${tgt.name} เจ็บหนัก กำลังกลับเมือง`); } }
+    } }
+    else if(tgt && bd<10){ m.facing=tgt.wx<m.wx?-1:1; moveToward2(m,tgt.wx,tgt.wy,m.ranged?1.0:1.6,dt); }
+    else { // idle wander in band
+      m.wanderT-=dt; if(m.wanderT<=0){ m.wanderT=rnd(2,4); m.gx=zoneCenterX(m.zone)+rnd(-7,7); m.gy=rnd(-2.4,2.4); }
+      moveToward2(m,m.gx,m.gy,0.7,dt); }
+  }
+}
+function moveToward2(m,tx,ty,speed,dt){ const dx=tx-m.wx,dy=ty-m.wy,d=Math.hypot(dx,dy); if(d<0.2)return; m.wx+=dx/d*speed*dt; m.wy+=dy/d*speed*dt; }
+
+function incomeTick(dt){
+  S._incAcc=(S._incAcc||0)+dt;
+  while(S._incAcc>=BAL.incomeTick){ S._incAcc-=BAL.incomeTick; let add=0; for(const b in BUILDINGS) add+=buildingIncome(b);
+    S.gold+=add; S.stats.goldEarned+=add; }
+}
+function popTick(dt){ const popTarget=6+serviceLevel("rest")*3+(S.buildings.tavern.lv||0)*2+S.hunters.length;
+  S.town.pop += (popTarget-S.town.pop)*0.02*dt; }
+
+let wfolk=[];
+function stepWorld(dt){
+  if(!S.world) S.world={mobs:[],bossT:{}};
+  incomeTick(dt); popTick(dt);
+  spawnMonsters(dt);
+  for(const h of S.hunters) heroAI(h,dt);
+  stepWorldMobs(dt);
+  // townsfolk
+  const tgt=Math.min(10,Math.floor(S.town.pop));
+  while(wfolk.length<tgt) wfolk.push({wx:TOWN_X+rnd(-8,8),wy:rnd(-2.5,2.5),gx:TOWN_X+rnd(-8,8),gy:rnd(-2.5,2.5),col:pick(["#b9c2d4","#cbb18a","#9db5c9","#c9a0a0"])});
+  while(wfolk.length>tgt) wfolk.pop();
+  for(const f of wfolk){ const d=Math.hypot(f.gx-f.wx,f.gy-f.wy); if(d<0.3){ f.gx=TOWN_X+rnd(-8,8); f.gy=rnd(-2.5,2.5);} else { f.wx+=(f.gx-f.wx)/d*0.6*dt; f.wy+=(f.gy-f.wy)/d*0.6*dt; } }
+  for(const fx of worldFx){ fx.life-=dt*1.1; } worldFx=worldFx.filter(f=>f.life>0);
+}
+
+/* ---- world render ---- */
+function drawShadowW(cx,gy,rx){ tctx.fillStyle="rgba(0,0,0,.24)"; tctx.beginPath(); tctx.ellipse(cx,gy,rx,rx*0.34,0,0,7); tctx.fill(); }
+function hpbarW(cx,topY,w,frac,mob){ tctx.fillStyle="rgba(0,0,0,.55)"; roundRectT(cx-w/2,topY,w,4,2); tctx.fill();
+  tctx.fillStyle=mob?"#e05a5a":"#54c98a"; roundRectT(cx-w/2,topY,w*clamp(frac,0,1),4,2); tctx.fill(); }
+function roundRectT(x,y,w,h,r){ tctx.beginPath(); tctx.moveTo(x+r,y); tctx.arcTo(x+w,y,x+w,y+h,r); tctx.arcTo(x+w,y+h,x,y+h,r); tctx.arcTo(x,y+h,x,y,r); tctx.arcTo(x,y,x+w,y,r); tctx.closePath(); }
+function drawBuildingW(bid){
+  const b=WBUILD[bid], lv=(S.buildings[bid]||{lv:0}).lv;
+  const x=screenX(b.x), gy=screenY(b.y);
+  if(artReady("bld_"+bid)){ drawShadowW(x,gy,TW*0.9); drawSpriteB(tctx,IMG["bld_"+bid],x,gy,TW*2.2,0.05); bldLabelW(x,gy-TW*2.2,lv); return; }
+  const w=TW*1.9, wallH=TW*0.95+Math.min(lv,6)*3, roofH=TW*0.62, oh=Math.max(4,TW*0.16);
+  const wx=x-w/2, wtop=gy-wallH, bd=BUILDINGS[bid], roofCol=ROOF[bid]||shade(bd.col,-24);
+  drawShadowW(x,gy+2,w*0.55);
+  tctx.fillStyle=bd.col; tctx.fillRect(wx,wtop,w,wallH);
+  tctx.fillStyle=shade(bd.col,-26); tctx.fillRect(x,wtop,w/2,wallH);
+  tctx.fillStyle=shade(bd.col,-45); tctx.fillRect(wx,gy-Math.max(3,TW*0.09),w,Math.max(3,TW*0.09));
+  const dw=w*0.26, dh=wallH*0.5; tctx.fillStyle=shade(bd.col,-60); tctx.fillRect(x-dw/2,gy-dh,dw,dh);
+  const ww=w*0.16, wh=wallH*0.22, wy2=wtop+wallH*0.22; tctx.fillStyle="#f2d68a"; tctx.fillRect(wx+w*0.12,wy2,ww,wh);
+  tctx.fillStyle="#d9b96e"; tctx.fillRect(x+w*0.22,wy2,ww,wh);
+  tctx.fillStyle=roofCol; tctx.beginPath(); tctx.moveTo(wx-oh,wtop+2); tctx.lineTo(x,wtop-roofH); tctx.lineTo(wx+w+oh,wtop+2); tctx.closePath(); tctx.fill();
+  tctx.fillStyle=shade(roofCol,-22); tctx.beginPath(); tctx.moveTo(x,wtop-roofH); tctx.lineTo(wx+w+oh,wtop+2); tctx.lineTo(x,wtop+2); tctx.closePath(); tctx.fill();
+  if(CHIMNEY[bid]){ const cxx=x+w*0.24, cyt=wtop-roofH*0.55; tctx.fillStyle=shade(roofCol,-40); tctx.fillRect(cxx,cyt,Math.max(4,TW*0.13),roofH*0.7);
+    const t=performance.now()/600; for(let i=0;i<3;i++){ const pr=(t+i*0.4)%1; tctx.globalAlpha=(1-pr)*0.35; tctx.fillStyle="#cfd6de"; tctx.beginPath(); tctx.arc(cxx+TW*0.06+Math.sin((t+i)*2)*3, cyt-pr*TW*0.9,(1+pr)*TW*0.11,0,7); tctx.fill(); } tctx.globalAlpha=1; }
+  tctx.font=`${Math.floor(TW*0.5)}px serif`; tctx.textAlign="center"; tctx.textBaseline="middle"; tctx.fillText(bd.em, x-w*0.3, gy-dh*0.55);
+  bldLabelW(x,wtop-roofH,lv);
+}
+function bldLabelW(x,topY,lv){ if(lv<=0) return; tctx.font=`bold ${Math.floor(TW*0.32)}px sans-serif`; tctx.textAlign="center"; tctx.textBaseline="alphabetic";
+  tctx.fillStyle="rgba(0,0,0,.55)"; tctx.fillText("Lv"+lv,x+0.5,topY-3); tctx.fillStyle="#fff"; tctx.fillText("Lv"+lv,x,topY-3.5); }
+function drawDecorW(d){ if(!artReady(d.key)) return; const x=screenX(d.x), gy=screenY(d.y); drawShadowW(x,gy,TW*0.35*d.h); drawSpriteB(tctx,IMG[d.key],x,gy,TW*d.h*1.7,0.04); }
+function drawFolkW(f){ const x=screenX(f.wx), gy=screenY(f.wy); drawShadowW(x,gy,6); tctx.fillStyle=f.col; roundRectT(x-4,gy-14,8,14,3); tctx.fill(); tctx.fillStyle="#e8d3b0"; tctx.beginPath(); tctx.arc(x,gy-16,4,0,7); tctx.fill(); }
+function drawMobW(m){ const x=screenX(m.wx), gy=screenY(m.wy); const sz=m.boss?1.6:1; drawShadowW(x,gy,TW*0.4*sz);
+  const art=animImg(m.mid);
+  if(m.hitFx>0){ tctx.save(); tctx.globalAlpha=0.5; tctx.fillStyle="rgba(255,90,90,.5)"; tctx.beginPath(); tctx.arc(x,gy-TW*0.5*sz,TW*0.6*sz,0,7); tctx.fill(); tctx.restore(); }
+  if(art){ const h=TW*1.5*sz*(m.boss?1.15:1); const w=h*(art.naturalWidth/art.naturalHeight)*(m.facing||1);
+    tctx.imageSmoothingEnabled=false; tctx.save(); tctx.translate(x,gy); tctx.scale(m.facing||1,1); tctx.drawImage(art,-Math.abs(w)/2,-h+h*0.06,Math.abs(w),h); tctx.restore(); }
+  else { tctx.font=`${Math.floor(TW*1.0*sz)}px serif`; tctx.textAlign="center"; tctx.textBaseline="alphabetic"; tctx.fillText(m.em,x,gy); }
+  hpbarW(x, gy-TW*1.5*sz-6, Math.max(22,TW*0.9*sz), m.hp/m.maxHp, true);
+  if(m.boss){ tctx.fillStyle="rgba(255,255,255,.75)"; tctx.font=`bold ${Math.floor(TW*0.3)}px sans-serif`; tctx.textAlign="center"; tctx.fillText(m.name,x,gy+13); }
+}
+function drawHeroW(h){ const x=screenX(h.wx), gy=screenY(h.wy), c=CLASSES[h.cls], mhp=hunterMaxHp(h); drawShadowW(x,gy,9);
+  const art=tintedSprite(c.sprite,c.tint,0.5); const H=TW*1.7;
+  if(art){ const w=H*(art.naturalWidth/art.naturalHeight); tctx.imageSmoothingEnabled=false; tctx.save(); tctx.translate(x,gy); tctx.scale(h.facing||1,1); tctx.drawImage(art,-w/2,-H+H*0.10,w,H); tctx.restore(); }
+  else { tctx.font=`${Math.floor(TW*0.9)}px serif`; tctx.textAlign="center"; tctx.fillText(c.emoji,x,gy); }
+  if(h.hp<mhp*0.999 || h.ai==="HUNT") hpbarW(x, gy-H-4, Math.max(24,TW), h.hp/mhp, false);
+  if(follow===h.id){ tctx.fillStyle="var(--accent)"; tctx.fillStyle="#5fd0e0"; tctx.font=`bold ${Math.floor(TW*0.3)}px sans-serif`; tctx.textAlign="center"; tctx.fillText("▼",x,gy-H-9); }
+}
+function renderWorld(){
+  if(!tctx) return;
+  const {W,H}=worldMetrics();
+  if(!camInit){ goHome(); camInit=true; }
+  if(follow){ const h=S.hunters.find(x=>x.id===follow); if(h){ const want=W*0.5 - h.wx*TW; camX+=(want-camX)*0.12; } }
+  clampCam(W);
+  tctx.setTransform(townDpr,0,0,townDpr,0,0); tctx.imageSmoothingEnabled=false;
+  const light=document.documentElement.getAttribute("data-theme")==="light";
+  // sky
+  const sky=tctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,light?"#bcd3e6":"#1a2740"); sky.addColorStop(1,light?"#cfe0d6":"#243247");
+  tctx.fillStyle=sky; tctx.fillRect(0,0,W,H);
+  // distant hills (parallax) to fill the horizon
+  const hz=screenY(-4.2);
+  drawHills(hz-TW*1.6, TW*0.9, 0.05, light?"#93b79c":"#1e2c37");
+  drawHills(hz-TW*0.6, TW*0.7, 0.12, light?"#84ae86":"#243a2d");
+  // ground band with zone tints
+  const gTop=screenY(-4.2), gBot=H;
+  for(let x=0;x<W;x+=4){ const wx=(x-camX)/TW; let col;
+    if(wx<GATE_X) col=light?"#9cc98a":"#33513a";
+    else { const zi=clamp(Math.round((wx-zoneCenterX(0))/ZONE_GAP),0,FIELDS.length-1); const tints=light?["#a6c98a","#b2b07e","#b59a6e","#8fb0b6"]:["#33513a","#4a4a32","#4a3b2c","#2c4650"]; col=tints[zi]||tints[0]; }
+    tctx.fillStyle=col; tctx.fillRect(x,gTop,5,gBot-gTop);
+  }
+  // road
+  tctx.fillStyle=light?"#b39a6b":"#5b4a33"; tctx.fillRect(0,screenY(0)-TW*0.28,W,TW*0.56); tctx.globalAlpha=0.5;
+  tctx.fillStyle=light?"#a98f5f":"#6b5a3f"; tctx.fillRect(0,screenY(0)-2,W,4); tctx.globalAlpha=1;
+  // gate posts
+  const gx=screenX(GATE_X); tctx.fillStyle=light?"#8a7250":"#4a3c28";
+  tctx.fillRect(gx-TW*0.15,screenY(-2.6)-TW*1.2,TW*0.22,TW*1.6); tctx.fillRect(gx-TW*0.15,screenY(2.6)-TW*1.2,TW*0.22,TW*1.6);
+  tctx.fillStyle="#caa15a"; tctx.font=`${Math.floor(TW*0.5)}px serif`; tctx.textAlign="center"; tctx.fillText("⛩️",gx,screenY(0)-TW*1.3);
+  // zone name banners
+  for(let i=0;i<FIELDS.length;i++){ if(!zoneUnlocked(i)) continue; const zx=screenX(zoneCenterX(i));
+    if(zx>-60&&zx<W+60){ tctx.fillStyle=light?"rgba(0,0,0,.4)":"rgba(255,255,255,.5)"; tctx.font=`bold ${Math.floor(TW*0.42)}px sans-serif`; tctx.textAlign="center"; tctx.fillText(FIELDS[i].em+" "+FIELDS[i].name, zx, screenY(-3.6)); } }
+  // depth-sorted entities
+  const ents=[];
+  for(const bid in WBUILD){ if(buildingBuilt(bid)) ents.push({y:WBUILD[bid].y, fn:()=>drawBuildingW(bid)}); }
+  for(const d of WDECOR) ents.push({y:d.y-0.3, fn:()=>drawDecorW(d)});
+  for(const f of wfolk) ents.push({y:f.wy, fn:()=>drawFolkW(f)});
+  for(const m of S.world.mobs){ if(m.hp>0) ents.push({y:m.wy, fn:()=>drawMobW(m)}); }
+  for(const h of S.hunters) ents.push({y:h.wy, fn:()=>drawHeroW(h)});
+  ents.sort((a,b)=>a.y-b.y).forEach(e=>e.fn());
+  // floaties
+  for(const fx of worldFx){ tctx.globalAlpha=clamp(fx.life,0,1); tctx.fillStyle=fx.col; tctx.font=`bold ${fx.big?Math.floor(TW*0.7):Math.floor(TW*0.5)}px sans-serif`; tctx.textAlign="center";
+    tctx.fillText(fx.txt, screenX(fx.wx), screenY(fx.wy)-(0.9-fx.life)*30); }
+  tctx.globalAlpha=1;
+}
+function worldTap(cx,cy){
+  const rect=townCv.getBoundingClientRect(); const px=cx-rect.left, py=cy-rect.top;
+  // heroes
+  let best=null,bd=1e9,kind=null;
+  for(const h of S.hunters){ const x=screenX(h.wx), y=screenY(h.wy)-TW*0.8; const d=Math.hypot(px-x,py-y); if(d<bd&&d<TW*1.1){bd=d;best=h;kind="hero";} }
+  if(best){ follow=best.id; openHunter(best.id); return; }
+  for(const bid in WBUILD){ if(!buildingBuilt(bid)) continue; const x=screenX(WBUILD[bid].x), y=screenY(WBUILD[bid].y)-TW*0.6; const d=Math.hypot(px-x,py-y); if(d<bd&&d<TW*1.2){bd=d;best=bid;kind="bld";} }
+  if(kind==="bld"){ openBuilding(best); return; }
+  // zone tap
+  const wx=(px-camX)/TW; if(wx>GATE_X){ const zi=clamp(Math.round((wx-zoneCenterX(0))/ZONE_GAP),0,FIELDS.length-1); openZone(zi); }
+}
+function openZone(i){
+  const f=FIELDS[i], unlocked=zoneUnlocked(i);
+  const here=S.hunters.filter(h=>h._zone===i && (h.ai==="HUNT"||h.ai==="WALK_OUT"));
+  openSheet(`${f.em} ${f.name}`, `
+    <div class="small muted" style="margin-bottom:8px">${f.th} · Lv ${f.lv}+ · พลังแนะนำ ${fmt(zonePowerReq(i))}</div>
+    ${unlocked?`<div class="chipline"><span class="statmini">นักล่าในโซน ${here.length}</span><span class="statmini">🪙/ตัว ${f.gold[0]}-${f.gold[1]}</span></div>
+      <div class="divider"></div><button class="btn grow" id="zAssign" style="width:100%">ส่งนักล่าที่ว่างทั้งหมดมาโซนนี้</button>`
+    : `<div class="dim center" style="padding:16px">🔒 ปลดล็อกเมื่อรายได้รวมถึง ${fmt(f.req)}</div>`}
+  `, true);
+  const b=$("#zAssign"); if(b) b.onclick=()=>{ S.hunters.forEach(h=>{ h.assignedZone=f.id; }); toastUp("สั่งทุกคนไป "+f.name); closeSheet(); };
+}
+
+/* =========================================================================
+   GAME LOOP
+   ========================================================================= */
 let lastFrame=now();
 function loop(){
   const t=now(); let dt=(t-lastFrame)/1000; lastFrame=t;
   dt=Math.min(dt,0.1)*(S.settings.speed||1);
-  S.playSec+=dt; S.day=1+Math.floor(S.playSec/300); // 5 min = 1 day
-  stepTown(dt);
-  stepTravel(dt);
-  // render active view
-  if(currentView==="town") renderTown();
-  if(activeCombat) renderCombat();
-  // light HUD refresh (throttled)
+  S.playSec+=dt; S.day=1+Math.floor(S.playSec/300);
+  stepWorld(dt);
+  if(currentView==="town") renderWorld();
   hudTick+=dt; if(hudTick>0.5){ hudTick=0; refreshTopbar(); refreshTownHud(); updateBadges(); if(currentView==="hunters") softRefreshHunters(); }
   queueSave();
   requestAnimationFrame(loop);
@@ -1156,23 +1510,24 @@ let hudTick=0;
 function offlineCatchup(){
   const elapsed=Math.min((now()-S.last)/1000, BAL.offlineCapHours*3600);
   if(elapsed<60) return null;
-  // income
+  // passive town income
   let inc=0; for(const b in BUILDINGS) inc+=buildingIncome(b);
-  const goldGain=Math.floor(inc*elapsed*0.85); // slight offline penalty
-  S.gold+=goldGain; S.stats.goldEarned+=goldGain;
-  // hunts: hunters that were in a field keep earning at avg rate
+  const passiveGold=Math.floor(inc*elapsed*0.85);
+  S.gold+=passiveGold; S.stats.goldEarned+=passiveGold;
+  // every hunter keeps looping their assigned zone at an averaged rate
   let huntGold=0, xpGain=0, drops=0;
-  const fighters=S.hunters.filter(h=>h.state==="fighting"||h.state==="traveling");
-  for(const h of fighters){
-    const f=fieldById(h.field)||FIELDS[0];
-    const rate=(f.gold[0]+f.gold[1])/2 / 3; // ~ per second
-    const g=Math.floor(rate*elapsed); huntGold+=g;
-    const xp=Math.floor(elapsed/4); giveXp(h,xp); xpGain+=xp;
-    if(Math.random()<Math.min(6,elapsed/600)){ const it=makeItem(f.lv); addItem(it); drops++; }
-    h.energy=BAL.energyMax; h.hp=hunterMaxHp(h);
+  const active=S.hunters.length;
+  for(const h of S.hunters){
+    const zi=heroZoneIdx(h); const f=FIELDS[zi]||FIELDS[0];
+    const effic=0.55; // travel/rest/sell overhead
+    const g=Math.floor(((f.gold[0]+f.gold[1])/2)/2.6 * elapsed * effic); huntGold+=g;
+    const xp=Math.floor(elapsed/5*effic); giveXp(h,xp); xpGain+=xp;
+    const nd=Math.floor(Math.min(elapsed/240, 20)*effic);
+    for(let i=0;i<nd;i++){ if(S.inv.length<S.invMax){ addItem(makeItem(f.lv+zi*2)); drops++; } }
+    h.hp=hunterMaxHp(h); h.energy=BAL.energyMax; h.ai="TOWN_IDLE"; h.bag={gold:0,items:[]}; h.wx=TOWN_X+rnd(-5,5);
   }
   S.gold+=huntGold; S.stats.goldEarned+=huntGold;
-  return {elapsed, goldGain:goldGain+huntGold, xpGain, drops, fighters:fighters.length};
+  return {elapsed, goldGain:passiveGold+huntGold, xpGain, drops, fighters:active};
 }
 
 /* =========================================================================
@@ -1184,7 +1539,6 @@ function showView(v){
   $$(".view").forEach(el=>el.classList.toggle("active", el.id==="view-"+v));
   $$("#nav button").forEach(b=>b.classList.toggle("on", b.dataset.view===v));
   if(v==="hunters") renderHunters();
-  if(v==="field") renderFields();
   if(v==="gear"){ renderGear(); S.seenGear=true; updateBadges(); }
   if(v==="shop") renderShop();
   if(v==="town") resizeTown();
@@ -1200,8 +1554,9 @@ function updateBadges(){
 
 /* ---- Hunters view ---- */
 function stateLabel(h){
-  return {idle:["ว่าง","#54c98a"],resting:["พักฟื้น","#f0a850"],traveling:["กำลังเดินทาง","#5fd0e0"],
-    fighting:["กำลังต่อสู้","#e05a5a"],returning:["กำลังกลับ","#8b8bf0"]}[h.state]||["-","#999"];
+  return {TOWN_IDLE:["อยู่เมือง","#54c98a"],GO_HEAL:["ไปรักษา","#e05a5a"],GO_REST:["ไปพัก","#f0a850"],
+    GO_SELL:["ไปขายของ","#f2c14e"],WALK_OUT:["ออกเดินทาง","#5fd0e0"],HUNT:["กำลังล่า","#e0574f"],
+    WALK_HOME:["กำลังกลับ","#8b8bf0"]}[h.ai]||["—","#999"];
 }
 function renderHunters(){
   const wrap=$("#huntersList"); wrap.innerHTML="";
@@ -1211,7 +1566,7 @@ function renderHunters(){
     div.innerHTML=`
       <div class="avatar" style="background:${c.col}22;border-color:${c.col}55">${avatarInner(h.cls,h.lv)}</div>
       <div class="grow">
-        <div class="row" style="gap:6px"><b>${h.name}</b><span class="tag">${c.th}</span></div>
+        <div class="row" style="gap:6px"><b>${h.name}</b><span class="tag">${c.th}</span><span class="tag" style="color:var(--gold);border-color:var(--gold)">${gradeOf(h)}${(h.star||0)?" ★"+h.star:""}</span></div>
         <div class="small muted"><span class="state-dot" style="background:${sl[1]}"></span>${sl[0]} · พลัง ${fmt(hunterPower(h))}</div>
         <div class="row" style="gap:6px;margin-top:5px">
           <div class="bar grow" title="HP"><i style="width:${h.hp/mhp*100}%;background:var(--hp)"></i></div>
@@ -1264,10 +1619,11 @@ function openHunter(id){
   openSheet(h.name, `
     <div class="row" style="margin-bottom:8px">
       <div class="avatar" style="width:52px;height:52px;font-size:26px;background:${c.col}22;border-color:${c.col}55">${avatarInner(h.cls,h.lv)}</div>
-      <div class="grow"><div class="row" style="gap:6px"><b>${c.name}</b><span class="tag">${c.th}</span></div>
-        <div class="small muted">พลังรวม ${fmt(hunterPower(h))}</div>
-        <div class="bar" style="margin-top:4px"><i style="width:${h.xp/xpToNext(h.lv)*100}%;background:var(--xp)"></i></div>
-        <div class="dim" style="font-size:10px">XP ${fmt(h.xp)}/${fmt(xpToNext(h.lv))}</div>
+      <div class="grow"><div class="row" style="gap:6px"><b>${c.name}</b><span class="tag">${c.th}</span>
+        <span class="tag" style="color:var(--gold);border-color:var(--gold)">เกรด ${gradeOf(h)} ${"★".repeat(h.star||0)}</span></div>
+        <div class="small muted">พลังรวม ${fmt(hunterPower(h))} · Lv ${h.lv}/${capForStar(h.star||0)}</div>
+        <div class="bar" style="margin-top:4px"><i style="width:${atCap(h)?100:h.xp/xpToNext(h.lv)*100}%;background:var(--xp)"></i></div>
+        <div class="dim" style="font-size:10px">${atCap(h)?"ตันเลเวล — พร้อมเลื่อนดาว":"XP "+fmt(h.xp)+"/"+fmt(xpToNext(h.lv))}</div>
       </div></div>
     <div class="chipline">
       <span class="statmini">❤️ ${fmt(mhp)}</span>
@@ -1280,14 +1636,37 @@ function openHunter(id){
       <div class="row" style="gap:6px"><span style="color:${SKILLS[h.cls].col};font-weight:800">✨ ${SKILLS[h.cls].name}</span><span class="tag">สกิล</span></div>
       <div class="small muted" style="margin-top:3px">${SKILLS[h.cls].desc}</div></div>`:""}
     <div class="divider"></div>
+    <div class="view-title" style="margin:0 0 6px">พื้นที่ล่าที่สั่ง</div>
+    <div class="chipline" id="zoneChips">${zoneChipsHtml(h)}</div>
+    <div class="divider"></div>
+    ${ascendRowHtml(h)}
+    <div class="divider"></div>
     <div class="view-title" style="margin:0 0 6px">อุปกรณ์สวมใส่</div>
     <div class="slotgrid" id="eqGrid">${slotsHtml}</div>
-    <div class="divider"></div>
-    <div class="row"><button class="btn sec grow" id="btnAutoEquip">✨ สวมของดีสุดอัตโนมัติ</button></div>
-    <div class="small muted center" style="margin-top:8px">สถานะ: ${stateLabel(h)[0]}</div>
+    <div class="row" style="margin-top:8px"><button class="btn sec grow" id="btnAutoEquip">✨ สวมของดีสุดอัตโนมัติ</button></div>
+    ${(h.bag&&(h.bag.gold||h.bag.items.length))?`<div class="small muted center" style="margin-top:8px">🎒 หอบอยู่: 🪙${fmt(h.bag.gold)} · ${h.bag.items.length} ชิ้น</div>`:""}
+    <div class="small muted center" style="margin-top:6px">สถานะ: ${stateLabel(h)[0]}</div>
   `);
   $$("#eqGrid .gslot").forEach(el=>{ el.onclick=()=>openSlotPicker(h, el.dataset.eqslot); });
   $("#btnAutoEquip").onclick=()=>{ autoEquip(h); openHunter(id); toastUp("✨ จัดของให้แล้ว"); };
+  $$("#zoneChips [data-zone]").forEach(b=>b.onclick=()=>{ h.assignedZone=b.dataset.zone; if(h.ai==="HUNT"||h.ai==="WALK_OUT"){ h._zone=heroZoneIdx(h);} openHunter(id); });
+  const ba=$("#btnAscend"); if(ba) ba.onclick=()=>{ if(ascend(h)){ toastUp("⭐ เลื่อนดาว! เกรด "+gradeOf(h)); openHunter(id); } else toastUp("เงื่อนไขไม่พอ"); };
+}
+function zoneChipsHtml(h){
+  const cur=h.assignedZone||"auto";
+  let s=`<span class="tag" data-zone="auto" style="cursor:pointer;${cur==="auto"?'background:var(--accent);color:#fff;border-color:var(--accent)':''}">Auto</span>`;
+  FIELDS.forEach((f,i)=>{ const un=zoneUnlocked(i); const on=cur===f.id;
+    s+=`<span class="tag" ${un?`data-zone="${f.id}"`:''} style="${un?'cursor:pointer;':'opacity:.4;'}${on?'background:var(--accent);color:#fff;border-color:var(--accent)':''}">${f.em} ${f.name}${un?'':' 🔒'}</span>`; });
+  return s;
+}
+function ascendRowHtml(h){
+  if((h.star||0)>=5) return `<div class="row"><div class="grow"><b>เลื่อนดาว</b><div class="small muted">สูงสุดแล้ว — เกรด S ★★★★★</div></div></div>`;
+  const c=ascendCost(h), ready=atCap(h), afford=S.gold>=c.gold&&S.gems>=c.gems;
+  const nextSm=Math.round(((1+(h.star+1)*0.12)/(1+(h.star||0)*0.12)-1)*100);
+  return `<div class="row"><div class="grow"><b>เลื่อนดาว → เกรด ${GRADES[(h.star||0)+1]}</b>
+    <div class="small muted">+สเตตัสรวม~${nextSm}% · แคปเลเวล ${capForStar(h.star||0)}→${capForStar((h.star||0)+1)}</div>
+    <div class="dim small">ต้องการ: 🪙${fmt(c.gold)} · 💎${c.gems}${ready?'':' · ต้องตันเลเวลก่อน'}</div></div>
+    <button class="btn gold" id="btnAscend" ${(!ready||!afford)?"disabled":""}>⭐ เลื่อนดาว</button></div>`;
 }
 function openSlotPicker(h, slotId){
   const slot=slotById(slotId);
@@ -1615,10 +1994,9 @@ function bindNav(){
   $("#btnQuests").onclick=openQuests;
   $("#sheetClose").onclick=closeSheet;
   $("#sheet .backdrop").onclick=closeSheet;
-  $("#combatBack").onclick=closeCombat;
   $("#pillBuild").onclick=()=>showView("shop");
   $("#pillIncome").onclick=()=>showView("shop");
-  window.addEventListener("resize",()=>{ if(activeCombat) resizeCombat(); });
+  $("#pillHome").onclick=()=>{ goHome(); };
   window.addEventListener("beforeunload", save);
   document.addEventListener("visibilitychange",()=>{ if(document.hidden) save(); });
 }
@@ -1627,7 +2005,7 @@ function boot(){
   if(!had) newGame();
   applyTheme();
   loadArt();
-  initTown(); initCombatCanvas(); bindNav();
+  initTown(); bindNav();
   refreshTopbar(); refreshTownHud(); updateBadges();
   // offline
   const off= had ? offlineCatchup() : null;

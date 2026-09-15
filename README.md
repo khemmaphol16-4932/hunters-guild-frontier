@@ -17,18 +17,24 @@
 Open `tycoon.html` in a browser, or serve the folder statically and visit it.
 `localStorage` save, offline catch-up, Thai UI, light/dark, game-speed setting.
 
-- **Living town** — an isometric frontier you build out: Guild Hall, Market,
-  Tavern, Cookhouse, Smithy, Infirmary, Bunkhouse. Buildings earn gold and
-  provide services (food/heal/rest) that idle hunters use as they wander.
-- **Auto-hunt** — dispatch hunters (Vanguard / Reaver / Ranger / Adept) to the
-  Verdant Reach, Bracken Hollow, Ashen Wastes and Drowned Coast. They travel,
-  auto-battle waves of monsters and periodic bosses in a live combat view, and
-  return with loot and gold.
+- **Seamless real-time world** — town and hunting grounds share one continuous
+  road (no separate combat screen). Autonomous heroes (Vanguard / Reaver /
+  Ranger / Adept) walk out the gate to Verdant Reach → Bracken Hollow → Ashen
+  Wastes → Drowned Coast, fight monsters and bosses in place, then limp home
+  when hurt or loaded to heal at the clinic, rest at the inn, and sell their
+  haul at the market — then head out again. You watch and manage; you assign a
+  zone per hero (or Auto) and they think for themselves. Class skills auto-cast
+  in combat.
+- **Living tycoon town** — build out Guild Hall, Market, Tavern, Cookhouse,
+  Smithy, Infirmary, Bunkhouse. Buildings earn gold and set how fast heroes
+  heal, rest and sell.
 - **Deep gear** — six slots, six rarities (Common → Legendary), main + random
   substats, three set bonuses (Ashwarden's Vigil / Quietstep / Lantern Order),
   enhance (+levels, risk at high +), equip / auto-equip / salvage.
-- **Tycoon + idle** — passive town income scales with buildings and population;
-  everything keeps running while away, with a welcome-back offline summary.
+- **Ascension** — star up heroes (grades E→S): at the level cap, spend gold +
+  gems to raise stats and the cap.
+- **Idle + progression** — passive town income, quests, a gem shop, and a
+  welcome-back offline summary; everything keeps running while away.
 
 ---
 
