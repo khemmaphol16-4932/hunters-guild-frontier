@@ -1,0 +1,15 @@
+{
+  "frameWidth": 128,
+  "frameHeight": 128,
+  "frames": 6,
+  "pivot": [
+    64,
+    112
+  ],
+  "loop": true,
+  "advance": "distance",
+  "tilesPerCycle": 2,
+  "contactFrames": [],
+  "hoverOffset": 20,
+  "mirrorOf": "se"
+}

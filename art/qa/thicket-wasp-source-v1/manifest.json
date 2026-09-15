@@ -57,6 +57,20 @@
       "variant": "04-ne",
       "width": 55,
       "review": "Codex REJECTED: body scale and orientation drift; retained for provenance only."
+    },
+    {
+      "file": "thicket_wasp_fly_se_key_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "fly-se-01",
+      "width": 64,
+      "review": "Codex: south-east forward-flight key pose for the six-frame distance-driven fly state."
+    },
+    {
+      "file": "thicket_wasp_fly_ne_key_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "fly-ne-01",
+      "width": 64,
+      "review": "Codex: north-east back-three-quarter forward-flight key pose for the six-frame distance-driven fly state."
     }
   ]
 }

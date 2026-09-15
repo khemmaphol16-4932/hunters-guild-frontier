@@ -30,6 +30,26 @@ function normalize(facing, frame = '01') {
   return { source, sprite, palette, result };
 }
 
+function normalizePose(state, facing, sourceName, targetWidth = 64) {
+  const source = `art/generated/thicket-wasp-source-v1/${sourceName}`;
+  const raw = decodePng(readFileSync(source));
+  const sourceBox = bbox(raw, 128);
+  if (!sourceBox) throw new Error(`Thicket Wasp ${state} ${facing} source is empty`);
+  const firstHeight = Math.round(sourceBox.h * targetWidth / sourceBox.w);
+  const firstPass = downsample(raw, sourceBox, targetWidth, firstHeight);
+  const firstBox = bbox(firstPass, 128);
+  const finalHeight = Math.round(firstBox.h * targetWidth / firstBox.w);
+  const sampled = downsample(firstPass, firstBox, targetWidth, finalHeight);
+  const { img: limited, palette } = quantize(sampled, 24);
+  const sprite = place(limited, 128, 128, [64, 92]);
+  const half = halve(sprite);
+  const result = validate(sprite, { canvas: [128, 128], category: '03', halfImg: half });
+  writeFileSync(`${OUT}/monster_thicket_wasp_${state}_${facing}_01@2x.png`, encodePng(sprite));
+  writeFileSync(`${OUT}/monster_thicket_wasp_${state}_${facing}_01@1x.png`, encodePng(half));
+  writeFileSync(`${OUT}/monster_thicket_wasp_${state}_${facing}_01_shadow@2x.png`, encodePng(contactShadow(sprite, [64, 112])));
+  return { source, sprite, palette, result };
+}
+
 const se = normalize('se');
 const ne = normalize('ne');
 const se02 = normalize('se', '02');
@@ -117,6 +137,40 @@ writeFileSync(`${OUT}/monster_thicket_wasp_idle_nw.json`, JSON.stringify({
   frameWidth: 128, frameHeight: 128, frames: 4, pivot: [64, 112], loop: true,
   advance: 'ambient', keyFrame: 1, hoverOffset: 20, mirrorOf: 'ne',
 }, null, 2) + '\n');
+
+const flySe = normalizePose('fly', 'se', 'thicket_wasp_fly_se_key_candidate.png');
+const flyNe = normalizePose('fly', 'ne', 'thicket_wasp_fly_ne_key_candidate.png');
+const flyCycle = (base) => [
+  base,
+  bodyLockedHover(base, -1, -6),
+  bodyLockedHover(base, -2, 5),
+  bodyLockedHover(base, -1, -4),
+  bodyLockedHover(base, 0, 3),
+  bodyLockedHover(base, 1, -2),
+];
+const flySeFrames = flyCycle(flySe.sprite);
+const flyNeFrames = flyCycle(flyNe.sprite);
+const flySwFrames = flySeFrames.map(mirror);
+const flyNwFrames = flyNeFrames.map(mirror);
+for (const [facing, frames, mirrorOf] of [
+  ['se', flySeFrames, null], ['sw', flySwFrames, 'se'], ['ne', flyNeFrames, null], ['nw', flyNwFrames, 'ne'],
+]) {
+  frames.forEach((sprite, index) => {
+    const frame = String(index + 1).padStart(2, '0');
+    const half = halve(sprite);
+    writeFileSync(`${OUT}/monster_thicket_wasp_fly_${facing}_${frame}@2x.png`, encodePng(sprite));
+    writeFileSync(`${OUT}/monster_thicket_wasp_fly_${facing}_${frame}@1x.png`, encodePng(half));
+  });
+  writeFileSync(`${OUT}/monster_thicket_wasp_fly_${facing}@2x.png`, encodePng(sheet(frames)));
+  writeFileSync(`${OUT}/monster_thicket_wasp_fly_${facing}.json`, JSON.stringify({
+    frameWidth: 128, frameHeight: 128, frames: 6, pivot: [64, 112], loop: true,
+    advance: 'distance', tilesPerCycle: 2, contactFrames: [], hoverOffset: 20, mirrorOf,
+  }, null, 2) + '\n');
+}
+writeFileSync(`${OUT}/monster_thicket_wasp_fly_qa.png`, encodePng(qaSheet([
+  ...flySeFrames, scaleNearest(sheet(flySeFrames), 0.55),
+  ...flyNeFrames, scaleNearest(sheet(flyNeFrames), 0.55),
+])));
 const swarm = { width: 128, height: 128, data: new Uint8Array(128 * 128 * 4) };
 for (const [dx, dy] of [[-18, 4], [0, -6], [18, 5]]) {
   for (let y = 0; y < se.sprite.height; y++) for (let x = 0; x < se.sprite.width; x++) {
@@ -136,7 +190,11 @@ writeFileSync(`${OUT}/monster_thicket_wasp_idle_ne_rejected_qa.png`, encodePng(q
   ne.sprite, ne02.sprite, ne03.sprite, ne04.sprite,
 ])));
 
-const pass = [se, se02, se03, se04, ne, neDerived02, neDerived03, neDerived04].every((x) => x.result.pass);
+const flyResults = [...flySeFrames, ...flyNeFrames].map((sprite) => validate(sprite, {
+  canvas: [128, 128], category: '03', halfImg: halve(sprite),
+}));
+const pass = [se, se02, se03, se04, ne, neDerived02, neDerived03, neDerived04].every((x) => x.result.pass)
+  && flyResults.every((x) => x.pass);
 const report = [
   '# QA — Thicket Wasp source v1', '',
   `Sources: \`${se.source}\`, \`${ne.source}\` · deterministic batch-local normalization using \`art/tools/sprite.mjs\`.`, '',
@@ -164,6 +222,12 @@ const report = [
   'Sheet order: SE frames 01–04 and strip at 55%, NE frames 01–04 and strip at 55%, three-wasp SE overlap at 100% and 55%.', '',
   'Rejected generated NE intermediates (frame 01 reference, then rejected 02–04):', '',
   '![Rejected NE generations](monster_thicket_wasp_idle_ne_rejected_qa.png)', '',
+  '## Fly / walk state', '',
+  `Authored key poses: \`${flySe.source}\`, \`${flyNe.source}\`. Six-frame cycles use exact body-locked offsets and wing-ramp pulses; SW/NW are mirrors.`, '',
+  `- ${flyResults.every((x) => x.pass) ? '✅' : '❌'} all 12 authored-direction fly frames pass machine validation`,
+  '- ✅ distance-driven sidecars use two tiles per cycle; flying has no ground-contact frames',
+  '- ✅ Codex visual review: travel lean reads separately from idle at 55%; body identity remains fixed through each cycle', '',
+  '![Fly QA](monster_thicket_wasp_fly_qa.png)', '',
 ];
 writeFileSync(`${OUT}/report.md`, report.join('\n'));
 console.log(`${pass ? 'PASS' : 'FAIL'} MON_THICKET_WASP idle — four complete facings; NE loop body-locked`);

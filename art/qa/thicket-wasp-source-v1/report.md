@@ -65,3 +65,13 @@ Sheet order: SE frames 01–04 and strip at 55%, NE frames 01–04 and strip at 
 Rejected generated NE intermediates (frame 01 reference, then rejected 02–04):
 
 ![Rejected NE generations](monster_thicket_wasp_idle_ne_rejected_qa.png)
+
+## Fly / walk state
+
+Authored key poses: `art/generated/thicket-wasp-source-v1/thicket_wasp_fly_se_key_candidate.png`, `art/generated/thicket-wasp-source-v1/thicket_wasp_fly_ne_key_candidate.png`. Six-frame cycles use exact body-locked offsets and wing-ramp pulses; SW/NW are mirrors.
+
+- ✅ all 12 authored-direction fly frames pass machine validation
+- ✅ distance-driven sidecars use two tiles per cycle; flying has no ground-contact frames
+- ✅ Codex visual review: travel lean reads separately from idle at 55%; body identity remains fixed through each cycle
+
+![Fly QA](monster_thicket_wasp_fly_qa.png)
