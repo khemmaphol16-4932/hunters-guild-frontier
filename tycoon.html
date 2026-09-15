@@ -263,6 +263,9 @@ const ART_SRC = {
   hunter_adept:    "proof-cycle-rigs-source-v2/hunter_adept_skel_idle_se_02@2x.png",
   moss_crawler:    "proof-cycle-actors-source-v1/monster_moss_crawler_idle_se_01@2x.png",
   thicket_wasp:    "thicket-wasp-source-v1/monster_thicket_wasp_idle_se_01@2x.png",
+  thicket_wasp_2:  "thicket-wasp-source-v1/monster_thicket_wasp_idle_se_02@2x.png",
+  thicket_wasp_3:  "thicket-wasp-source-v1/monster_thicket_wasp_idle_se_03@2x.png",
+  thicket_wasp_4:  "thicket-wasp-source-v1/monster_thicket_wasp_idle_se_04@2x.png",
   firepit:         "town-props-source-v2/prp_town_basic_firepit_01@2x.png",
   woodpile:        "town-props-source-v2/prp_town_basic_woodpile_01@2x.png",
   weapon_rack:     "town-props-source-v2/prp_town_basic_weapon_rack_01@2x.png",
@@ -272,6 +275,14 @@ const ART_SRC = {
   tree_broadleaf:  "trees-source-v1/prp_trees_broadleaf_medium_01@2x.png",
   tree_birch:      "trees-source-v1/prp_trees_birch_medium_01@2x.png",
 };
+// Idle animation frame lists (monster id -> art keys). Falls back to the single sprite.
+const ART_ANIM = { thicket_wasp: ["thicket_wasp","thicket_wasp_2","thicket_wasp_3","thicket_wasp_4"] };
+const ANIM_FPS = 6;
+function animImg(mid){
+  const frames=ART_ANIM[mid];
+  if(frames){ const ready=frames.filter(artReady); if(ready.length){ const i=Math.floor(performance.now()/1000*ANIM_FPS)%ready.length; return IMG[ready[i]]; } }
+  return artReady(mid)?IMG[mid]:null;
+}
 const IMG = {};           // key -> HTMLImageElement (may be not-yet-loaded)
 const _tintCache = {};    // key|color -> canvas
 function loadArt(){
@@ -651,25 +662,65 @@ function drawIsoTile(r,c,col){
   tctx.fillStyle=col; tctx.fill();
   tctx.strokeStyle="rgba(0,0,0,.12)"; tctx.stroke();
 }
+const ROOF = { guild_hall:"#9c3f3a", market:"#6a8f4e", tavern:"#7a4a2c", restaurant:"#b06a2e",
+  smithy:"#5a5f6b", clinic:"#c9cdd6", inn:"#7a5236" };
+const CHIMNEY = { smithy:1, restaurant:1, tavern:1 };
 function drawBuilding(p){
   const bd=BUILDINGS[p.b]; const lv=(S.buildings[p.b]||{lv:0}).lv;
   const x=isoX(p.r+0.5,p.c+0.5), y=isoY(p.r+0.5,p.c+0.5);
-  const w=TILE*1.5, hgt=TILE*0.9+lv*4;
-  // base shadow
-  tctx.fillStyle="rgba(0,0,0,.18)"; tctx.beginPath(); tctx.ellipse(x,y+6,w*0.5,TILE*0.28,0,0,7); tctx.fill();
-  // body
-  tctx.fillStyle=bd.col;
-  roundRectPath(x-w/2, y-hgt, w, hgt+TILE*0.2, 6); tctx.fill();
-  // roof
-  tctx.fillStyle=shade(bd.col,-18);
-  tctx.beginPath();
-  tctx.moveTo(x-w/2-3,y-hgt); tctx.lineTo(x, y-hgt-TILE*0.5); tctx.lineTo(x+w/2+3,y-hgt); tctx.closePath(); tctx.fill();
-  // emoji sign
-  tctx.font=`${Math.floor(TILE*0.62)}px serif`; tctx.textAlign="center"; tctx.textBaseline="middle";
-  tctx.fillText(bd.em, x, y-hgt*0.45);
-  // level pip
-  if(lv>0){ tctx.font=`bold ${Math.floor(TILE*0.28)}px sans-serif`; tctx.fillStyle="#fff";
-    tctx.fillText("Lv"+lv, x, y-hgt-TILE*0.02); }
+  // sprite override hook — if Codex ships a full-building sprite, use it
+  if(artReady("bld_"+p.b)){
+    tctx.fillStyle="rgba(0,0,0,.2)"; tctx.beginPath(); tctx.ellipse(x,y+3,TILE*0.9,TILE*0.34,0,0,7); tctx.fill();
+    drawSpriteB(tctx, IMG["bld_"+p.b], x, y+TILE*0.2, TILE*2.0, 0.05);
+    drawBldLabel(x,y,TILE*1.4,lv); return;
+  }
+  const w=TILE*1.7, wallH=TILE*0.82 + Math.min(lv,6)*3, roofH=TILE*0.58, oh=Math.max(4,TILE*0.14);
+  const baseY=y+TILE*0.16, wx=x-w/2, wtop=baseY-wallH;
+  const roofCol=ROOF[p.b]||shade(bd.col,-24);
+  // ground shadow
+  tctx.fillStyle="rgba(0,0,0,.22)"; tctx.beginPath(); tctx.ellipse(x,y+4,w*0.52,TILE*0.26,0,0,7); tctx.fill();
+  // walls (left lit / right shaded)
+  tctx.fillStyle=bd.col;            tctx.fillRect(wx, wtop, w, wallH);
+  tctx.fillStyle=shade(bd.col,-26); tctx.fillRect(x, wtop, w/2, wallH);
+  tctx.fillStyle=shade(bd.col,-45); tctx.fillRect(wx, baseY-Math.max(3,TILE*0.09), w, Math.max(3,TILE*0.09)); // plinth
+  // door
+  const dw=w*0.26, dh=wallH*0.52;
+  tctx.fillStyle=shade(bd.col,-60); tctx.fillRect(x-dw/2, baseY-dh, dw, dh);
+  tctx.fillStyle=shade(bd.col,-30); tctx.fillRect(x-dw/2, baseY-dh, dw, Math.max(2,TILE*0.06));
+  // windows (warm glow)
+  const ww=w*0.16, wh=wallH*0.24, wy=wtop+wallH*0.22;
+  tctx.fillStyle="#f2d68a";
+  tctx.fillRect(wx+w*0.12, wy, ww, wh);
+  tctx.fillStyle="#d9b96e"; tctx.fillRect(x+w*0.22, wy, ww, wh);
+  // roof (pitched, with overhang and shaded right slope)
+  tctx.fillStyle=roofCol;
+  tctx.beginPath(); tctx.moveTo(wx-oh, wtop+2); tctx.lineTo(x, wtop-roofH); tctx.lineTo(wx+w+oh, wtop+2); tctx.closePath(); tctx.fill();
+  tctx.fillStyle=shade(roofCol,-22);
+  tctx.beginPath(); tctx.moveTo(x, wtop-roofH); tctx.lineTo(wx+w+oh, wtop+2); tctx.lineTo(x, wtop+2); tctx.closePath(); tctx.fill();
+  // ridge
+  tctx.fillStyle=shade(roofCol,18); tctx.fillRect(x-1, wtop-roofH, 2, roofH+2);
+  // chimney + smoke for working buildings
+  if(CHIMNEY[p.b]){
+    const cx=x+w*0.24, cyt=wtop-roofH*0.55;
+    tctx.fillStyle=shade(roofCol,-40); tctx.fillRect(cx, cyt, Math.max(4,TILE*0.13), roofH*0.7);
+    const t=performance.now()/600;
+    for(let i=0;i<3;i++){ const pr=(t+i*0.4)%1; tctx.globalAlpha=(1-pr)*0.35;
+      tctx.fillStyle="#cfd6de"; tctx.beginPath();
+      tctx.arc(cx+TILE*0.06+Math.sin((t+i)*2)*3, cyt-pr*TILE*0.9, (1+pr)*TILE*0.11, 0,7); tctx.fill(); }
+    tctx.globalAlpha=1;
+  }
+  // hanging signboard with the building emoji
+  const sy=wtop+wallH*0.06;
+  tctx.font=`${Math.floor(TILE*0.5)}px serif`; tctx.textAlign="center"; tctx.textBaseline="middle";
+  tctx.fillText(bd.em, x-w*0.30, baseY-dh*0.55);
+  drawBldLabel(x, y, w, lv, wtop-roofH);
+}
+function drawBldLabel(x,y,w,lv,topY){
+  if(lv<=0) return;
+  const ly=(topY!=null?topY:y-w)-4;
+  tctx.font=`bold ${Math.floor(TILE*0.3)}px sans-serif`; tctx.textAlign="center"; tctx.textBaseline="alphabetic";
+  tctx.fillStyle="rgba(0,0,0,.55)"; tctx.fillText("Lv"+lv, x+0.5, ly+0.5);
+  tctx.fillStyle="#fff"; tctx.fillText("Lv"+lv, x, ly);
 }
 function roundRectPath(x,y,w,h,r){ tctx.beginPath(); tctx.moveTo(x+r,y); tctx.arcTo(x+w,y,x+w,y+h,r); tctx.arcTo(x+w,y+h,x,y+h,r); tctx.arcTo(x,y+h,x,y,r); tctx.arcTo(x,y,x+w,y,r); tctx.closePath(); }
 function shade(hex,amt){ const n=parseInt(hex.slice(1),16); let r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt;
@@ -983,7 +1034,7 @@ function renderCombat(){
     p.hitFx=Math.max(0,p.hitFx-0.016); }
   // draw mobs
   for(const m of run.mobs){ if(m.hp<=0) continue; const sz=m.boss?1.7:1;
-    const mart=artReady(m.mid)?IMG[m.mid]:null;
+    const mart=animImg(m.mid);
     drawFighter(m.x*W,m.y*H+H*0.15, m.em, m.hp/m.maxHp, m.hitFx, "#c05050", false, true, sz, m.name, mart, 46*sz*(mart?1.15:1));
     m.hitFx=Math.max(0,m.hitFx-0.016); }
   // floaties
