@@ -1,21 +1,21 @@
-# Hunter's Guild: Frontier — Tycoon
+# Hunter's Guild: Frontier
 
-> **New direction (Tycoon rebuild).** `index.html` is now a self-contained,
-> mobile-first **Evil Hunter Tycoon–style** game: no build step, no dependencies —
-> just open the file. You run a living frontier town, hunters auto-hunt in the
-> field, you loot and upgrade their gear, and the town earns while you are away.
-> One file, `localStorage` save, offline catch-up, Thai UI, light/dark.
->
-> **Play:** open `index.html` in a browser (or serve the folder statically).
->
-> The original TypeScript simulation engine (below) still lives under `src/`,
-> `tests/` and `docs/` and can be restored from git history — the world data
-> (monsters, buildings, classes, gear rarities and sets) was carried over into
-> the new game.
+> **Two builds live in this repo.**
+> - **`index.html`** — the original **Vite + TypeScript** simulation engine
+>   (`src/`, `tests/`, `docs/`). This is the active, shared project (see
+>   `AGENTS.md`). `npm run dev` serves it.
+> - **`tycoon.html`** — a self-contained, mobile-first **Evil Hunter Tycoon–style**
+>   game with no build step and no dependencies: just open the file. Added
+>   2026-09-15 at the owner's request as a separate direction; it reuses this
+>   repo's world data (monsters, buildings, classes, gear rarities and sets) but
+>   shares none of the TS code, so it does not touch the engine above.
 
 ---
 
-## The Tycoon game (index.html)
+## The Tycoon game (`tycoon.html`)
+
+Open `tycoon.html` in a browser, or serve the folder statically and visit it.
+`localStorage` save, offline catch-up, Thai UI, light/dark, game-speed setting.
 
 - **Living town** — an isometric frontier you build out: Guild Hall, Market,
   Tavern, Cookhouse, Smithy, Infirmary, Bunkhouse. Buildings earn gold and
