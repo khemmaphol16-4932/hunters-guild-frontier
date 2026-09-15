@@ -147,9 +147,10 @@ select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);bo
 <div id="app">
   <div id="topbar">
     <div class="res gold"><span class="ic">🪙</span><span id="uiGold" class="num">0</span></div>
-    <div class="res gem"><span class="ic">💎</span><span id="uiGem" class="num">0</span></div>
+    <div class="res gem" id="gemChip" style="cursor:pointer"><span class="ic">💎</span><span id="uiGem" class="num">0</span></div>
     <div class="spacer"></div>
     <div class="daychip">Day <span id="uiDay">1</span></div>
+    <button class="iconbtn" id="btnQuests" style="position:relative">🎯<span class="badge" id="questBadge" style="display:none;position:absolute;top:-5px;right:-5px;background:var(--bad);color:#fff;border-radius:20px;font-size:9px;font-weight:800;padding:0 4px;min-width:14px;text-align:center"></span></button>
     <button class="iconbtn" id="btnSettings">⚙</button>
   </div>
 
@@ -337,6 +338,17 @@ const CLASSES = {
             base:{hp:180, atk:40, def:6,  spd:2.2, crit:.08}, grow:{hp:24, atk:6.0, def:0.9}},
 };
 const CLASS_IDS = Object.keys(CLASSES);
+// Active class skills — auto-fire on cooldown during a hunt.
+const SKILLS = {
+  vanguard:{name:"Rallying Guard", th:"ปกป้องหมู่", cd:12, kind:"heal", pow:0.09, col:"#54c98a",
+            desc:"ฟื้น HP ทั้งปาร์ตี้ 9% ทุก 12 วิ"},
+  reaver:  {name:"Cleave", th:"ฟันวงกว้าง", cd:8, kind:"aoe", pow:1.7, col:"#e0574f",
+            desc:"ฟันศัตรูทุกตัว 170% โจมตี ทุก 8 วิ"},
+  ranger:  {name:"Volley", th:"ห่าธนู", cd:9, kind:"multi", hits:3, pow:1.2, col:"#7fd06a",
+            desc:"ยิง 3 เป้าหมาย ตัวละ 120% โจมตี ทุก 9 วิ"},
+  adept:   {name:"Arcane Surge", th:"คลื่นเวท", cd:10, kind:"smart", pow:1.5, col:"#8b8bf0",
+            desc:"เพื่อนเลือดต่ำ→ฮีล / ไม่งั้นระเบิดใส่ศัตรูทุกตัว 150% ทุก 10 วิ"},
+};
 const FIRST_NAMES = ["Kael","Bryn","Sora","Mira","Doran","Vesna","Aldric","Tamsin","Corvin","Elowen",
   "Garrick","Isolde","Roan","Neris","Fenwick","Ludo","Cassia","Petra","Halvard","Yara","Osric","Wenna"];
 
@@ -418,6 +430,21 @@ const BUILDINGS = {
     baseIncome:14, desc:"เพิ่มขวัญกำลังใจ ดึงดูดชาวเมือง รายได้สูง"},
 };
 
+/* -------------------- Quests / milestones -------------------- */
+const QUESTS = [
+  {id:"kills", ic:"⚔️", name:"นักล่าสัตว์ประหลาด", stat:()=>S.stats.kills,
+   tiers:[50,250,1000,5000,20000], rew:t=>({gold:Math.round(500*Math.pow(4,t))})},
+  {id:"boss", ic:"👑", name:"นักปราบบอส", stat:()=>S.stats.bossKills,
+   tiers:[1,5,20,60,150], rew:t=>({gems:3+t*3})},
+  {id:"gold", ic:"🪙", name:"เจ้าสัวแห่งเมือง", stat:()=>Math.floor(S.stats.goldEarned),
+   tiers:[5000,50000,500000,5000000,50000000], rew:t=>({gems:2+t*2})},
+  {id:"lv", ic:"⭐", name:"ครูฝึกนักล่า", stat:()=>S.hunters.reduce((a,h)=>a+h.lv,0),
+   tiers:[20,80,200,500,1200], rew:t=>({gold:Math.round(2000*Math.pow(3,t))})},
+];
+function questClaimed(q){ return (S.quests&&S.quests[q.id])||0; }
+function questClaimable(q){ const c=questClaimed(q); return c<q.tiers.length && q.stat()>=q.tiers[c]; }
+function questClaimableCount(){ return QUESTS.filter(questClaimable).length; }
+
 /* -------------------- Balance -------------------- */
 const BAL = {
   recruitBase:150, recruitStep:1.85,
@@ -449,7 +476,7 @@ function newGame(){
     ver:1, gold:400, gems:0, day:1, started:now(), last:now(), playSec:0,
     hunters:[], invMax:60, inv:[],
     buildings:{ guild_hall:{lv:1}, market:{lv:0}, restaurant:{lv:0}, clinic:{lv:0}, inn:{lv:0}, smithy:{lv:0}, tavern:{lv:0} },
-    town:{pop:6},
+    town:{pop:6}, bonusCap:0, quests:{},
     settings:{lang:"th", theme:"dark", speed:1},
     seenGear:true,
     stats:{kills:0, bossKills:0, goldEarned:0, dropsL:0},
@@ -567,6 +594,7 @@ function load(){
     // ensure fields exist
     S.buildings=S.buildings||{}; for(const b in BUILDINGS){ if(!S.buildings[b]) S.buildings[b]={lv:b==="guild_hall"?1:0}; }
     S.settings=S.settings||{lang:"th",theme:"dark",speed:1};
+    if(S.bonusCap==null) S.bonusCap=0; if(!S.quests) S.quests={};
     layoutTown(); return true;
   }catch(e){ return false; }
 }
@@ -803,7 +831,7 @@ function buildingIncome(bid){
 }
 function totalIncomePerMin(){ let g=0; for(const b in BUILDINGS) g+=buildingIncome(b); return g*60; }
 function idleHunters(){ return S.hunters.filter(h=>h.state==="idle"||h.state==="resting"); }
-function guildCap(){ return 3 + (S.buildings.guild_hall.lv-1)*1 + Math.floor(S.buildings.guild_hall.lv/2); }
+function guildCap(){ return 3 + (S.buildings.guild_hall.lv-1)*1 + Math.floor(S.buildings.guild_hall.lv/2) + (S.bonusCap||0); }
 
 function serviceLevel(kind){ // returns 0..n aggregated service strength
   let s=0; for(const b in BUILDINGS){ if(BUILDINGS[b].service===kind){ s+=(S.buildings[b].lv||0); } } return s;
@@ -918,6 +946,11 @@ function stepField(fieldId, dt){
   for(const p of alive){
     // drain energy
     p.h.energy=Math.max(0,p.h.energy-BAL.energyDrainFight*dt/60*10);
+    // class skill (auto-cast on cooldown)
+    const sk=SKILLS[p.h.cls];
+    if(sk){ if(p.h._skcd==null) p.h._skcd=sk.cd*rnd(0.35,0.75);
+      p.h._skcd-=dt;
+      if(p.h._skcd<=0){ p.h._skcd=sk.cd; castSkill(sk,p,party,run,fieldId,inField,watched); } }
     p.atkT-=dt;
     if(p.atkT<=0){
       p.atkT=p.st.spd;
@@ -948,6 +981,31 @@ function stepField(fieldId, dt){
   for(const p of party){ run.hunterHp[p.h.id]=Math.max(1,Math.round(p.hp)); p.h.hp=run.hunterHp[p.h.id]; }
   // energy check: if all low energy, return
   if(inField.every(h=>h.energy<=1)){ for(const h of inField){ h.state="returning"; h._travel=1.5; } if(watched) logCombat("😮‍💨 หมดแรง กลับเมือง"); }
+}
+function dmgMob(target,dmg,fieldId,run,inField,watched,color,big){
+  if(target.hp<=0) return;
+  dmg=Math.max(1,Math.round(dmg));
+  target.hp-=dmg; target.hitFx=0.25;
+  if(watched) floaty(target.x,target.y,dmg,color||"#fff",big);
+  if(target.hp<=0) onMobDeath(fieldId,run,target,inField,watched);
+}
+function castSkill(sk,caster,party,run,fieldId,inField,watched){
+  const st=caster.st;
+  if(watched){ logCombat(`✨ ${caster.h.name} · ${sk.th}`); caster.hitFx=0.15; }
+  if(sk.kind==="heal"){
+    for(const p of party){ if(p.hp>0){ const amt=Math.round(p.maxHp*sk.pow); p.hp=Math.min(p.maxHp,p.hp+amt);
+      if(watched) floaty(p.x,p.y,"+"+amt,"#54c98a"); } }
+  } else if(sk.kind==="aoe"){
+    for(const m of [...run.mobs]) dmgMob(m, st.atk*sk.pow - m.def*0.5, fieldId,run,inField,watched,sk.col,true);
+  } else if(sk.kind==="multi"){
+    const targets=run.mobs.filter(m=>m.hp>0).slice(0,sk.hits);
+    for(const m of targets) dmgMob(m, st.atk*sk.pow - m.def*0.5, fieldId,run,inField,watched,sk.col,false);
+  } else if(sk.kind==="smart"){
+    const hurt=party.filter(p=>p.hp>0 && p.hp<p.maxHp*0.6).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];
+    if(hurt){ const heal=Math.round(st.atk*4); hurt.hp=Math.min(hurt.maxHp,hurt.hp+heal);
+      if(watched) floaty(hurt.x,hurt.y,"+"+heal,"#54c98a"); }
+    else for(const m of [...run.mobs]) dmgMob(m, st.atk*sk.pow - m.def*0.5, fieldId,run,inField,watched,sk.col,true);
+  }
 }
 function onMobDeath(fieldId,run,mob,inField,watched){
   const f=fieldById(fieldId);
@@ -986,7 +1044,7 @@ function addItem(it){
 function stepTravel(dt){
   for(const h of S.hunters){
     if(h.state==="traveling"){ h._travel-=dt; if(h._travel<=0){ h.state="fighting"; } }
-    else if(h.state==="returning"){ h._travel-=dt; if(h._travel<=0){ h.field=null; h.state="idle"; h.gx=h.tx; h.gy=h.ty; } }
+    else if(h.state==="returning"){ h._travel-=dt; if(h._travel<=0){ h.field=null; h.state="idle"; h.gx=h.tx; h.gy=h.ty; h._skcd=null; } }
   }
   // run each active field
   const fields=new Set(S.hunters.filter(h=>h.state==="fighting").map(h=>h.field));
@@ -1086,7 +1144,7 @@ function loop(){
   if(currentView==="town") renderTown();
   if(activeCombat) renderCombat();
   // light HUD refresh (throttled)
-  hudTick+=dt; if(hudTick>0.25){ hudTick=0; refreshTopbar(); refreshTownHud(); if(currentView==="hunters") softRefreshHunters(); }
+  hudTick+=dt; if(hudTick>0.5){ hudTick=0; refreshTopbar(); refreshTownHud(); updateBadges(); if(currentView==="hunters") softRefreshHunters(); }
   queueSave();
   requestAnimationFrame(loop);
 }
@@ -1137,6 +1195,7 @@ function updateBadges(){
   const bh=$("#navBadgeH"); const idle=idleHunters().length; // could show something
   const bg=$("#navBadgeG"); const n=S.inv.filter(x=>!x._equipped).length;
   if(!S.seenGear && n>0){ bg.style.display="block"; bg.textContent=n>99?"99+":n; } else bg.style.display="none";
+  const qb=$("#questBadge"); if(qb){ const qc=questClaimableCount(); if(qc>0){ qb.style.display="block"; qb.textContent=qc; } else qb.style.display="none"; }
 }
 
 /* ---- Hunters view ---- */
@@ -1217,6 +1276,9 @@ function openHunter(id){
       <span class="statmini">⚡ ${(1/st.spd).toFixed(2)}/s</span>
       <span class="statmini">🎯 ${(st.crit*100).toFixed(0)}%</span>
     </div>
+    ${SKILLS[h.cls]?`<div class="card" style="margin:8px 0;padding:9px;background:var(--panel2)">
+      <div class="row" style="gap:6px"><span style="color:${SKILLS[h.cls].col};font-weight:800">✨ ${SKILLS[h.cls].name}</span><span class="tag">สกิล</span></div>
+      <div class="small muted" style="margin-top:3px">${SKILLS[h.cls].desc}</div></div>`:""}
     <div class="divider"></div>
     <div class="view-title" style="margin:0 0 6px">อุปกรณ์สวมใส่</div>
     <div class="slotgrid" id="eqGrid">${slotsHtml}</div>
@@ -1465,6 +1527,67 @@ function closeSheet(){ $("#sheet").style.display="none"; }
 let toastT=0;
 function toastUp(txt){ const el=$("#toastup"); el.textContent=txt; el.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove("show"),1400); }
 
+/* ---- Quests ---- */
+function openQuests(){
+  let html=`<div class="muted small" style="margin-bottom:8px">ทำสำเร็จเพื่อรับรางวัล — เป้าหมายไต่ระดับเรื่อยๆ</div>`;
+  for(const q of QUESTS){
+    const c=questClaimed(q), done=c>=q.tiers.length;
+    const cur=q.stat();
+    const target=done?q.tiers[q.tiers.length-1]:q.tiers[c];
+    const prevT=c>0?q.tiers[c-1]:0;
+    const frac=done?1:clamp((cur-prevT)/(target-prevT),0,1);
+    const claimable=questClaimable(q);
+    const rew=done?null:q.rew(c);
+    const rewTxt=rew?(rew.gold?`🪙${fmt(rew.gold)}`:`💎${rew.gems}`):"";
+    html+=`<div class="card" style="padding:11px">
+      <div class="row" style="gap:8px"><div class="gicon" style="font-size:19px">${q.ic}</div>
+        <div class="grow"><div class="row" style="gap:6px"><b>${q.name}</b><span class="tag">ระดับ ${Math.min(c+1,q.tiers.length)}/${q.tiers.length}</span></div>
+          <div class="dim small">${done?"สำเร็จครบทุกระดับ 🎉":`${fmt(cur)} / ${fmt(target)}`}</div></div>
+        ${claimable?`<button class="btn good sm" data-quest="${q.id}">รับ ${rewTxt}</button>`:done?`<span class="tag">✓</span>`:`<span class="statmini">${rewTxt}</span>`}
+      </div>
+      <div class="bar" style="margin-top:8px"><i style="width:${frac*100}%;background:${claimable?'var(--good)':'var(--accent)'}"></i></div>
+    </div>`;
+  }
+  openSheet("ภารกิจ", html, true);
+  $$("#sheetBody [data-quest]").forEach(b=>b.onclick=()=>{ claimQuest(b.dataset.quest); openQuests(); });
+}
+function claimQuest(id){
+  const q=QUESTS.find(x=>x.id===id); if(!q||!questClaimable(q)) return;
+  const c=questClaimed(q); const rew=q.rew(c);
+  if(rew.gold){ S.gold+=rew.gold; S.stats.goldEarned+=rew.gold; toastUp("🎯 +🪙"+fmt(rew.gold)); }
+  if(rew.gems){ S.gems+=rew.gems; toastUp("🎯 +💎"+rew.gems); }
+  S.quests[id]=c+1; refreshTopbar(); updateBadges(); queueSave();
+}
+
+/* ---- Gem shop (spend boss gems) ---- */
+function gemDeals(){
+  const inc=Math.max(1200, Math.round(totalIncomePerMin()*20));
+  return [
+    {id:"gold", ic:"🪙", name:"ถุงทอง", desc:`ทองก้อนโต +${fmt(inc)}`, cost:5, act:()=>{ S.gold+=inc; S.stats.goldEarned+=inc; }},
+    {id:"cache", ic:"📦", name:"หีบสมบัติ", desc:"อุปกรณ์ระดับสูง 3 ชิ้น (Epic ขึ้นไป)", cost:12, act:()=>{
+      const il=Math.round(6+ (S.stats.bossKills*1.5) + avgHunterLv());
+      for(let i=0;i<3;i++) addItem(makeItem(il, Math.random()<0.25?"legendary":Math.random()<0.5?"ancient":"epic")); }},
+    {id:"rest", ic:"💤", name:"พักฟื้นทันที", desc:"ฟื้น HP+เรี่ยวแรงนักล่าทุกคนเต็ม", cost:3, act:()=>{
+      S.hunters.forEach(h=>{ h.hp=hunterMaxHp(h); h.energy=BAL.energyMax; }); }},
+    {id:"cap", ic:"🏕️", name:"ขยายสมาคม", desc:"+1 ช่องนักล่าถาวร", cost:30, act:()=>{ S.bonusCap=(S.bonusCap||0)+1; }},
+  ];
+}
+function openGemShop(){
+  const deals=gemDeals();
+  let html=`<div class="row" style="justify-content:space-between;margin-bottom:8px">
+    <span class="muted small">เพชรได้จากการล้มบอสในพื้นที่ล่า</span><b class="gem" style="color:var(--gem)">💎 ${fmt(S.gems)}</b></div>`;
+  for(const d of deals){
+    html+=`<div class="gitem"><div class="gicon" style="font-size:20px;border-color:var(--gem)">${d.ic}</div>
+      <div class="grow"><b>${d.name}</b><div class="dim small">${d.desc}</div></div>
+      <button class="btn sm" data-gem="${d.id}" ${S.gems<d.cost?"disabled":""}>💎 ${d.cost}</button></div>`;
+  }
+  openSheet("ร้านเพชร", html, true);
+  $$("#sheetBody [data-gem]").forEach(b=>b.onclick=()=>{
+    const d=deals.find(x=>x.id===b.dataset.gem); if(!d||S.gems<d.cost) return;
+    S.gems-=d.cost; d.act(); refreshTopbar(); toastUp(d.ic+" "+d.name); openGemShop();
+    if(currentView==="hunters") renderHunters(); if(currentView==="gear") renderGear();
+  });
+}
 function openSettings(){
   openSheet("ตั้งค่า", `
     <div class="row" style="justify-content:space-between"><span>ธีม</span>
@@ -1488,6 +1611,8 @@ function applyTheme(){ document.documentElement.setAttribute("data-theme", S.set
 function bindNav(){
   $$("#nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
   $("#btnSettings").onclick=openSettings;
+  $("#gemChip").onclick=openGemShop;
+  $("#btnQuests").onclick=openQuests;
   $("#sheetClose").onclick=closeSheet;
   $("#sheet .backdrop").onclick=closeSheet;
   $("#combatBack").onclick=closeCombat;
