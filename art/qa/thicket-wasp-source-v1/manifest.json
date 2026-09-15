@@ -1,0 +1,13 @@
+{
+  "batch": "thicket-wasp-source-v1",
+  "source": "art/generated/thicket-wasp-source-v1",
+  "jobs": [
+    {
+      "file": "thicket_wasp_idle_se_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "01",
+      "width": 60,
+      "review": "Codex: first south-east idle candidate. Review single and three-wasp overlap at 0.55 before owner approval; production promotion remains blocked by the two unapproved reference gates."
+    }
+  ]
+}
