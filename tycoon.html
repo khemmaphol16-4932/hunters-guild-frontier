@@ -86,7 +86,7 @@ body{
 
 /* hunter chip */
 .hchip{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;margin-bottom:8px}
-.avatar{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto;position:relative;border:1px solid rgba(255,255,255,.12)}
+.avatar{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto;position:relative;border:1px solid rgba(255,255,255,.12);overflow:hidden}
 .avatar .lv{position:absolute;bottom:-4px;right:-4px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;font-size:9px;font-weight:800;padding:1px 4px;color:var(--ink)}
 .state-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
 
@@ -252,15 +252,76 @@ function fmt(n){ n=Math.floor(n);
   if(n>=1e4) return (n/1e3).toFixed(1)+"k";
   return n.toLocaleString("en-US"); }
 
+/* -------------------- Art assets (repo pixel art; emoji fallback) --------------------
+   Uses the project's QA-cleaned sprites under art/qa/. Paths are relative to this
+   file at the repo root. If an image fails to load (e.g. opened without the folder),
+   every draw path falls back to the emoji it replaced, so the game still runs. */
+const ART_BASE = "art/qa/";
+const ART_SRC = {
+  hunter_vanguard: "proof-cycle-rigs-source-v2/hunter_vanguard_skel_idle_se_02@2x.png",
+  hunter_ranger:   "proof-cycle-rigs-source-v2/hunter_ranger_skel_idle_se_02@2x.png",
+  hunter_adept:    "proof-cycle-rigs-source-v2/hunter_adept_skel_idle_se_02@2x.png",
+  moss_crawler:    "proof-cycle-actors-source-v1/monster_moss_crawler_idle_se_01@2x.png",
+  firepit:         "town-props-source-v2/prp_town_basic_firepit_01@2x.png",
+  woodpile:        "town-props-source-v2/prp_town_basic_woodpile_01@2x.png",
+  weapon_rack:     "town-props-source-v2/prp_town_basic_weapon_rack_01@2x.png",
+  handcart:        "town-props-source-v2/prp_town_basic_handcart_01@2x.png",
+  bench:           "town-props-source-v2/prp_town_basic_bench_01@2x.png",
+  tree_conifer:    "trees-source-v1/prp_trees_conifer_medium_01@2x.png",
+  tree_broadleaf:  "trees-source-v1/prp_trees_broadleaf_medium_01@2x.png",
+  tree_birch:      "trees-source-v1/prp_trees_birch_medium_01@2x.png",
+};
+const IMG = {};           // key -> HTMLImageElement (may be not-yet-loaded)
+const _tintCache = {};    // key|color -> canvas
+function loadArt(){
+  for(const k in ART_SRC){ const im=new Image(); im.decoding="async"; im.src=ART_BASE+ART_SRC[k]; IMG[k]=im; }
+}
+function artReady(k){ const im=IMG[k]; return im && im.complete && im.naturalWidth>0; }
+function tintedSprite(key, color, alpha){
+  const im=IMG[key]; if(!artReady(key)) return null;
+  const ck=key+"|"+color; if(_tintCache[ck]) return _tintCache[ck];
+  const c=document.createElement("canvas"); c.width=im.naturalWidth; c.height=im.naturalHeight;
+  const x=c.getContext("2d"); x.imageSmoothingEnabled=false;
+  x.drawImage(im,0,0);
+  x.globalCompositeOperation="source-atop"; x.globalAlpha=alpha==null?0.5:alpha;
+  x.fillStyle=color; x.fillRect(0,0,c.width,c.height);
+  x.globalAlpha=1; x.globalCompositeOperation="source-over";
+  _tintCache[ck]=c; return c;
+}
+const _avatarURL={};
+function hunterAvatarURL(cls){
+  const c=CLASSES[cls]; const ck=cls;
+  if(_avatarURL[ck]!==undefined) return _avatarURL[ck];
+  const art=tintedSprite(c.sprite, c.tint, 0.5);
+  _avatarURL[ck] = art ? art.toDataURL() : null;
+  return _avatarURL[ck];
+}
+function avatarInner(cls, lv){
+  const c=CLASSES[cls]; const url=hunterAvatarURL(cls);
+  const body = url
+    ? `<img src="${url}" alt="" style="position:absolute;left:50%;top:14%;transform:translateX(-50%);height:150%;image-rendering:pixelated;pointer-events:none">`
+    : c.emoji;
+  return `${body}${lv!=null?`<span class="lv">Lv${lv}</span>`:""}`;
+}
+// draw an image/canvas anchored feet-at-(cx,groundY); pad = fraction of art below the feet
+function drawSpriteB(ctx, art, cx, groundY, targetH, pad){
+  if(!art) return false;
+  const w0=art.naturalWidth||art.width, h0=art.naturalHeight||art.height; if(!w0) return false;
+  const h=targetH, w=h*(w0/h0);
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(art, cx-w/2, groundY - h + h*(pad||0), w, h);
+  return true;
+}
+
 /* -------------------- Static content (from HGF world data) -------------------- */
 const CLASSES = {
-  vanguard:{name:"Vanguard", th:"แนวหน้า", role:"tank",  emoji:"🛡️", col:"#c98b5a",
+  vanguard:{name:"Vanguard", th:"แนวหน้า", role:"tank",  emoji:"🛡️", col:"#c98b5a", sprite:"hunter_vanguard", tint:"#b56a3a",
             base:{hp:340, atk:22, def:18, spd:2.0, crit:.04}, grow:{hp:46, atk:3.2, def:2.6}},
-  reaver:  {name:"Reaver",   th:"นักบุก",  role:"melee", emoji:"⚔️", col:"#d05a5a",
+  reaver:  {name:"Reaver",   th:"นักบุก",  role:"melee", emoji:"⚔️", col:"#d05a5a", sprite:"hunter_vanguard", tint:"#c23b3b",
             base:{hp:230, atk:38, def:9,  spd:1.6, crit:.10}, grow:{hp:30, atk:5.6, def:1.2}},
-  ranger:  {name:"Ranger",   th:"นักแม่น", role:"ranged",emoji:"🏹", col:"#7fc06a",
+  ranger:  {name:"Ranger",   th:"นักแม่น", role:"ranged",emoji:"🏹", col:"#7fc06a", sprite:"hunter_ranger", tint:"#3f9e4f",
             base:{hp:190, atk:34, def:7,  spd:1.5, crit:.14}, grow:{hp:26, atk:5.2, def:1.0}},
-  adept:   {name:"Adept",    th:"ผู้เวท",  role:"mage",  emoji:"✨", col:"#8b8bf0",
+  adept:   {name:"Adept",    th:"ผู้เวท",  role:"mage",  emoji:"✨", col:"#8b8bf0", sprite:"hunter_adept", tint:"#6a5fd0",
             base:{hp:180, atk:40, def:6,  spd:2.2, crit:.08}, grow:{hp:24, atk:6.0, def:0.9}},
 };
 const CLASS_IDS = Object.keys(CLASSES);
@@ -513,8 +574,27 @@ const townSlots=[
   {b:"tavern",     r:4, c:6},
 ];
 let townPlaced=[]; // {b,r,c}
+let townDecor=[];  // {r,c,key,h,pad}
 function layoutTown(){
   townPlaced = townSlots.filter(s=> s.b==="guild_hall" || (S.buildings[s.b]&&S.buildings[s.b].lv>0) );
+  buildDecor();
+}
+function buildDecor(){
+  // Fixed, hand-placed decorations on non-building tiles (feels intentional, stays stable).
+  const occ = new Set(townSlots.map(s=>s.r+","+s.c));
+  const trees=["tree_conifer","tree_broadleaf","tree_birch"];
+  const spots=[
+    // edge trees
+    {r:0,c:0,key:trees[0],h:1.9},{r:0,c:2,key:trees[1],h:1.9},{r:0,c:6,key:trees[2],h:1.9},
+    {r:1,c:7,key:trees[0],h:1.9},{r:6,c:0,key:trees[1],h:1.9},{r:7,c:7,key:trees[2],h:1.9},
+    {r:7,c:1,key:trees[0],h:1.9},{r:3,c:0,key:trees[2],h:1.8},{r:0,c:4,key:trees[1],h:1.8},
+    {r:7,c:4,key:trees[0],h:1.9},
+    // props near the working area
+    {r:6,c:2,key:"woodpile",h:0.7},{r:6,c:6,key:"weapon_rack",h:1.0},
+    {r:2,c:6,key:"handcart",h:0.7},{r:5,c:6,key:"bench",h:0.5},
+    {r:4,c:3,key:"firepit",h:0.55},
+  ];
+  townDecor = spots.filter(s=>!occ.has(s.r+","+s.c));
 }
 function isoX(r,c){ return (c-r)*(TILE); }
 function isoY(r,c){ return (c+r)*(TILE*0.5); }
@@ -615,10 +695,25 @@ function drawPerson(r,c,col,emoji){
   else{ tctx.fillStyle=col; roundRectPath(x-4,y-13,8,13,3); tctx.fill();
         tctx.fillStyle="#e8d3b0"; tctx.beginPath(); tctx.arc(x,y-15,4,0,7); tctx.fill(); }
 }
+function drawDecor(d){
+  const x=isoX(d.r,d.c), y=isoY(d.r,d.c);
+  if(artReady(d.key)){
+    tctx.fillStyle="rgba(0,0,0,.18)"; tctx.beginPath(); tctx.ellipse(x,y+1,TILE*0.4*d.h,TILE*0.16*d.h,0,0,7); tctx.fill();
+    drawSpriteB(tctx, IMG[d.key], x, y+2, TILE*d.h*1.6, 0.04);
+  }
+}
+function drawHunterSprite(r,c,cls){
+  const x=isoX(r,c), y=isoY(r,c);
+  tctx.fillStyle="rgba(0,0,0,.22)"; tctx.beginPath(); tctx.ellipse(x,y+1,9,4,0,0,7); tctx.fill();
+  const art=tintedSprite(cls.sprite, cls.tint, 0.5);
+  if(art) drawSpriteB(tctx, art, x, y+3, TILE*1.5, 0.10);
+  else drawPerson(r,c,cls.col,cls.emoji);
+}
 function renderTown(){
   if(!tctx) return;
   const W=townCv.width/townDpr, H=townCv.height/townDpr;
   tctx.setTransform(townDpr,0,0,townDpr,0,0);
+  tctx.imageSmoothingEnabled=false;
   const isLight=document.documentElement.getAttribute("data-theme")==="light";
   tctx.fillStyle=isLight?"#cfe0cf":"#16211a"; tctx.fillRect(0,0,W,H);
   tctx.save();
@@ -634,11 +729,12 @@ function renderTown(){
 
   // collect drawables sorted by depth (r+c)
   const draw=[];
+  for(const d of townDecor) draw.push({depth:d.r+d.c-0.5, fn:()=>drawDecor(d)});
   for(const p of townPlaced) draw.push({depth:p.r+p.c+1, fn:()=>drawBuilding(p)});
   for(const f of folk) draw.push({depth:f.r+f.c, fn:()=>drawPerson(f.r,f.c,f.col,null)});
   for(const h of S.hunters){ if(h.state==="idle"||h.state==="resting"){
     const c=CLASSES[h.cls];
-    draw.push({depth:h.tx+h.ty, fn:()=>drawPerson(h.tx,h.ty,c.col,c.emoji)});
+    draw.push({depth:h.tx+h.ty, fn:()=>drawHunterSprite(h.tx,h.ty,c)});
   }}
   draw.sort((a,b)=>a.depth-b.depth).forEach(d=>d.fn());
   tctx.restore();
@@ -881,30 +977,46 @@ function renderCombat(){
   const run=ensureFieldRun(activeCombat.fieldId);
   const party=combatParty(activeCombat.fieldId);
   // draw hunters
-  for(const p of party){ drawFighter(p.x*W,p.y*H+H*0.15, CLASSES[p.h.cls].emoji, p.hp/p.maxHp, p.hitFx, CLASSES[p.h.cls].col, p.hp<=0, false); p.hitFx=Math.max(0,p.hitFx-0.016); }
+  for(const p of party){ const c=CLASSES[p.h.cls];
+    drawFighter(p.x*W,p.y*H+H*0.15, c.emoji, p.hp/p.maxHp, p.hitFx, c.col, p.hp<=0, false, 1, null, tintedSprite(c.sprite,c.tint,0.5), 46);
+    p.hitFx=Math.max(0,p.hitFx-0.016); }
   // draw mobs
-  for(const m of run.mobs){ if(m.hp<=0) continue; const sz=m.boss?1.7:1; drawFighter(m.x*W,m.y*H+H*0.15, m.em, m.hp/m.maxHp, m.hitFx, "#c05050", false, true, sz, m.name); m.hitFx=Math.max(0,m.hitFx-0.016); }
+  for(const m of run.mobs){ if(m.hp<=0) continue; const sz=m.boss?1.7:1;
+    const mart=artReady(m.mid)?IMG[m.mid]:null;
+    drawFighter(m.x*W,m.y*H+H*0.15, m.em, m.hp/m.maxHp, m.hitFx, "#c05050", false, true, sz, m.name, mart, 46*sz*(mart?1.15:1));
+    m.hitFx=Math.max(0,m.hitFx-0.016); }
   // floaties
   for(const fl of floaties){ cctx.globalAlpha=clamp(fl.life,0,1); cctx.fillStyle=fl.col; cctx.font=`bold ${fl.big?20:14}px sans-serif`; cctx.textAlign="center";
     cctx.fillText(fl.txt, fl.x*W, fl.y*H+H*0.15 - (0.9-fl.life)*40); fl.life-=0.02; }
   cctx.globalAlpha=1;
   floaties=floaties.filter(f=>f.life>0);
 }
-function drawFighter(x,y,emoji,hpFrac,hitFx,col,dead,isMob,scale=1,label){
+function drawFighter(x,y,emoji,hpFrac,hitFx,col,dead,isMob,scale=1,label,sprite,spriteH){
   cctx.save(); cctx.translate(x,y);
   const s=scale;
   // shadow
   cctx.fillStyle="rgba(0,0,0,.25)"; cctx.beginPath(); cctx.ellipse(0,6,16*s,5*s,0,0,7); cctx.fill();
   if(dead){ cctx.globalAlpha=0.35; }
-  if(hitFx>0){ cctx.fillStyle="rgba(255,80,80,.5)"; cctx.beginPath(); cctx.arc(0,-14*s,20*s,0,7); cctx.fill(); }
-  cctx.font=`${Math.floor(30*s)}px serif`; cctx.textAlign="center"; cctx.textBaseline="middle";
-  cctx.fillText(emoji,0,-14*s);
+  let topY=-14*s; // where the hp bar sits above
+  if(sprite){
+    const h=spriteH||46*s; const w=h*((sprite.naturalWidth||sprite.width)/(sprite.naturalHeight||sprite.height));
+    if(hitFx>0){ cctx.save(); cctx.globalAlpha=0.5*(dead?0.35:1); cctx.fillStyle="rgba(255,90,90,.55)";
+      cctx.beginPath(); cctx.ellipse(0,-h*0.4,w*0.5,h*0.5,0,0,7); cctx.fill(); cctx.restore(); }
+    cctx.imageSmoothingEnabled=false;
+    cctx.drawImage(sprite, -w/2, -h + h*(isMob?0.06:0.10) + 4, w, h);
+    topY=-h*0.98;
+  } else {
+    if(hitFx>0){ cctx.fillStyle="rgba(255,80,80,.5)"; cctx.beginPath(); cctx.arc(0,-14*s,20*s,0,7); cctx.fill(); }
+    cctx.font=`${Math.floor(30*s)}px serif`; cctx.textAlign="center"; cctx.textBaseline="middle";
+    cctx.fillText(emoji,0,-14*s);
+    topY=-30*s;
+  }
   // hp bar
-  const bw=32*s;
-  cctx.fillStyle="rgba(0,0,0,.5)"; roundRectC(-bw/2,-34*s,bw,4,2); cctx.fill();
-  cctx.fillStyle=isMob?"#e05a5a":"#54c98a"; roundRectC(-bw/2,-34*s,bw*clamp(hpFrac,0,1),4,2); cctx.fill();
+  const bw=Math.max(30,32*s);
+  cctx.fillStyle="rgba(0,0,0,.5)"; roundRectC(-bw/2,topY-6,bw,4,2); cctx.fill();
+  cctx.fillStyle=isMob?"#e05a5a":"#54c98a"; roundRectC(-bw/2,topY-6,bw*clamp(hpFrac,0,1),4,2); cctx.fill();
   cctx.restore();
-  if(label){ cctx.fillStyle="rgba(255,255,255,.7)"; cctx.font="10px sans-serif"; cctx.textAlign="center"; cctx.fillText(label,x,y+16*scale); }
+  if(label){ cctx.fillStyle="rgba(255,255,255,.7)"; cctx.font="10px sans-serif"; cctx.textAlign="center"; cctx.fillText(label,x,y+16); }
 }
 function roundRectC(x,y,w,h,r){ cctx.beginPath(); cctx.moveTo(x+r,y); cctx.arcTo(x+w,y,x+w,y+h,r); cctx.arcTo(x+w,y+h,x,y+h,r); cctx.arcTo(x,y+h,x,y,r); cctx.arcTo(x,y,x+w,y,r); cctx.closePath(); }
 
@@ -986,7 +1098,7 @@ function renderHunters(){
     const c=CLASSES[h.cls], st=hunterStats(h), mhp=st.hp, sl=stateLabel(h);
     const div=document.createElement("div"); div.className="hchip";
     div.innerHTML=`
-      <div class="avatar" style="background:${c.col}22;border-color:${c.col}55">${c.emoji}<span class="lv">Lv${h.lv}</span></div>
+      <div class="avatar" style="background:${c.col}22;border-color:${c.col}55">${avatarInner(h.cls,h.lv)}</div>
       <div class="grow">
         <div class="row" style="gap:6px"><b>${h.name}</b><span class="tag">${c.th}</span></div>
         <div class="small muted"><span class="state-dot" style="background:${sl[1]}"></span>${sl[0]} · พลัง ${fmt(hunterPower(h))}</div>
@@ -1040,7 +1152,7 @@ function openHunter(id){
   }
   openSheet(h.name, `
     <div class="row" style="margin-bottom:8px">
-      <div class="avatar" style="width:52px;height:52px;font-size:26px;background:${c.col}22;border-color:${c.col}55">${c.emoji}<span class="lv">Lv${h.lv}</span></div>
+      <div class="avatar" style="width:52px;height:52px;font-size:26px;background:${c.col}22;border-color:${c.col}55">${avatarInner(h.cls,h.lv)}</div>
       <div class="grow"><div class="row" style="gap:6px"><b>${c.name}</b><span class="tag">${c.th}</span></div>
         <div class="small muted">พลังรวม ${fmt(hunterPower(h))}</div>
         <div class="bar" style="margin-top:4px"><i style="width:${h.xp/xpToNext(h.lv)*100}%;background:var(--xp)"></i></div>
@@ -1337,6 +1449,7 @@ function boot(){
   const had=load();
   if(!had) newGame();
   applyTheme();
+  loadArt();
   initTown(); initCombatCanvas(); bindNav();
   refreshTopbar(); refreshTownHud(); updateBadges();
   // offline
