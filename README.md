@@ -1,4 +1,38 @@
-# Hunter's Guild: Frontier
+# Hunter's Guild: Frontier — Tycoon
+
+> **New direction (Tycoon rebuild).** `index.html` is now a self-contained,
+> mobile-first **Evil Hunter Tycoon–style** game: no build step, no dependencies —
+> just open the file. You run a living frontier town, hunters auto-hunt in the
+> field, you loot and upgrade their gear, and the town earns while you are away.
+> One file, `localStorage` save, offline catch-up, Thai UI, light/dark.
+>
+> **Play:** open `index.html` in a browser (or serve the folder statically).
+>
+> The original TypeScript simulation engine (below) still lives under `src/`,
+> `tests/` and `docs/` and can be restored from git history — the world data
+> (monsters, buildings, classes, gear rarities and sets) was carried over into
+> the new game.
+
+---
+
+## The Tycoon game (index.html)
+
+- **Living town** — an isometric frontier you build out: Guild Hall, Market,
+  Tavern, Cookhouse, Smithy, Infirmary, Bunkhouse. Buildings earn gold and
+  provide services (food/heal/rest) that idle hunters use as they wander.
+- **Auto-hunt** — dispatch hunters (Vanguard / Reaver / Ranger / Adept) to the
+  Verdant Reach, Bracken Hollow, Ashen Wastes and Drowned Coast. They travel,
+  auto-battle waves of monsters and periodic bosses in a live combat view, and
+  return with loot and gold.
+- **Deep gear** — six slots, six rarities (Common → Legendary), main + random
+  substats, three set bonuses (Ashwarden's Vigil / Quietstep / Lantern Order),
+  enhance (+levels, risk at high +), equip / auto-equip / salvage.
+- **Tycoon + idle** — passive town income scales with buildings and population;
+  everything keeps running while away, with a welcome-back offline summary.
+
+---
+
+## The original engine (legacy, under `src/`)
 
 An autonomous Hunter Guild management RPG. The player is the Guild Master: they set strategy, policy, builds and parties — they never directly control a Hunter in combat. The Guild AI manages execution, and Hunter AI executes.
 
