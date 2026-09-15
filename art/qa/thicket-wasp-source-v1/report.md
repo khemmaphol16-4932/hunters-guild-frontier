@@ -75,3 +75,13 @@ Authored key poses: `art/generated/thicket-wasp-source-v1/thicket_wasp_fly_se_ke
 - ✅ Codex visual review: travel lean reads separately from idle at 55%; body identity remains fixed through each cycle
 
 ![Fly QA](monster_thicket_wasp_fly_qa.png)
+
+## Attack state
+
+Authored impact keys: `art/generated/thicket-wasp-source-v1/thicket_wasp_attack_se_impact_candidate.png`, `art/generated/thicket-wasp-source-v1/thicket_wasp_attack_ne_impact-v2_candidate.png`. Frame 03 is the sting impact; frames 01/05 use the travel pose and 02/04 move through the lunge. SW/NW are exact mirrors.
+
+- ✅ all 10 authored-direction action frames pass machine validation
+- ✅ action sidecars are non-looping at 12 × game speed with key frame 03
+- ✅ Codex visual review: sting curl and forward lunge remain distinct from travel at 55%; no gore or venom glow
+
+![Attack QA](monster_thicket_wasp_attack_qa.png)

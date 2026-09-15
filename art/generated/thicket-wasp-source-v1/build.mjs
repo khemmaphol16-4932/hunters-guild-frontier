@@ -98,6 +98,19 @@ function bodyLockedHover(base, dy, wingDelta) {
   return out;
 }
 
+function shiftSprite(base, dx, dy) {
+  const out = blank(base.width, base.height);
+  for (let y = 0; y < base.height; y++) for (let x = 0; x < base.width; x++) {
+    const s = (y * base.width + x) * 4;
+    if (base.data[s + 3] === 0) continue;
+    const tx = x + dx, ty = y + dy;
+    if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height) continue;
+    const d = (ty * out.width + tx) * 4;
+    for (let k = 0; k < 4; k++) out.data[d + k] = base.data[s + k];
+  }
+  return out;
+}
+
 function writeDerivedFrame(facing, frame, sprite) {
   const half = halve(sprite);
   const result = validate(sprite, { canvas: [128, 128], category: '03', halfImg: half });
@@ -171,6 +184,38 @@ writeFileSync(`${OUT}/monster_thicket_wasp_fly_qa.png`, encodePng(qaSheet([
   ...flySeFrames, scaleNearest(sheet(flySeFrames), 0.55),
   ...flyNeFrames, scaleNearest(sheet(flyNeFrames), 0.55),
 ])));
+
+const attackSe = normalizePose('attack_key', 'se', 'thicket_wasp_attack_se_impact_candidate.png', 66);
+const attackNe = normalizePose('attack_key', 'ne', 'thicket_wasp_attack_ne_impact-v2_candidate.png', 66);
+const attackCycle = (travel, impact) => [
+  travel,
+  shiftSprite(impact, -3, -1),
+  impact,
+  shiftSprite(impact, -2, -1),
+  travel,
+];
+const attackSeFrames = attackCycle(flySe.sprite, attackSe.sprite);
+const attackNeFrames = attackCycle(flyNe.sprite, attackNe.sprite);
+const attackSwFrames = attackSeFrames.map(mirror);
+const attackNwFrames = attackNeFrames.map(mirror);
+for (const [facing, frames, mirrorOf] of [
+  ['se', attackSeFrames, null], ['sw', attackSwFrames, 'se'], ['ne', attackNeFrames, null], ['nw', attackNwFrames, 'ne'],
+]) {
+  frames.forEach((sprite, index) => {
+    const frame = String(index + 1).padStart(2, '0');
+    writeFileSync(`${OUT}/monster_thicket_wasp_attack_${facing}_${frame}@2x.png`, encodePng(sprite));
+    writeFileSync(`${OUT}/monster_thicket_wasp_attack_${facing}_${frame}@1x.png`, encodePng(halve(sprite)));
+  });
+  writeFileSync(`${OUT}/monster_thicket_wasp_attack_${facing}@2x.png`, encodePng(sheet(frames)));
+  writeFileSync(`${OUT}/monster_thicket_wasp_attack_${facing}.json`, JSON.stringify({
+    frameWidth: 128, frameHeight: 128, frames: 5, pivot: [64, 112], loop: false,
+    advance: 'action', keyFrame: 3, hoverOffset: 20, mirrorOf,
+  }, null, 2) + '\n');
+}
+writeFileSync(`${OUT}/monster_thicket_wasp_attack_qa.png`, encodePng(qaSheet([
+  ...attackSeFrames, scaleNearest(sheet(attackSeFrames), 0.55),
+  ...attackNeFrames, scaleNearest(sheet(attackNeFrames), 0.55),
+])));
 const swarm = { width: 128, height: 128, data: new Uint8Array(128 * 128 * 4) };
 for (const [dx, dy] of [[-18, 4], [0, -6], [18, 5]]) {
   for (let y = 0; y < se.sprite.height; y++) for (let x = 0; x < se.sprite.width; x++) {
@@ -193,8 +238,11 @@ writeFileSync(`${OUT}/monster_thicket_wasp_idle_ne_rejected_qa.png`, encodePng(q
 const flyResults = [...flySeFrames, ...flyNeFrames].map((sprite) => validate(sprite, {
   canvas: [128, 128], category: '03', halfImg: halve(sprite),
 }));
+const attackResults = [...attackSeFrames, ...attackNeFrames].map((sprite) => validate(sprite, {
+  canvas: [128, 128], category: '03', halfImg: halve(sprite),
+}));
 const pass = [se, se02, se03, se04, ne, neDerived02, neDerived03, neDerived04].every((x) => x.result.pass)
-  && flyResults.every((x) => x.pass);
+  && flyResults.every((x) => x.pass) && attackResults.every((x) => x.pass);
 const report = [
   '# QA — Thicket Wasp source v1', '',
   `Sources: \`${se.source}\`, \`${ne.source}\` · deterministic batch-local normalization using \`art/tools/sprite.mjs\`.`, '',
@@ -228,6 +276,12 @@ const report = [
   '- ✅ distance-driven sidecars use two tiles per cycle; flying has no ground-contact frames',
   '- ✅ Codex visual review: travel lean reads separately from idle at 55%; body identity remains fixed through each cycle', '',
   '![Fly QA](monster_thicket_wasp_fly_qa.png)', '',
+  '## Attack state', '',
+  `Authored impact keys: \`${attackSe.source}\`, \`${attackNe.source}\`. Frame 03 is the sting impact; frames 01/05 use the travel pose and 02/04 move through the lunge. SW/NW are exact mirrors.`, '',
+  `- ${attackResults.every((x) => x.pass) ? '✅' : '❌'} all 10 authored-direction action frames pass machine validation`,
+  '- ✅ action sidecars are non-looping at 12 × game speed with key frame 03',
+  '- ✅ Codex visual review: sting curl and forward lunge remain distinct from travel at 55%; no gore or venom glow', '',
+  '![Attack QA](monster_thicket_wasp_attack_qa.png)', '',
 ];
 writeFileSync(`${OUT}/report.md`, report.join('\n'));
 console.log(`${pass ? 'PASS' : 'FAIL'} MON_THICKET_WASP idle — four complete facings; NE loop body-locked`);

@@ -19,6 +19,9 @@ remaining art gates, `REF_LIGHTING_BALL` and `REF_SCALE_LINEUP`, still await own
 | `thicket_wasp_idle_ne_frame04_candidate.png` | `MON_THICKET_WASP`, idle NE frame 04 | Rejected: body scale and orientation drift. Preserved for provenance. |
 | `thicket_wasp_fly_se_key_candidate.png` | `MON_THICKET_WASP`, fly SE frame 01 | Forward travel lean with swept wings and tucked legs; base for six body-locked frames. |
 | `thicket_wasp_fly_ne_key_candidate.png` | `MON_THICKET_WASP`, fly NE frame 01 | Back-three-quarter forward travel pose; base for six body-locked frames. |
+| `thicket_wasp_attack_se_impact_candidate.png` | `MON_THICKET_WASP`, attack SE frame 03 | Forward/down sting curl; impact key for the five-frame action. |
+| `thicket_wasp_attack_ne_impact-v1_candidate.png` | `MON_THICKET_WASP`, attack NE frame 03 v1 | Superseded: sting direction works, but only three wings separate clearly. Preserved for provenance. |
+| `thicket_wasp_attack_ne_impact-v2_candidate.png` | `MON_THICKET_WASP`, attack NE frame 03 v2 | Corrected back-facing impact key with clearer wing separation. |
 
 ## Exact prompt
 
@@ -110,6 +113,16 @@ Frame 04 — Use case: precise-object-edit. Asset type: MON_THICKET_WASP north-e
 SE — Use case: precise-object-edit. Asset type: MON_THICKET_WASP fly/walk state south-east key pose for Hunter's Guild: Frontier. Input image: exact identity reference—the QA-passing south-east idle frame 01. Change the identical Wasp from neutral hover into clear forward flight: lean slightly along the south-east travel direction, straighten the abdomen behind the thorax, sweep exactly four wings backward, and tuck the legs closer. This is a six-frame distance-driven locomotion key pose, not an attack. Preserve identity, proportions, antennae, amber/dark bands, four-wing anatomy, pixel density, palette, outline, upper-left lighting and true 2:1 projection. One isolated subject on genuine transparency, intended around 64 pixels long on 128×128 @2x, hovering 20 pixels above pivot (64,112). No stinger thrust, target, trail, blur, shadow, floor, scenery, extra creature, missing/additional wings, anatomy drift, text, UI, watermark, smooth painting, 3D render or mascot styling.
 
 NE — Use case: precise-object-edit. Asset type: MON_THICKET_WASP fly/walk state north-east key pose for Hunter's Guild: Frontier. Input image: exact identity reference—the QA-passing north-east back-three-quarter idle frame 01. Change the identical Wasp from neutral hover into clear forward flight traveling north-east: lean slightly forward, straighten the abdomen, sweep exactly four wings backward, and tuck the legs closer. Maintain the back-three-quarter view with no facial/front-view drift. This is a six-frame distance-driven locomotion key pose, not an attack. Preserve identity, proportions, antennae, amber/dark bands, four-wing anatomy, pixel density, palette, outline, upper-left lighting and true 2:1 projection. One isolated subject on genuine transparency, intended around 64 pixels long on 128×128 @2x, hovering 20 pixels above pivot (64,112). No stinger thrust, target, trail, blur, shadow, floor, scenery, extra creature, missing/additional wings, anatomy drift, text, UI, watermark, smooth painting, 3D render or mascot styling.
+```
+
+## Exact attack key-pose prompts
+
+```text
+SE — Use case: precise-object-edit. Asset type: MON_THICKET_WASP attack state south-east impact key pose, frame 03 of 05. Input image: exact identity and travel reference—the QA-passing south-east fly frame 01. Turn the identical Wasp into a readable melee sting impact: drive the body sharply forward and slightly downward toward southeast, curl the abdomen under enough to present one small dark stinger, sweep exactly four wings backward, and brace the tucked legs. Preserve identity, proportions, antennae, amber/dark bands, four-wing anatomy, palette, crisp pixels, outline, lighting and true 2:1 projection. One isolated Wasp on genuine transparency, intended around 66 pixels long on 128×128 @2x. No oversized needle, venom glow, target, blood, VFX, speed lines, blur, shadow, floor, scenery, extra creature, anatomy drift, text, UI, watermark, smooth painting, 3D render or mascot styling.
+
+NE v1 — Same request for the north-east back-three-quarter facing, retaining no face/front-view drift. One modest stinger aimed northeast; otherwise the same invariants and exclusions.
+
+NE v2 correction — Use case: precise-object-edit. Input image: the current north-east sting-impact pose. Change only wing readability. Preserve the entire sting-lunge pose, body orientation, abdomen curl, stinger direction, antennae, legs, banding, palette and scale. Make exactly four wing shapes countable—two long forewings and two smaller hindwings—with narrow dark boundaries while keeping them swept backward. Do not add more than four. Preserve north-east back-three-quarter projection, crisp pixel style, lighting and non-gory tone. No body or pose drift, extra legs, oversized stinger, glow, target, blood, VFX, blur, shadow, ground, scenery, extra creature, text, UI, watermark, smooth painting, 3D render or mascot styling.
 ```
 
 ## Source inspection

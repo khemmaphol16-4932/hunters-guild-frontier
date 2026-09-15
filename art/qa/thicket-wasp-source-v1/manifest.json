@@ -71,6 +71,27 @@
       "variant": "fly-ne-01",
       "width": 64,
       "review": "Codex: north-east back-three-quarter forward-flight key pose for the six-frame distance-driven fly state."
+    },
+    {
+      "file": "thicket_wasp_attack_se_impact_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "attack-se-03",
+      "width": 66,
+      "review": "Codex: south-east sting-lunge impact key, frame 03 of the five-frame action."
+    },
+    {
+      "file": "thicket_wasp_attack_ne_impact-v1_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "attack-ne-03-v1",
+      "width": 66,
+      "review": "Codex superseded: sting direction passes but wing separation is weak; retained for provenance."
+    },
+    {
+      "file": "thicket_wasp_attack_ne_impact-v2_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "attack-ne-03-v2",
+      "width": 66,
+      "review": "Codex: corrected north-east sting-lunge impact key, frame 03 of the five-frame action."
     }
   ]
 }
