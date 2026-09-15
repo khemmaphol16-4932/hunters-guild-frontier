@@ -22,6 +22,41 @@
       "variant": "02",
       "width": 60,
       "review": "Codex: south-east idle frame 02 wing-downstroke candidate; use frame 01 as the reduced-motion hold. Two more loop frames and the NE loop remain outstanding."
+    },
+    {
+      "file": "thicket_wasp_idle_se_frame03_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "03",
+      "width": 60,
+      "review": "Codex: south-east idle frame 03, lowest wing downstroke and highest hover point."
+    },
+    {
+      "file": "thicket_wasp_idle_se_frame04_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "04",
+      "width": 60,
+      "review": "Codex: south-east idle frame 04 return upstroke; intended to loop directly into frame 01."
+    },
+    {
+      "file": "thicket_wasp_idle_ne_frame02_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "02-ne",
+      "width": 60,
+      "review": "Codex REJECTED: body rotates away from the approved north-east identity; retained for provenance only."
+    },
+    {
+      "file": "thicket_wasp_idle_ne_frame03_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "03-ne",
+      "width": 72,
+      "review": "Codex REJECTED: body scale and orientation drift; retained for provenance only."
+    },
+    {
+      "file": "thicket_wasp_idle_ne_frame04_candidate.png",
+      "id": "MON_THICKET_WASP",
+      "variant": "04-ne",
+      "width": 55,
+      "review": "Codex REJECTED: body scale and orientation drift; retained for provenance only."
     }
   ]
 }

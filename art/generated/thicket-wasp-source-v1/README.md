@@ -12,6 +12,11 @@ remaining art gates, `REF_LIGHTING_BALL` and `REF_SCALE_LINEUP`, still await own
 | `thicket_wasp_idle_ne_candidate.png` | `MON_THICKET_WASP`, idle NE frame 01 | Back-three-quarter authored facing preserves identity, banding, four wings and tucked legs. Source alpha is soft and requires deterministic normalization before QA. |
 | `thicket_wasp_idle_se_frame02_candidate.png` | `MON_THICKET_WASP`, idle SE frame 02 v1 | Rejected after normalization: only three wing shapes remained clearly countable. Preserved for provenance. |
 | `thicket_wasp_idle_se_frame02-v2_candidate.png` | `MON_THICKET_WASP`, idle SE frame 02 v2 | Corrected downstroke with four separately readable wing shapes. |
+| `thicket_wasp_idle_se_frame03_candidate.png` | `MON_THICKET_WASP`, idle SE frame 03 | Lowest downstroke and highest hover point; four separated wings. |
+| `thicket_wasp_idle_se_frame04_candidate.png` | `MON_THICKET_WASP`, idle SE frame 04 | Return upstroke designed to transition into frame 01. |
+| `thicket_wasp_idle_ne_frame02_candidate.png` | `MON_THICKET_WASP`, idle NE frame 02 | Rejected: body rotates away from the approved NE identity. Preserved for provenance. |
+| `thicket_wasp_idle_ne_frame03_candidate.png` | `MON_THICKET_WASP`, idle NE frame 03 | Rejected: body scale and orientation drift. Preserved for provenance. |
+| `thicket_wasp_idle_ne_frame04_candidate.png` | `MON_THICKET_WASP`, idle NE frame 04 | Rejected: body scale and orientation drift. Preserved for provenance. |
 
 ## Exact prompt
 
@@ -61,6 +66,40 @@ Primary request: correct only the wing readability. The wasp must show exactly f
 Invariants: keep the head, thorax, abdomen, antennae, tucked legs, amber/dark bands, body proportions, south-east facing, true 2:1 dimetric perspective, upper-left lighting, hover height and restrained crisp pixel-art style unchanged. Preserve the subtle down-and-back wing angle of animation frame 02.
 Composition: one isolated wasp centered on a genuinely transparent square canvas with generous margin; intended 128×128 @2x normalization and 55% gameplay readability.
 Constraints: change only wing separation/readability; no anatomy drift, body recolor, extra legs, extra creature, shadow, floor, glow, halo, motion blur, scenery, sprite sheet, text, UI, watermark, smooth painting, 3D render, or cute mascot styling.
+```
+
+## Exact frame-03 edit prompt
+
+```text
+Use case: precise-object-edit.
+Asset type: MON_THICKET_WASP idle animation frame 03 source for Hunter's Guild: Frontier.
+Input image: exact identity and adjacent-pose reference—the corrected south-east idle frame 02.
+Primary request: create frame 03, the lowest point of the wing downstroke and highest point of the subtle hover. Change only wing angle and a tiny vertical body lift. Show exactly four individually countable wing shapes: both forewings and both smaller hindwings swept farther downward and backward, closer to horizontal than frame 02, with clear dark pixel boundaries. Keep the body, head, thorax, abdomen, antennae, tucked legs, band pattern, facing and perspective identical.
+Invariants: same Thicket Wasp identity and proportions; exactly two pairs of wings; south-east facing; crisp hand-placed pixel art; local-dark outline; same restrained honey-amber, ochre, charcoal-brown and pale-wing palette; upper-left light; true 2:1 dimetric view at 26.565 degrees; countable at 55% zoom.
+Composition: exactly one isolated wasp centered on a genuinely transparent square canvas, intended normalization to about 60 pixels across on 128×128 @2x canvas; body approximately 22 pixels above the ground pivot.
+Constraints: adjacent animation frame only; no anatomy drift, body recolor, new pose, additional wings, missing wings, extra legs, extra creature, cast shadow, floor, halo, glow, motion blur, scenery, sprite sheet, text, UI, watermark, smooth painting, 3D render, or mascot styling.
+```
+
+## Exact frame-04 edit prompt
+
+```text
+Use case: precise-object-edit.
+Asset type: MON_THICKET_WASP idle animation frame 04 source for Hunter's Guild: Frontier.
+Input image: exact identity and loop-end reference—the south-east idle frame 01.
+Primary request: create frame 04, the return upstroke immediately before frame 01. Change only wing angle and a tiny vertical body descent. Show exactly four individually countable wing shapes (two forewings, two smaller hindwings) swept upward but slightly lower and farther back than frame 01, with clean dark pixel boundaries. The result must transition smoothly into frame 01 without a silhouette pop. Keep the body, head, thorax, abdomen, antennae, tucked legs, band pattern, facing and perspective identical.
+Invariants: same Thicket Wasp identity and proportions; exactly two pairs of wings; south-east facing; crisp hand-placed pixel art; local-dark outline; same restrained honey-amber, ochre, charcoal-brown and pale-wing palette; upper-left light; true 2:1 dimetric view at 26.565 degrees; countable at 55% zoom.
+Composition: exactly one isolated wasp centered on a genuinely transparent square canvas, intended normalization to about 60 pixels across on 128×128 @2x canvas; body approximately 21 pixels above the ground pivot.
+Constraints: adjacent animation frame only; no anatomy drift, body recolor, new pose, additional wings, missing wings, extra legs, extra creature, cast shadow, floor, halo, glow, motion blur, scenery, sprite sheet, text, UI, watermark, smooth painting, 3D render, or mascot styling.
+```
+
+## Exact north-east loop edit prompts
+
+```text
+Frame 02 — Use case: precise-object-edit. Asset type: MON_THICKET_WASP north-east idle animation frame 02 source. Input image: exact identity and frame-01 target reference—the normalized north-east back-three-quarter idle Wasp. Create the next frame of its restrained four-frame hover loop. Change only the wing beat and tiny vertical hover: move exactly four wings into a clear mid-downstroke, slightly downward and backward, while lifting the body a fraction. Preserve the back-three-quarter north-east orientation and make all four wing shapes separately countable after reduction. Keep identical body, head, thorax, abdomen, antennae, tucked legs, amber/dark bands, proportions, true 2:1 dimetric view, crisp pixel style, local-dark outline, palette and upper-left lighting. One isolated subject on genuine transparency, intended near 60 pixels across on 128×128 @2x. No anatomy drift, extra or missing wings, extra creature, shadow, ground, halo, glow, blur, scenery, sheet, text, UI, watermark, smooth painting, 3D render or mascot styling.
+
+Frame 03 — Use case: precise-object-edit. Asset type: MON_THICKET_WASP north-east idle animation frame 03 source. Input image: exact identity and adjacent frame-02 reference. Create the lowest wing downstroke and highest subtle hover point. Change only wing angle and a tiny body lift. Keep exactly four separately countable wings swept farther backward and closer to horizontal than frame 02. Preserve the north-east back-three-quarter orientation, body anatomy, banding, palette, projection, lighting and crisp pixel style. One isolated subject on genuine transparency, intended near 60–72 pixels across on 128×128 @2x. No anatomy drift, extra or missing wings, extra creature, shadow, ground, halo, glow, blur, scenery, sheet, text, UI, watermark, smooth painting, 3D render or mascot styling.
+
+Frame 04 — Use case: precise-object-edit. Asset type: MON_THICKET_WASP north-east idle animation frame 04 source. Input image: exact identity and loop-end reference—the north-east back-three-quarter idle frame 01. Create the return upstroke immediately before frame 01. Change only wing angle and tiny vertical body descent. Show exactly four individually countable wings swept upward but slightly lower and farther back than frame 01 so it transitions smoothly. Preserve the north-east orientation, anatomy, banding, palette, projection, lighting and crisp pixel style. One isolated subject on genuine transparency, intended near 55–60 pixels across on 128×128 @2x. No anatomy drift, extra or missing wings, extra creature, shadow, ground, halo, glow, blur, scenery, sheet, text, UI, watermark, smooth painting, 3D render or mascot styling.
 ```
 
 ## Source inspection
