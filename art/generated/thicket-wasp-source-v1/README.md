@@ -3,7 +3,7 @@
 Generated 2026-09-15 with the built-in image generation tool against baseline `7b93bef`.
 The Moss Crawler v2 QA sheet was supplied as a style and pixel-density reference only.
 
-**Status: QA-PASSING SOURCE CANDIDATE.** This is not promoted and is not referenced by the runtime. The two
+**Status: QA-PASSING FOUR-FACING IDLE CANDIDATE.** This is not promoted and is not referenced by the runtime. The two
 remaining art gates, `REF_LIGHTING_BALL` and `REF_SCALE_LINEUP`, still await owner approval.
 
 | File | Asset | Review |
@@ -107,5 +107,7 @@ Frame 04 — Use case: precise-object-edit. Asset type: MON_THICKET_WASP north-e
 - Canvas: 1254 × 1254.
 - Alpha: 1,370,724 transparent pixels; 1,091 opaque pixels; 200,701 partial-alpha pixels.
 - The deterministic build passes canvas, binary-alpha, 24-colour-cap, pure-black/white and exact
-  half-size checks. Codex visually passes the normalized sprite both singly and as a three-wasp
-  overlap at 55% zoom. Owner review and the two blocking reference gates remain outstanding.
+  half-size checks. SE is authored as four wing poses and mirrors to SW. NE frame 01 is authored;
+  its loop is body-locked from that base with a subtle wing-ramp pulse and mirrors to NW. Codex
+  visually passes all four facings and the three-wasp overlap at 55% zoom. Owner review and the
+  two blocking reference gates remain outstanding.

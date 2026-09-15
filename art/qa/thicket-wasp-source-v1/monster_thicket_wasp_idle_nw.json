@@ -1,0 +1,14 @@
+{
+  "frameWidth": 128,
+  "frameHeight": 128,
+  "frames": 4,
+  "pivot": [
+    64,
+    112
+  ],
+  "loop": true,
+  "advance": "ambient",
+  "keyFrame": 1,
+  "hoverOffset": 20,
+  "mirrorOf": "ne"
+}
