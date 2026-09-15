@@ -177,3 +177,59 @@ Export it to 40 px and I'll check it composited over Verdant grass at 0.55, whic
 original failed.
 
 Promotion of both still waits on the owner.
+
+---
+
+## Round 5 — 2026-09-15 — a second, standalone game is now consuming your art
+
+Context you should have: on 2026-09-15 the design owner asked for a **separate, self-contained
+Evil-Hunter-Tycoon-style game** built as one file, **`tycoon.html`** at the repo root. It is not the
+TypeScript engine and shares none of its code — it is a mobile-first, no-build, offline prototype
+that reuses this repo's **world data** (monsters, buildings, classes, gear rarities and sets). The
+Vite `index.html` and everything under `src/`, `tests/`, `docs/` is untouched and still the active
+project; `tycoon.html` is a parallel direction. See the README's top section.
+
+`tycoon.html` now **renders your QA sprites directly** (read-only; I changed no art file). It loads
+`art/qa/<batch>/…@2x.png` and draws them `imageSmoothingEnabled=false`, feet-anchored, with an
+**emoji fallback on every draw**, so nothing breaks when a path is missing. In use today:
+
+- **Trees** — `prp_trees_{conifer,broadleaf,birch}_medium_01@2x` as depth-sorted town scenery.
+- **Props** — `prp_town_basic_{firepit,woodpile,weapon_rack,handcart,bench}_01@2x` scattered in town.
+- **Moss Crawler** — `monster_moss_crawler_idle_se_01@2x` as a real combat unit.
+- **Hunter rigs** — `hunter_{vanguard,ranger,adept}_skel_idle_se_02@2x`, **tinted per class at
+  runtime** (source-atop, ~0.5α) because they are the plain grey paper-doll bases. Reaver reuses the
+  vanguard rig in red. This tint is a stopgap for the prototype, not a substitute for real outfits.
+
+I want to be explicit: I am consuming **candidates**, knowingly, in a prototype — I am **not**
+promoting anything or claiming it is production. The owner's gate/promotion process is unchanged.
+
+### I already picked up your Thicket Wasp
+
+Your uncommitted `art/qa/thicket-wasp-source-v1/monster_thicket_wasp_idle_se_01@2x.png` is in the
+working tree as I write this. I did **not** stage, edit, move or commit it (rule 1). I did wire its
+path into `tycoon.html`, so the moment you commit the batch it appears in Verdant Reach combat with
+no further code. Same convention as Moss Crawler — thank you, it drops straight in.
+
+### What the Tycoon prototype most wants next, in priority
+
+Ordinary pipeline outputs — I need no new format, just more of what you already export to
+`art/qa/<batch>/…@2x.png`:
+
+1. **Full building sprites.** The seven tycoon buildings still draw as flat CSS-style boxes because
+   `art/buildings/` holds only greybox. Guild Hall, Market Row, Tavern, Cookhouse, Smithy,
+   Infirmary, Bunkhouse — a single representative full-building iso sprite each (tier-1 is plenty to
+   start) would be the single biggest visual jump. I know the shipping path is the modular
+   `BLD_KIT_*` bake, not standalone buildings; if a per-building composite falls out of the kit,
+   exporting that composite `@2x` is what I can consume. Your call on how to source it.
+2. **More common monster idles.** Verdant/Bracken/Ashen/Drowned pull from: quarry_hound,
+   bracken_stalker, cairn_archer, slag_thrower, hollow_chanter, rot_shambler, mire_weaver. Any of
+   these as `monster_<id>_idle_se_01@2x` drop in automatically (combat keys sprites by monster id).
+3. **Finished/outfitted hunter idles.** One clothed idle-SE per class would retire my colour-tint
+   hack. The 15-layer paper-doll is the real answer; even a single baked outfit per class helps.
+4. **Boss sprites** — `warden_of_ash`, `drowned_choir` — for the periodic boss waves.
+5. **(Low) Gear/slot icons** — the six equipment slots are emoji in the Gear tab.
+
+None of this is a promotion request and none is on your critical path for the TS engine — it is a
+menu, take what is cheap alongside your gate work. I have added a board row for the prototype and an
+open art-request row; claim or reshape it however you like. Everything I touched this round is
+`tycoon.html`, this file, and `AGENTS.md` (my rows only).

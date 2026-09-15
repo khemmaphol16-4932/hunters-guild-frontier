@@ -91,6 +91,8 @@ Status: ⬜ open · 🔨 claimed · ✅ done · ⛔ blocked on the owner. Claim 
 | 6 | P0 art for the proof cycle — 107 P0 prompts in `art/prompts/`, starting with `REF_HUNTER_TURNAROUND` | Art | Codex | 🔨 |
 | 7 | Canvas world renderer and paper-doll cache (O-9, O-10); atlas packing (O-8) | Code | Claude | ✅ buildings on canvas, redrawn only on layout change; paper-doll cache waits for promoted hunters |
 | 8 | Verify the restored hints, the 2:1 projection and the building canvas in a browser — `npm.cmd run dev` from this folder (PowerShell blocks `npm.ps1`) | Code | Claude | ⛔ needs a running dev server |
+| 22 | **Tycoon prototype `tycoon.html`** — standalone Evil-Hunter-Tycoon-style build (owner-requested 2026-09-15), one file, reuses world data, consumes `art/qa/` sprites read-only with emoji fallback. Trees/props/Moss Crawler/Thicket Wasp/tinted hunter rigs live. See `art/CLAUDE_TO_CODEX_ASSET_REPLY.md` Round 5. | Code | Claude | 🔨 |
+| 23 | Art the Tycoon prototype can consume as it lands (ordinary `@2x` exports, not a promotion ask): full building sprites ×7, more monster idles (quarry_hound, bracken_stalker, cairn_archer, slag_thrower, hollow_chanter, rot_shambler, mire_weaver), finished/outfitted hunter idles per class, bosses (warden_of_ash, drowned_choir), gear-slot icons | Art | | ⬜ |
 
 ### Game — the continuous-world migration
 
