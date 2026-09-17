@@ -253,6 +253,13 @@ const ART_SRC = {
   thicket_wasp_2:  "thicket-wasp-source-v1/monster_thicket_wasp_idle_se_02@2x.png",
   thicket_wasp_3:  "thicket-wasp-source-v1/monster_thicket_wasp_idle_se_03@2x.png",
   thicket_wasp_4:  "thicket-wasp-source-v1/monster_thicket_wasp_idle_se_04@2x.png",
+  wasp_atk1:"thicket-wasp-source-v1/monster_thicket_wasp_attack_se_01@2x.png",
+  wasp_atk2:"thicket-wasp-source-v1/monster_thicket_wasp_attack_se_02@2x.png",
+  wasp_atk3:"thicket-wasp-source-v1/monster_thicket_wasp_attack_se_03@2x.png",
+  wasp_atk4:"thicket-wasp-source-v1/monster_thicket_wasp_attack_se_04@2x.png",
+  wasp_atk5:"thicket-wasp-source-v1/monster_thicket_wasp_attack_se_05@2x.png",
+  wasp_hit1:"thicket-wasp-source-v1/monster_thicket_wasp_hit_se_01@2x.png",
+  wasp_hit2:"thicket-wasp-source-v1/monster_thicket_wasp_hit_se_02@2x.png",
   firepit:         "town-props-source-v2/prp_town_basic_firepit_01@2x.png",
   woodpile:        "town-props-source-v2/prp_town_basic_woodpile_01@2x.png",
   weapon_rack:     "town-props-source-v2/prp_town_basic_weapon_rack_01@2x.png",
@@ -264,11 +271,28 @@ const ART_SRC = {
 };
 // Idle animation frame lists (monster id -> art keys). Falls back to the single sprite.
 const ART_ANIM = { thicket_wasp: ["thicket_wasp","thicket_wasp_2","thicket_wasp_3","thicket_wasp_4"] };
+// Full state anim sets (idle/atk/hit) per monster; frames that fail to load are skipped.
+const MOB_ANIM = { thicket_wasp:{
+  idle:["thicket_wasp","thicket_wasp_2","thicket_wasp_3","thicket_wasp_4"],
+  atk:["wasp_atk1","wasp_atk2","wasp_atk3","wasp_atk4","wasp_atk5"],
+  hit:["wasp_hit1","wasp_hit2"] } };
 const ANIM_FPS = 6;
 function animImg(mid){
   const frames=ART_ANIM[mid];
   if(frames){ const ready=frames.filter(artReady); if(ready.length){ const i=Math.floor(performance.now()/1000*ANIM_FPS)%ready.length; return IMG[ready[i]]; } }
   return artReady(mid)?IMG[mid]:null;
+}
+// choose a frame for a mob based on its current action (hit > attack > idle)
+function animImgForMob(m){
+  const A=MOB_ANIM[m.mid];
+  if(A){
+    if((m.hitFx||0)>0 && A.hit){ const fr=A.hit.filter(artReady);
+      if(fr.length){ const i=clamp(Math.floor((0.22-m.hitFx)/0.22*fr.length),0,fr.length-1); return IMG[fr[i]]; } }
+    if((m.atkAnim||0)>0 && A.atk){ const fr=A.atk.filter(artReady);
+      if(fr.length){ const i=clamp(Math.floor((0.42-m.atkAnim)/0.42*fr.length),0,fr.length-1); return IMG[fr[i]]; } }
+    if(A.idle){ const fr=A.idle.filter(artReady); if(fr.length){ const i=Math.floor(performance.now()/1000*ANIM_FPS)%fr.length; return IMG[fr[i]]; } }
+  }
+  return artReady(m.mid)?IMG[m.mid]:null;
 }
 const IMG = {};           // key -> HTMLImageElement (may be not-yet-loaded)
 const _tintCache = {};    // key|color -> canvas
@@ -1240,6 +1264,7 @@ function heroLog(h,msg){ /* only surface if near camera-follow or occasionally *
 function heroAI(h, dt){
   const mhp=hunterMaxHp(h), st=hunterStats(h);
   if(h.hp<=0) h.hp=1;
+  if(h._lunge>0) h._lunge-=dt; if(h.hitFx>0) h.hitFx-=dt;
   switch(h.ai){
     case "TOWN_IDLE": {
       if(h.bag.items.length>0 || h.bag.gold>0){ h.ai="GO_SELL"; }
@@ -1301,6 +1326,7 @@ function sellBag(h,bid){
 function heroHit(h,st,mob){
   let dmg=Math.max(1, st.atk - mob.def*0.5); const crit=Math.random()<st.crit; if(crit) dmg*=st.cd;
   dmg=Math.round(dmg*rnd(0.9,1.1)); mob.hp-=dmg; mob.hitFx=0.22;
+  h._lunge=0.2;   // step toward the target on the swing
   worldFloaty(mob.wx,mob.wy-1.2,"-"+dmg,crit?"#f2c14e":"#fff",crit);
   if(mob.hp<=0) mobDies(mob,h);
 }
@@ -1334,15 +1360,15 @@ function mobDies(mob,h){
 }
 function stepWorldMobs(dt){
   for(const m of S.world.mobs){ if(m.hp<=0) continue;
-    m.hitFx=Math.max(0,(m.hitFx||0)-dt);
+    m.hitFx=Math.max(0,(m.hitFx||0)-dt); m.atkAnim=Math.max(0,(m.atkAnim||0)-dt); if(m._lunge>0) m._lunge-=dt;
     // find a hero in this zone within aggro
     let tgt=null,bd=1e9;
     for(const h of S.hunters){ if(h.ai!=="HUNT"||h._zone!==m.zone||h.hp<=1) continue;
       const d=Math.hypot(h.wx-m.wx,h.wy-m.wy); if(d<bd){bd=d;tgt=h;} }
     const range=m.ranged?6:1.4;
-    if(tgt && bd<=range){ m.atkT-=dt; if(m.atkT<=0){ m.atkT=m.spd;
+    if(tgt && bd<=range){ m.atkT-=dt; if(m.atkT<=0){ m.atkT=m.spd; m.atkAnim=0.42; m._lunge=0.2; m.facing=tgt.wx<m.wx?-1:1;
       const ts=hunterStats(tgt); let dmg=Math.max(1,m.atk-ts.def*0.6); dmg=Math.round(dmg*rnd(0.85,1.15));
-      tgt.hp-=dmg; worldFloaty(tgt.wx,tgt.wy-1.4,"-"+dmg,"#e05a5a",false);
+      tgt.hp-=dmg; tgt.hitFx=0.22; worldFloaty(tgt.wx,tgt.wy-1.4,"-"+dmg,"#e05a5a",false);
       if(tgt.hp<=1){ tgt.hp=1; if(tgt.ai==="HUNT"){ tgt.ai="WALK_HOME"; if(follow===tgt.id) worldLog(`💀 ${tgt.name} เจ็บหนัก กำลังกลับเมือง`); } }
     } }
     else if(tgt && bd<10){ m.facing=tgt.wx<m.wx?-1:1; moveToward2(m,tgt.wx,tgt.wy,m.ranged?1.0:1.6,dt); }
@@ -1405,20 +1431,25 @@ function bldLabelW(x,topY,lv){ if(lv<=0) return; tctx.font=`bold ${Math.floor(TW
   tctx.fillStyle="rgba(0,0,0,.55)"; tctx.fillText("Lv"+lv,x+0.5,topY-3); tctx.fillStyle="#fff"; tctx.fillText("Lv"+lv,x,topY-3.5); }
 function drawDecorW(d){ if(!artReady(d.key)) return; const x=screenX(d.x), gy=screenY(d.y); drawShadowW(x,gy,TW*0.35*d.h); drawSpriteB(tctx,IMG[d.key],x,gy,TW*d.h*1.7,0.04); }
 function drawFolkW(f){ const x=screenX(f.wx), gy=screenY(f.wy); drawShadowW(x,gy,6); tctx.fillStyle=f.col; roundRectT(x-4,gy-14,8,14,3); tctx.fill(); tctx.fillStyle="#e8d3b0"; tctx.beginPath(); tctx.arc(x,gy-16,4,0,7); tctx.fill(); }
-function drawMobW(m){ const x=screenX(m.wx), gy=screenY(m.wy); const sz=m.boss?1.6:1; drawShadowW(x,gy,TW*0.4*sz);
-  const art=animImg(m.mid);
+function drawMobW(m){ const sz=m.boss?1.6:1;
+  const lunge=(m._lunge>0? (m.facing||1)*Math.sin(m._lunge/0.2*Math.PI)*TW*0.4 : 0);
+  const x=screenX(m.wx)+lunge, gy=screenY(m.wy); drawShadowW(screenX(m.wx),gy,TW*0.4*sz);
+  const art=animImgForMob(m);
   if(m.hitFx>0){ tctx.save(); tctx.globalAlpha=0.5; tctx.fillStyle="rgba(255,90,90,.5)"; tctx.beginPath(); tctx.arc(x,gy-TW*0.5*sz,TW*0.6*sz,0,7); tctx.fill(); tctx.restore(); }
-  if(art){ const h=TW*1.5*sz*(m.boss?1.15:1); const w=h*(art.naturalWidth/art.naturalHeight)*(m.facing||1);
-    tctx.imageSmoothingEnabled=false; tctx.save(); tctx.translate(x,gy); tctx.scale(m.facing||1,1); tctx.drawImage(art,-Math.abs(w)/2,-h+h*0.06,Math.abs(w),h); tctx.restore(); }
+  if(art){ const h=TW*1.5*sz*(m.boss?1.15:1); const w=h*(art.naturalWidth/art.naturalHeight);
+    tctx.imageSmoothingEnabled=false; tctx.save(); tctx.translate(x,gy); tctx.scale(m.facing||1,1); tctx.drawImage(art,-w/2,-h+h*0.06,w,h); tctx.restore(); }
   else { tctx.font=`${Math.floor(TW*1.0*sz)}px serif`; tctx.textAlign="center"; tctx.textBaseline="alphabetic"; tctx.fillText(m.em,x,gy); }
-  hpbarW(x, gy-TW*1.5*sz-6, Math.max(22,TW*0.9*sz), m.hp/m.maxHp, true);
-  if(m.boss){ tctx.fillStyle="rgba(255,255,255,.75)"; tctx.font=`bold ${Math.floor(TW*0.3)}px sans-serif`; tctx.textAlign="center"; tctx.fillText(m.name,x,gy+13); }
+  hpbarW(screenX(m.wx), gy-TW*1.5*sz-6, Math.max(22,TW*0.9*sz), m.hp/m.maxHp, true);
+  if(m.boss){ tctx.fillStyle="rgba(255,255,255,.75)"; tctx.font=`bold ${Math.floor(TW*0.3)}px sans-serif`; tctx.textAlign="center"; tctx.fillText(m.name,screenX(m.wx),gy+13); }
 }
-function drawHeroW(h){ const x=screenX(h.wx), gy=screenY(h.wy), c=CLASSES[h.cls], mhp=hunterMaxHp(h); drawShadowW(x,gy,9);
+function drawHeroW(h){ const c=CLASSES[h.cls], mhp=hunterMaxHp(h); const gy=screenY(h.wy);
+  const lunge=(h._lunge>0? (h.facing||1)*Math.sin(h._lunge/0.2*Math.PI)*TW*0.5 : 0);
+  const x=screenX(h.wx)+lunge; drawShadowW(screenX(h.wx),gy,9);
   const art=tintedSprite(c.sprite,c.tint,0.5); const H=TW*1.7;
   if(art){ const w=H*(art.naturalWidth/art.naturalHeight); tctx.imageSmoothingEnabled=false; tctx.save(); tctx.translate(x,gy); tctx.scale(h.facing||1,1); tctx.drawImage(art,-w/2,-H+H*0.10,w,H); tctx.restore(); }
   else { tctx.font=`${Math.floor(TW*0.9)}px serif`; tctx.textAlign="center"; tctx.fillText(c.emoji,x,gy); }
-  if(h.hp<mhp*0.999 || h.ai==="HUNT") hpbarW(x, gy-H-4, Math.max(24,TW), h.hp/mhp, false);
+  if(h.hitFx>0){ tctx.save(); tctx.globalAlpha=0.45; tctx.fillStyle="rgba(255,80,80,.6)"; tctx.beginPath(); tctx.ellipse(x,gy-H*0.45,TW*0.5,H*0.42,0,0,7); tctx.fill(); tctx.restore(); }
+  if(h.hp<mhp*0.999 || h.ai==="HUNT") hpbarW(screenX(h.wx), gy-H-4, Math.max(24,TW), h.hp/mhp, false);
   if(follow===h.id){ tctx.fillStyle="var(--accent)"; tctx.fillStyle="#5fd0e0"; tctx.font=`bold ${Math.floor(TW*0.3)}px sans-serif`; tctx.textAlign="center"; tctx.fillText("▼",x,gy-H-9); }
 }
 function renderWorld(){
