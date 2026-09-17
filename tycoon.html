@@ -1421,26 +1421,80 @@ function drawShadowW(cx,gy,rx){ tctx.fillStyle="rgba(0,0,0,.24)"; tctx.beginPath
 function hpbarW(cx,topY,w,frac,mob){ tctx.fillStyle="rgba(0,0,0,.55)"; roundRectT(cx-w/2,topY,w,4,2); tctx.fill();
   tctx.fillStyle=mob?"#e05a5a":"#54c98a"; roundRectT(cx-w/2,topY,w*clamp(frac,0,1),4,2); tctx.fill(); }
 function roundRectT(x,y,w,h,r){ tctx.beginPath(); tctx.moveTo(x+r,y); tctx.arcTo(x+w,y,x+w,y+h,r); tctx.arcTo(x+w,y+h,x,y+h,r); tctx.arcTo(x,y+h,x,y,r); tctx.arcTo(x,y,x+w,y,r); tctx.closePath(); }
+const BLD_OUT="rgba(22,16,12,.55)";
 function drawBuildingW(bid){
   const b=WBUILD[bid], lv=(S.buildings[bid]||{lv:0}).lv;
   const x=screenX(b.x), gy=screenY(b.y);
   if(artReady("bld_"+bid)){ drawShadowW(x,gy,TW*0.9); drawSpriteB(tctx,IMG["bld_"+bid],x,gy,TW*2.2,0.05); bldLabelW(x,gy-TW*2.2,lv); return; }
-  const w=TW*1.9, wallH=TW*0.95+Math.min(lv,6)*3, roofH=TW*0.62, oh=Math.max(4,TW*0.16);
-  const wx=x-w/2, wtop=gy-wallH, bd=BUILDINGS[bid], roofCol=ROOF[bid]||shade(bd.col,-24);
-  drawShadowW(x,gy+2,w*0.55);
+  const bd=BUILDINGS[bid];
+  const grand = bid==="guild_hall";
+  const w=TW*(grand?2.2:1.95), wallH=TW*(grand?1.15:0.98)+Math.min(lv,6)*3, roofH=TW*(grand?0.78:0.66), oh=Math.max(4,TW*0.18);
+  const wx=x-w/2, wtop=gy-wallH, roofCol=ROOF[bid]||shade(bd.col,-24);
+  drawShadowW(x,gy+2,w*0.56);
+  // foundation stones
+  tctx.fillStyle=shade(bd.col,-55); tctx.fillRect(wx-2,gy-Math.max(4,TW*0.15),w+4,Math.max(4,TW*0.15));
+  // walls: lit left / shaded right
   tctx.fillStyle=bd.col; tctx.fillRect(wx,wtop,w,wallH);
-  tctx.fillStyle=shade(bd.col,-26); tctx.fillRect(x,wtop,w/2,wallH);
-  tctx.fillStyle=shade(bd.col,-45); tctx.fillRect(wx,gy-Math.max(3,TW*0.09),w,Math.max(3,TW*0.09));
-  const dw=w*0.26, dh=wallH*0.5; tctx.fillStyle=shade(bd.col,-60); tctx.fillRect(x-dw/2,gy-dh,dw,dh);
-  const ww=w*0.16, wh=wallH*0.22, wy2=wtop+wallH*0.22; tctx.fillStyle="#f2d68a"; tctx.fillRect(wx+w*0.12,wy2,ww,wh);
-  tctx.fillStyle="#d9b96e"; tctx.fillRect(x+w*0.22,wy2,ww,wh);
+  tctx.fillStyle=shade(bd.col,-24); tctx.fillRect(x,wtop,w/2,wallH);
+  // plank seams
+  tctx.strokeStyle="rgba(0,0,0,.10)"; tctx.lineWidth=1;
+  for(let yy=wtop+TW*0.34; yy<gy-2; yy+=TW*0.34){ tctx.beginPath(); tctx.moveTo(wx,Math.round(yy)+.5); tctx.lineTo(wx+w,Math.round(yy)+.5); tctx.stroke(); }
+  // corner posts + outline
+  tctx.fillStyle=shade(bd.col,-48); tctx.fillRect(wx,wtop,Math.max(2,TW*0.08),wallH); tctx.fillRect(wx+w-Math.max(2,TW*0.08),wtop,Math.max(2,TW*0.08),wallH);
+  tctx.strokeStyle=BLD_OUT; tctx.lineWidth=2; tctx.strokeRect(wx,wtop,w,wallH);
+  // door
+  const dw=w*0.26, dh=wallH*0.5, dx=x-dw/2, dy=gy-dh;
+  tctx.fillStyle=shade(bd.col,-62); tctx.fillRect(dx,dy,dw,dh);
+  tctx.strokeStyle=BLD_OUT; tctx.strokeRect(dx,dy,dw,dh);
+  tctx.fillStyle="#e8c877"; tctx.fillRect(dx+dw*0.74,dy+dh*0.46,Math.max(1,TW*0.06),Math.max(1,TW*0.06));
+  // windows (framed + muntins); smithy glows orange from the forge
+  const glow = bid==="smithy"?"#ff8a3a":"#f2d68a";
+  const ww=w*0.17, wh=wallH*0.23, wyy=wtop+wallH*0.2;
+  const win=(px)=>{ tctx.fillStyle=glow; tctx.fillRect(px,wyy,ww,wh); tctx.strokeStyle="rgba(0,0,0,.35)"; tctx.lineWidth=1;
+    tctx.beginPath(); tctx.moveTo(px+ww/2,wyy); tctx.lineTo(px+ww/2,wyy+wh); tctx.moveTo(px,wyy+wh/2); tctx.lineTo(px+ww,wyy+wh/2); tctx.stroke();
+    tctx.strokeStyle=BLD_OUT; tctx.strokeRect(px,wyy,ww,wh); };
+  win(wx+w*0.1); win(x+w*0.22);
+  // roof
   tctx.fillStyle=roofCol; tctx.beginPath(); tctx.moveTo(wx-oh,wtop+2); tctx.lineTo(x,wtop-roofH); tctx.lineTo(wx+w+oh,wtop+2); tctx.closePath(); tctx.fill();
   tctx.fillStyle=shade(roofCol,-22); tctx.beginPath(); tctx.moveTo(x,wtop-roofH); tctx.lineTo(wx+w+oh,wtop+2); tctx.lineTo(x,wtop+2); tctx.closePath(); tctx.fill();
-  if(CHIMNEY[bid]){ const cxx=x+w*0.24, cyt=wtop-roofH*0.55; tctx.fillStyle=shade(roofCol,-40); tctx.fillRect(cxx,cyt,Math.max(4,TW*0.13),roofH*0.7);
+  // shingle rows
+  tctx.strokeStyle="rgba(0,0,0,.15)"; tctx.lineWidth=1;
+  for(let k=1;k<4;k++){ const t=k/4, ly=(wtop+2)-roofH*t, half=(oh+w/2)*(1-t); tctx.beginPath(); tctx.moveTo(x-half,ly); tctx.lineTo(x+half,ly); tctx.stroke(); }
+  tctx.strokeStyle=BLD_OUT; tctx.lineWidth=2; tctx.beginPath(); tctx.moveTo(wx-oh,wtop+2); tctx.lineTo(x,wtop-roofH); tctx.lineTo(wx+w+oh,wtop+2); tctx.stroke();
+  tctx.fillStyle=shade(roofCol,20); tctx.fillRect(x-1,wtop-roofH,2,roofH+2);
+  // chimney + smoke
+  if(CHIMNEY[bid]){ const cxx=x+w*0.24, cyt=wtop-roofH*0.55; tctx.fillStyle=shade(roofCol,-40); tctx.fillRect(cxx,cyt,Math.max(4,TW*0.14),roofH*0.75); tctx.strokeStyle=BLD_OUT; tctx.strokeRect(cxx,cyt,Math.max(4,TW*0.14),roofH*0.75);
     const t=performance.now()/600; for(let i=0;i<3;i++){ const pr=(t+i*0.4)%1; tctx.globalAlpha=(1-pr)*0.35; tctx.fillStyle="#cfd6de"; tctx.beginPath(); tctx.arc(cxx+TW*0.06+Math.sin((t+i)*2)*3, cyt-pr*TW*0.9,(1+pr)*TW*0.11,0,7); tctx.fill(); } tctx.globalAlpha=1; }
-  tctx.font=`${Math.floor(TW*0.5)}px serif`; tctx.textAlign="center"; tctx.textBaseline="middle"; tctx.fillText(bd.em, x-w*0.3, gy-dh*0.55);
-  bldLabelW(x,wtop-roofH,lv);
+  // per-type accents
+  drawBldAccent(bid,x,gy,w,wallH,wtop,roofH);
+  // hanging sign emoji
+  tctx.font=`${Math.floor(TW*0.46)}px serif`; tctx.textAlign="center"; tctx.textBaseline="middle"; tctx.fillText(bd.em, x-w*0.32, gy-dh*0.62);
+  bldLabelW(x,wtop-roofH-(grand?TW*1.0:0),lv);
 }
+function drawBldAccent(bid,x,gy,w,wallH,wtop,roofH){
+  if(bid==="guild_hall"){ // waving pennant on the ridge
+    const py=wtop-roofH; tctx.strokeStyle="#5a4a33"; tctx.lineWidth=2; tctx.beginPath(); tctx.moveTo(x,py); tctx.lineTo(x,py-TW*0.95); tctx.stroke();
+    const t=performance.now()/300, fw=TW*0.75, v=Math.sin(t)*TW*0.09;
+    tctx.fillStyle="#c94f4a"; tctx.beginPath(); tctx.moveTo(x,py-TW*0.95); tctx.lineTo(x+fw,py-TW*0.8+v); tctx.lineTo(x,py-TW*0.62); tctx.closePath(); tctx.fill(); tctx.strokeStyle=BLD_OUT; tctx.stroke();
+  } else if(bid==="market"){ // striped awning over the door
+    const aw=w*0.62, ax=x-aw/2, ay=wtop+wallH*0.44, ah=TW*0.5;
+    for(let i=0;i<6;i++){ tctx.fillStyle=(i%2)?"#e7e2d6":"#c94f4a"; tctx.fillRect(ax+i*aw/6,ay,aw/6+0.5,ah); }
+    tctx.fillStyle="rgba(0,0,0,.12)"; tctx.fillRect(ax,ay+ah-2,aw,2); tctx.strokeStyle=BLD_OUT; tctx.lineWidth=1.5; tctx.strokeRect(ax,ay,aw,ah);
+  } else if(bid==="tavern"){ // barrels
+    bldBarrel(x+w*0.42,gy); bldBarrel(x+w*0.54,gy-TW*0.05,0.85);
+  } else if(bid==="restaurant"){ // cooking pot out front
+    const px=x+w*0.34; tctx.fillStyle="#33373d"; tctx.beginPath(); tctx.ellipse(px,gy-TW*0.16,TW*0.24,TW*0.16,0,0,7); tctx.fill();
+    tctx.strokeStyle=BLD_OUT; tctx.stroke(); tctx.fillStyle="rgba(255,150,60,.5)"; tctx.beginPath(); tctx.ellipse(px,gy-TW*0.22,TW*0.16,TW*0.08,0,0,7); tctx.fill();
+  } else if(bid==="clinic"){ // red cross
+    const cs=TW*0.55, cx=x, cy=wtop+wallH*0.46; tctx.fillStyle="#e34a4a"; tctx.fillRect(cx-cs*0.16,cy-cs*0.5,cs*0.32,cs); tctx.fillRect(cx-cs*0.5,cy-cs*0.16,cs,cs*0.32);
+  } else if(bid==="smithy"){ // anvil + sparks
+    const axx=x-w*0.4, ay=gy-TW*0.28; tctx.fillStyle="#33373d"; tctx.fillRect(axx-TW*0.22,ay-TW*0.12,TW*0.44,TW*0.1); tctx.fillRect(axx-TW*0.08,ay-TW*0.02,TW*0.16,TW*0.14); tctx.strokeStyle=BLD_OUT; tctx.strokeRect(axx-TW*0.22,ay-TW*0.12,TW*0.44,TW*0.1);
+    const t=performance.now()/120; for(let i=0;i<3;i++){ const pr=(t+i*7)%10/10; tctx.globalAlpha=1-pr; tctx.fillStyle="#ffcf6a"; tctx.fillRect(axx+Math.sin(i*3)*TW*0.1, ay-TW*0.16-pr*TW*0.3, 2,2); } tctx.globalAlpha=1;
+  }
+}
+function bldBarrel(px,gy,s){ s=s||1; const bw=TW*0.28*s, bh=TW*0.36*s;
+  tctx.fillStyle="#8a5a34"; roundRectT(px-bw/2,gy-bh,bw,bh,3); tctx.fill(); tctx.strokeStyle=BLD_OUT; tctx.lineWidth=1.5; tctx.stroke();
+  tctx.fillStyle="#5a3a22"; tctx.fillRect(px-bw/2,gy-bh*0.7,bw,Math.max(1,bh*0.12)); tctx.fillRect(px-bw/2,gy-bh*0.35,bw,Math.max(1,bh*0.12)); }
 function bldLabelW(x,topY,lv){ if(lv<=0) return; tctx.font=`bold ${Math.floor(TW*0.32)}px sans-serif`; tctx.textAlign="center"; tctx.textBaseline="alphabetic";
   tctx.fillStyle="rgba(0,0,0,.55)"; tctx.fillText("Lv"+lv,x+0.5,topY-3); tctx.fillStyle="#fff"; tctx.fillText("Lv"+lv,x,topY-3.5); }
 function drawDecorW(d){ if(!artReady(d.key)) return; const x=screenX(d.x), gy=screenY(d.y); drawShadowW(x,gy,TW*0.35*d.h); drawSpriteB(tctx,IMG[d.key],x,gy,TW*d.h*1.7,0.04); }
