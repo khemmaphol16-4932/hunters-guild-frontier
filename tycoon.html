@@ -490,7 +490,7 @@ function newGame(){
     hunters:[], invMax:60, inv:[],
     buildings:{ guild_hall:{lv:1}, market:{lv:0}, restaurant:{lv:0}, clinic:{lv:0}, inn:{lv:0}, smithy:{lv:0}, tavern:{lv:0} },
     town:{pop:6}, bonusCap:0, quests:{},
-    settings:{lang:"th", theme:"dark", speed:1},
+    settings:{lang:"th", theme:"dark", speed:1, healAt:0.4},
     seenGear:true,
     stats:{kills:0, bossKills:0, goldEarned:0, dropsL:0, sold:0},
   };
@@ -547,6 +547,7 @@ function hunterStats(h){
   }
   hp*=1+hpP/100; atk*=1+atkP/100; spd/=1+spdpct/100;
   const sm=1+(h.star||0)*0.12; hp*=sm; atk*=sm; def*=sm;   // ascension bonus
+  atk*=smithyAtkMult(); hp*=cookHpMult();                  // town building buffs
   return {
     hp:Math.round(hp), atk:Math.round(atk), def:Math.round(def),
     spd:Math.max(0.5,spd), crit:clamp(crit,0,0.75), cd, ranged:c.role==="ranged"||c.role==="mage",
@@ -557,6 +558,7 @@ function hunterPower(h){ const s=hunterStats(h); return Math.round(s.hp*0.25 + s
 function xpToNext(lv){ return Math.floor(BAL.xpBase*Math.pow(BAL.xpStep,lv-1)); }
 function giveXp(h, amt){
   const cap=capForStar(h.star||0);
+  amt=Math.round(amt*tavernXpMult());   // Tavern XP buff
   h.xp+=amt;
   while(h.lv<cap && h.xp>=xpToNext(h.lv)){ h.xp-=xpToNext(h.lv); h.lv++; h.hp=hunterMaxHp(h); }
   if(h.lv>=cap) h.xp=Math.min(h.xp, xpToNext(h.lv)); // hold at cap until ascended
@@ -622,6 +624,7 @@ function load(){
     S.buildings=S.buildings||{}; for(const b in BUILDINGS){ if(!S.buildings[b]) S.buildings[b]={lv:b==="guild_hall"?1:0}; }
     S.settings=S.settings||{lang:"th",theme:"dark",speed:1};
     if(S.bonusCap==null) S.bonusCap=0; if(!S.quests) S.quests={};
+    if(S.settings.healAt==null) S.settings.healAt=0.4;
     if(!S.stats) S.stats={kills:0,bossKills:0,goldEarned:0,dropsL:0,sold:0};
     if(S.stats.sold==null) S.stats.sold=0;
     // migrate hunters to seamless-world agents
@@ -862,6 +865,16 @@ function guildCap(){ return 3 + (S.buildings.guild_hall.lv-1)*1 + Math.floor(S.b
 
 function serviceLevel(kind){ // returns 0..n aggregated service strength
   let s=0; for(const b in BUILDINGS){ if(BUILDINGS[b].service===kind){ s+=(S.buildings[b].lv||0); } } return s;
+}
+/* Town buildings buff the whole guild (not just gold) */
+function smithyAtkMult(){ return 1 + (S.buildings.smithy.lv||0)*0.03; }   // Smithy: forged weapons → +ATK%
+function cookHpMult(){   return 1 + (S.buildings.restaurant.lv||0)*0.02; } // Cookhouse: well-fed → +max HP%
+function tavernXpMult(){ return 1 + (S.buildings.tavern.lv||0)*0.05; }     // Tavern: shared tales → +XP%
+function buildingBuffText(bid){
+  if(bid==="smithy")     return `⚔️ +โจมตีนักล่าทุกคน ${Math.round(((S.buildings.smithy.lv||0)*3))}%`;
+  if(bid==="restaurant") return `❤️ +พลังชีวิตทุกคน ${Math.round(((S.buildings.restaurant.lv||0)*2))}%`;
+  if(bid==="tavern")     return `⭐ +XP ทุกคน ${Math.round(((S.buildings.tavern.lv||0)*5))}%`;
+  return null;
 }
 function stepTown(dt){
   // income
@@ -1199,11 +1212,11 @@ function goHome(){ follow=null; const W=townCv.width/townDpr; camX=W*0.5 - TOWN_
 
 // --- helpers ---
 function zoneUnlocked(i){ return fieldUnlocked(FIELDS[i]); }
-function zonePowerReq(i){ return FIELDS[i].lv*38 + 20; }
+function zonePowerReq(i){ return FIELDS[i].lv*45 + 30; }
 function autoZoneFor(h){
+  // pick the DEEPEST unlocked zone the hero can clear comfortably (power ≥ req × safety margin)
   const p=hunterPower(h); let best=0;
-  for(let i=0;i<FIELDS.length;i++){ if(zoneUnlocked(i) && p>=zonePowerReq(i)) best=i; }
-  // allow one stretch zone if nothing matches beyond 0
+  for(let i=0;i<FIELDS.length;i++){ if(zoneUnlocked(i) && p>=zonePowerReq(i)*1.15) best=i; }
   return best;
 }
 function heroZoneIdx(h){
@@ -1253,6 +1266,7 @@ function spawnMonsters(dt){
     if(S.world.bossT[i]<=0 && !list.some(m=>m.boss)){
       S.world.bossT[i]=rnd(60,110);
       S.world.mobs.push(worldMobUnit(FIELDS[i].boss, i, true));
+      if(booted){ toastUp(`⚠️ บอส ${MOBS[FIELDS[i].boss].name} โผล่ที่ ${FIELDS[i].name}!`); worldLog(`⚠️ บอส ${MOBS[FIELDS[i].boss].name} · ${FIELDS[i].name}`); }
     }
   }
   // prune far-dead
@@ -1287,8 +1301,8 @@ function heroAI(h, dt){
       // re-evaluate retreat early if something changed
       break; }
     case "HUNT": {
-      // retreat conditions
-      if(h.hp<mhp*0.42 || h.energy<=2 || h.bag.items.length>=BAG_CAP){ h.ai="WALK_HOME"; break; }
+      // retreat conditions (heal threshold is player-configurable in settings)
+      if(h.hp<mhp*(S.settings.healAt||0.4) || h.energy<=2 || h.bag.items.length>=BAG_CAP){ h.ai="WALK_HOME"; break; }
       h.energy=Math.max(0,h.energy - 2.2*dt);
       const zi=h._zone;
       // skill
@@ -1387,7 +1401,7 @@ function incomeTick(dt){
 function popTick(dt){ const popTarget=6+serviceLevel("rest")*3+(S.buildings.tavern.lv||0)*2+S.hunters.length;
   S.town.pop += (popTarget-S.town.pop)*0.02*dt; }
 
-let wfolk=[];
+let wfolk=[]; let booted=false;
 function stepWorld(dt){
   if(!S.world) S.world={mobs:[],bossT:{}};
   incomeTick(dt); popTick(dt);
@@ -1450,7 +1464,9 @@ function drawHeroW(h){ const c=CLASSES[h.cls], mhp=hunterMaxHp(h); const gy=scre
   else { tctx.font=`${Math.floor(TW*0.9)}px serif`; tctx.textAlign="center"; tctx.fillText(c.emoji,x,gy); }
   if(h.hitFx>0){ tctx.save(); tctx.globalAlpha=0.45; tctx.fillStyle="rgba(255,80,80,.6)"; tctx.beginPath(); tctx.ellipse(x,gy-H*0.45,TW*0.5,H*0.42,0,0,7); tctx.fill(); tctx.restore(); }
   if(h.hp<mhp*0.999 || h.ai==="HUNT") hpbarW(screenX(h.wx), gy-H-4, Math.max(24,TW), h.hp/mhp, false);
-  if(follow===h.id){ tctx.fillStyle="var(--accent)"; tctx.fillStyle="#5fd0e0"; tctx.font=`bold ${Math.floor(TW*0.3)}px sans-serif`; tctx.textAlign="center"; tctx.fillText("▼",x,gy-H-9); }
+  const sIcon={GO_HEAL:"🩹",GO_REST:"💤",GO_SELL:"🪙",WALK_OUT:"🚶",HUNT:"⚔️",WALK_HOME:"🏃"}[h.ai];
+  if(sIcon){ tctx.font=`${Math.floor(TW*0.5)}px serif`; tctx.textAlign="center"; tctx.textBaseline="alphabetic"; tctx.fillText(sIcon, screenX(h.wx), gy-H-12); }
+  if(follow===h.id){ tctx.fillStyle="#5fd0e0"; tctx.font=`bold ${Math.floor(TW*0.3)}px sans-serif`; tctx.textAlign="center"; tctx.fillText("▼",x,gy-H-24); }
 }
 function renderWorld(){
   if(!tctx) return;
@@ -1889,6 +1905,7 @@ function renderShop(){
     let extra="";
     if(bid==="guild_hall") extra=`<span class="statmini">ช่องนักล่า ${guildCap()}</span>`;
     else if(bd.service) extra=`<span class="statmini">บริการ ${serviceName(bd.service)} Lv${serviceLevel(bd.service)}</span>`;
+    const buff=buildingBuffText(bid); if(buff) extra+=`<span class="statmini" style="color:var(--good)">${buff}</span>`;
     div.innerHTML=`
       <div class="row"><div class="avatar" style="background:${bd.col}22;border-color:${bd.col}55">${bd.em}</div>
         <div class="grow"><div class="row" style="gap:6px"><b>${bd.name}</b>${built?`<span class="tag">Lv ${lv}</span>`:`<span class="tag">ยังไม่สร้าง</span>`}</div>
@@ -1920,7 +1937,8 @@ function openBuilding(bid){
     <div class="grow"><b>${bd.name}</b> <span class="tag">Lv ${st.lv}</span><div class="small muted">${bd.desc}</div></div></div>
     <div class="chipline" style="margin-top:8px">${bd.baseIncome?`<span class="statmini">📈 +${fmt(buildingIncome(bid))}/วิ</span>`:""}
     ${bd.service?`<span class="statmini">บริการ ${serviceName(bd.service)}</span>`:""}
-    ${bid==="guild_hall"?`<span class="statmini">ช่องนักล่า ${guildCap()}</span>`:""}</div>
+    ${bid==="guild_hall"?`<span class="statmini">ช่องนักล่า ${guildCap()}</span>`:""}
+    ${buildingBuffText(bid)?`<span class="statmini" style="color:var(--good)">${buildingBuffText(bid)}</span>`:""}</div>
     <div class="divider"></div>
     <button class="btn gold" style="width:100%" id="btnBQuick" ${S.gold<cost?"disabled":""}>⬆️ อัพเกรด Lv${st.lv+1} · 🪙${fmt(cost)}</button>`;
   openSheet(bd.name, body, true);
@@ -2005,6 +2023,14 @@ function openSettings(){
       <select id="setTheme"><option value="dark">มืด</option><option value="light">สว่าง</option></select></div>
     <div class="row" style="justify-content:space-between;margin-top:10px"><span>ความเร็วเกม</span>
       <select id="setSpeed"><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select></div>
+    <div class="row" style="justify-content:space-between;margin-top:10px"><span>กลับมารักษาเมื่อ HP ≤</span>
+      <select id="setHeal">
+        <option value="0.25">25% (ดุ เสี่ยงตาย)</option>
+        <option value="0.4">40% (แนะนำ)</option>
+        <option value="0.55">55%</option>
+        <option value="0.7">70% (ปลอดภัย)</option>
+      </select></div>
+    <div class="small muted" style="margin-top:4px">ยิ่งต่ำ = ล่านานขึ้นแต่เสี่ยงล้ม · ยิ่งสูง = ปลอดภัยแต่แวะเมืองบ่อย</div>
     <div class="divider"></div>
     <div class="small muted">Day ${S.day} · เล่นมา ${Math.floor(S.playSec/60)} นาที · ล้ม ${fmt(S.stats.kills)} · บอส ${S.stats.bossKills}</div>
     <div class="divider"></div>
@@ -2012,6 +2038,7 @@ function openSettings(){
   `, true);
   const th=$("#setTheme"); th.value=S.settings.theme; th.onchange=()=>{ S.settings.theme=th.value; applyTheme(); save(); };
   const sp=$("#setSpeed"); sp.value=String(S.settings.speed||1); sp.onchange=()=>{ S.settings.speed=+sp.value; save(); };
+  const hl=$("#setHeal"); hl.value=String(S.settings.healAt||0.4); hl.onchange=()=>{ S.settings.healAt=+hl.value; save(); toastUp("ตั้งค่ากลับรักษาที่ "+Math.round(hl.value*100)+"%"); };
   $("#btnReset").onclick=()=>{ if(confirm("ลบเซฟและเริ่มใหม่?")){ localStorage.removeItem(SAVE_KEY); location.reload(); } };
 }
 function applyTheme(){ document.documentElement.setAttribute("data-theme", S.settings.theme==="light"?"light":"dark"); }
@@ -2048,6 +2075,7 @@ function boot(){
   // offline
   const off= had ? offlineCatchup() : null;
   if(off){ showOfflineModal(off); }
+  setTimeout(()=>{ booted=true; }, 1500);
   lastFrame=now();
   requestAnimationFrame(loop);
 }
